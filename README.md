@@ -23,6 +23,18 @@ python -m pip install -e .
 
 If Python 3.13 is unavailable, create the environment with another supported Python version, for example `py -3.11 -m venv .venv`.
 
+For person-candidate detection, install the matching PyTorch and TorchVision versions. The current RTX 3050 setup uses CUDA 12.8:
+
+```powershell
+python -m pip install -r requirements-vision.txt --index-url https://download.pytorch.org/whl/cu128
+```
+
+For a CPU-only environment, use PyTorch's CPU wheel index instead:
+
+```powershell
+python -m pip install -r requirements-vision.txt --index-url https://download.pytorch.org/whl/cpu
+```
+
 ## Inspect an input file
 
 ```powershell
@@ -52,6 +64,18 @@ Choose a custom output path if needed:
 ```powershell
 python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 120 --output "data/previews/vd-1_frame_000120.png"
 ```
+
+## Run the baseline person detector
+
+The optional detector reports COCO `person` candidates. It does not identify enemies or teams. The first detection run downloads the documented TorchVision COCO_V1 checkpoint; see [the model card](docs/MODEL_CARDS.md).
+
+```powershell
+python -m vantasight "data/input/screenshots/ss-1.png" --detect-persons
+python -m vantasight "data/input/screenshots/ss-2.png" --detect-persons
+python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --detect-persons --max-side 2560 --exclude-region 0,620,530,960
+```
+
+Annotated previews go to `data/previews/` by default. `--max-side` controls internal detector resizing; reported bounding boxes map back to the original input resolution. Exclusion rectangles can be passed in source pixels with repeatable `--exclude-region x1,y1,x2,y2` options, for example to mask the `vd-1.mp4` webcam inset. The example region is specific to that video; other files need their own region coordinates.
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the step-by-step roadmap, current progress, and plain-language notes about each component.
 

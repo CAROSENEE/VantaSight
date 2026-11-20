@@ -241,3 +241,5 @@ reports/*
 !reports/.gitkeep
 
 .task-tmp/
+models/cache/
+models/weights/

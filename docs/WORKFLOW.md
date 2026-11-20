@@ -8,24 +8,37 @@
 
 ## এখন পর্যন্ত কী করা হয়েছে
 
-- **M1 — Input foundation:** image loader, video metadata reader ও CLI লেখা হয়েছে। OpenCV install ও runtime verification বাকি।
-- **M2 — Frame preview:** নির্দিষ্ট video frame পড়া ও preview image save করার code লেখা হয়েছে। OpenCV install করে বাস্তব video দিয়ে যাচাই করা বাকি।
+- **M1 — Input foundation:** image loader, video metadata reader ও CLI লেখা এবং `vd-1.mp4` দিয়ে runtime-এ যাচাই করা হয়েছে।
+- **M2 — Frame preview:** নির্দিষ্ট video frame পড়া ও preview image save করা হয়েছে। Frame index 3540 (29.5 সেকেন্ড) সফলভাবে বের হয়েছে: `data/previews/vd-1_frame_003540.png`। ছয়টি অতিরিক্ত সময়ে frame দেখে contact sheet বানানো হয়েছে: `data/previews/vd-1_contact-sheet.jpg`।
+- **M3 — Baseline detection:** TorchVision COCO `person candidate` detector যোগ করে `ss-1`, `ss-2` এবং `vd-1`-এর frame 3000-এ runtime inference করা হয়েছে।
+- `ss-1`-এ doorway character candidate confidence 0.286-এ ধরা পড়েছে; একই সঙ্গে HUD-এর portrait/red mark-এ false positive এসেছে। `ss-2`-এর in-world negative sample-এ 3টি HUD/weapon false positive এসেছে।
+- `vd-1` frame 3000-এ gameplay character candidate confidence 0.963-এ ধরা পড়েছে; webcam inset ও HUD-ও candidate হয়েছে। এটা baseline মাত্র—এ ফল থেকে detection accuracy দাবি করা যাবে না।
+- ওই frame-এ webcam region `0,620,530,960` বাদ দিয়ে পুনরায় চালালে candidate 10 থেকে 8 হয়েছে; webcam-এর দুটি candidate বাদ গেছে এবং gameplay character candidate রয়ে গেছে। HUD/weapon false positive এখনো আছে। এই coordinate শুধু `vd-1`-এর জন্য।
+- OpenCV `5.1.0.95` ও project package virtual environment-এ install হয়েছে।
+- `vd-1.mp4`-এর metadata: 59 সেকেন্ড, 2560×1440, 120 FPS, 7,080 frame, ফাইল প্রায় 203 MB।
+- 5, 15, 25, 35, 45 ও 55 সেকেন্ডের frame sample দেখা হয়েছে; এটি পুরো video review নয়। 25 ও 45 সেকেন্ডের sample-এ opponent দেখা যায়, তবে দূরে ও ছোট। সব frame-এ enemy থাকবে এমন নয়—enemy কিছু সময় অনুপস্থিত থেকে পরে দেখা দিতে পারে, সেটি স্বাভাবিক।
+- তোমার ব্যাখ্যা অনুযায়ী stream-এর webcam inset-এর মানুষ game-এর enemy নয় এবং ওই inset enemy-কে ঢাকে না। তাই webcam-কে enemy detection হিসেবে গণনা করব না, তবে পুরো game frame বাদও দেব না।
+- Original frame 2560×1440 resolution-এ রাখা হয়েছে। Contact sheet-এর thumbnail-গুলো শুধু একসঙ্গে দেখার সুবিধার জন্য ছোট করা; ওই thumbnail দিয়ে enemy size বিচার করা যাবে না।
 - `data/input/screenshots/` screenshot রাখার জন্য তৈরি।
 - `data/input/videos/` recorded video রাখার জন্য তৈরি।
 - `data/previews/` তৈরি হওয়া preview রাখার জন্য তৈরি।
+- দেওয়া দুটি screenshot `ss-1.png` ও `ss-2.png` নামে input folder-এ রাখা হয়েছে; resolution যথাক্রমে 1917×1073 এবং 1917×1070। Git এগুলো ignore করছে।
+- প্রাথমিক visual label: `ss-1`-এ gameplay doorway-তে enemy character দৃশ্যমান; `ss-2`-এ main sightline-এ সাধারণ gameplay character দৃশ্যমান নয়। `ss-2`-এর লাল replay silhouette-গুলোকে আলাদা overlay হিসেবে ধরব, normal gameplay player detection-এর ground truth হিসেবে নয়।
 - Video ও screenshot-এর ID আলাদা ধারায় চলবে: `vd-1`, `vd-2`, ... এবং `ss-1`, `ss-2`, ...। File extension আগের মতো থাকবে, যেমন `vd-1.mp4` বা `ss-1.png`।
 - `README.md`-তে setup ও ব্যবহারের নির্দেশনা আছে। `.gitignore` input media ও generated preview Git থেকে বাদ রাখে।
+- Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
+- Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-এখনো detector, body-region model, tracker, alignment calculation বা dashboard তৈরি হয়নি। বর্তমান session-এ pip offline mode-এ আছে এবং virtual environment তৈরি করার সময় temporary file লেখার permission error হয়েছে। তাই OpenCV install হয়নি, code-ও runtime-এ চালিয়ে যাচাই করা যায়নি।
+এখনো detector, body-region model, tracker, alignment calculation বা dashboard তৈরি হয়নি।
 
 ## কাজের roadmap
 
 | ধাপ | কাজ | ধাপ শেষে যা পাওয়া যাবে | অবস্থা |
 |---|---|---|---|
-| 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | Code লেখা; install ও runtime verification বাকি |
-| 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Code লেখা; install ও runtime verification বাকি |
-| 3. প্রাথমিক detection | উপযুক্ত pretrained detector যোগ করা; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | শুরু হয়নি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | শুরু হয়নি |
+| 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
+| 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
+| 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | Code ও প্রথম sample inference হয়েছে; false positive বেশি |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | দুই screenshot ও একটি video frame দিয়ে শুরু হয়েছে |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Confidence-সহ region estimate | শুরু হয়নি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | শুরু হয়নি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | শুরু হয়নি |
@@ -84,6 +97,25 @@ with VideoReader("data/input/videos/clip.mp4") as reader:
     print(frame.index, frame.timestamp_seconds, frame.pixels.shape)
 ```
 
+## M3: person-candidate detection
+
+Detector class হিসেবে `person candidate` ফেরত দেয়; enemy/team পরিচয় দাবি করে না। Screenshot-এ চালাতে:
+
+```powershell
+python -m vantasight "data/input/screenshots/ss-1.png" --detect-persons
+python -m vantasight "data/input/screenshots/ss-2.png" --detect-persons
+```
+
+Video frame 3000-এ চালাতে:
+
+```powershell
+python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --detect-persons --max-side 2560 --exclude-region 0,620,530,960
+```
+
+Model image-কে ভিতরে resize করতে পারে, কিন্তু bounding box original source resolution-এ ফেরত দেয়। Webcam inset-এর মত region বাদ দিতে original-image pixel coordinate-এ `--exclude-region x1,y1,x2,y2` ব্যবহার করা যায়। Replay silhouette ও game HUD-কে enemy বলে ধরে নেওয়া হবে না।
+
+বর্তমান baseline COCO dataset-এর ordinary-person example-এ প্রশিক্ষিত; Valorant footage-এর জন্য তৈরি নয়। তাই result কেবল candidate—miss ও false positive হাতে পর্যালোচনা করতে হবে। Weight ও license detail: [MODEL_CARDS.md](MODEL_CARDS.md)।
+
 ## ছবি ও ভিডিও GitHub-এ যাবে কি?
 
 `data/input/screenshots/` এবং `data/input/videos/`-এর media Git ignore করা আছে। তাই স্বাভাবিক `git add`, commit ও push-এ ছবিগুলো বা ভিডিও GitHub-এ যাবে না। `git add -f` দিয়ে জোর করে যোগ করলে upload হতে পারে—ইচ্ছা করে না করলে এমন করবে না। `data/previews/`-এর তৈরি preview-ও Git ignore করা।
@@ -99,7 +131,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1 ও M2 runtime-এ যাচাই করতে OpenCV install করতে হবে। `data/input/videos/` folder-এ একটি ছোট recorded video রাখলে আমরা frame preview পরীক্ষা করতে পারব। M3-তে গেলে screenshot-ও কাজে লাগবে। Footage ছাড়াও code structure এগোনো যাবে, তবে বাস্তব উদাহরণে frame preview বা detection-এর মান যাচাই করা যাবে না।
+M1, M2 এবং M3-এর প্রথম runtime inference হয়েছে। Webcam exclusion region কাজ করেছে, তবে HUD/weapon false positive রয়ে গেছে। পরের কাজ হলো UI/replay overlay-এর false positive আলাদা করা এবং enemy আছে/নেই—দুই ধরনের আরও sample দিয়ে review করা। এখনই নতুন file দিতে হবে না; বিদ্যমান sample থেকেই পরের code ধাপ এগোবে।
 
 ## ভাষার নিয়ম
 

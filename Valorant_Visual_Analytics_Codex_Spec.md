@@ -69,6 +69,21 @@ pipeline is reliable and after checking applicable game/platform rules.
 -   Do not assume every detected human-shaped object is an enemy. Team
     identity may be unknown unless visually and reliably supported by
     the input.
+-   Enemy visibility is intermittent in normal gameplay. Frames with no
+    visible enemy are valid negative samples, and the tracker must not
+    invent a current target when a detection is absent.
+-   Treat stream webcam/face-cam regions as broadcast overlays, not
+    in-game player candidates. For the supplied `vd-1.mp4`, the webcam
+    inset does not cover the gameplay area or its enemies; do not discard
+    the full frame because the inset is present.
+-   Distinguish enemy character models rendered in the gameplay scene
+    from replay/spectator highlighting silhouettes and other HUD marks.
+    Unless a separate overlay-analysis task is explicitly defined, replay
+    highlights are not ground-truth visible-player detections.
+-   Preserve the source frame resolution and original coordinate map.
+    Small or distant enemies remain valid targets even when they occupy
+    few pixels. Any inference resize must preserve mapping to source
+    coordinates and evaluation must include small targets.
 
 ### 2.3 Body-region analysis
 
@@ -164,7 +179,11 @@ flowchart TD
 ## 4. Suggested Technology Stack
 
 Use a modular design. Do not install every library before confirming the
-project needs it.
+project needs it. The initial person-candidate baseline uses TorchVision's
+COCO-pretrained Faster R-CNN MobileNetV3-Large FPN; see `docs/MODEL_CARDS.md`
+for weight source, license notes, and limitations. It reports `person`, not
+enemy/team identity. Ultralytics is not the initial dependency because its
+AGPL-3.0 license may require changing the repository's GPL-3.0 licensing.
 
   -----------------------------------------------------------------------
   Area                    Suggested technology    Purpose
@@ -396,6 +415,12 @@ silently present stale results as live results.
 -   Measure precision, recall, and F1.
 -   Review false positives and missed player characters.
 -   Test different resolutions, lighting, effects, and occlusions.
+-   Include both enemy-present and enemy-absent frames, including
+    sequences where an enemy appears intermittently.
+-   Review broadcast webcam overlays separately so the streamer is not
+    counted as an in-game enemy.
+-   Include small/distant targets and preserve original-resolution
+    coordinates when preprocessing frames.
 
 ### Phase 3 --- Body-region estimation
 
