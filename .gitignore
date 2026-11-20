@@ -225,6 +225,14 @@ __marimo__/
 # VantaSight local inputs and generated reports
 data/input/*
 !data/input/.gitkeep
+!data/input/screenshots/
+!data/input/videos/
+data/input/screenshots/*
+!data/input/screenshots/.gitkeep
+data/input/videos/*
+!data/input/videos/.gitkeep
+data/previews/*
+!data/previews/.gitkeep
 data/annotations/*
 !data/annotations/.gitkeep
 data/samples/*

@@ -82,3 +82,23 @@ class VideoReader:
             timestamp = self._capture.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
             yield VideoFrame(index=index, timestamp_seconds=timestamp, pixels=pixels)
             index += 1
+
+    def read_frame(self, frame_index: int) -> VideoFrame:
+        """Read one zero-based frame by index, seeking instead of decoding earlier frames."""
+
+        if self._capture is None:
+            raise RuntimeError("Use VideoReader inside a 'with' block before reading frames")
+        if frame_index < 0:
+            raise ValueError("Frame index must be zero or greater")
+        if self.info is not None and self.info.frame_count > 0 and frame_index >= self.info.frame_count:
+            raise IndexError(
+                f"Frame index {frame_index} is outside the video ({self.info.frame_count} frames)"
+            )
+
+        self._capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        success, pixels = self._capture.read()
+        if not success:
+            raise IndexError(f"Could not decode video frame {frame_index}")
+
+        timestamp = self._capture.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+        return VideoFrame(index=frame_index, timestamp_seconds=timestamp, pixels=pixels)
