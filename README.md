@@ -4,7 +4,7 @@
 
 VantaSight is a computer-vision research project. The first target is Valorant footage; the input and analytics pipeline should remain reusable for other FPS or online games later. It aims to measure candidate detections, visible body-region estimates, tracking quality, and crosshair alignment. It does not control a game or automate player input.
 
-The first milestone provides a small Python package for reading screenshots and videos and inspecting their metadata. Detection and analytics will be added only after the input pipeline is established.
+The input foundation and frame preview are implemented. An optional baseline person-candidate detector is available for offline screenshots and selected video frames; it is a research baseline and does not identify enemies or teams.
 
 ## Requirements
 
@@ -75,7 +75,7 @@ python -m vantasight "data/input/screenshots/ss-2.png" --detect-persons
 python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --detect-persons --max-side 2560 --exclude-region 0,620,530,960
 ```
 
-Annotated previews go to `data/previews/` by default. `--max-side` controls internal detector resizing; reported bounding boxes map back to the original input resolution. Exclusion rectangles can be passed in source pixels with repeatable `--exclude-region x1,y1,x2,y2` options, for example to mask the `vd-1.mp4` webcam inset. The example region is specific to that video; other files need their own region coordinates.
+Annotated previews go to `data/previews/` by default. `--max-side` controls internal detector resizing; reported bounding boxes map back to the original input resolution. Per-file exclusion rectangles are stored in the local, Git-ignored `data/annotations/source_regions.json`; the default file is loaded automatically by source filename. For one-off adjustments, repeat `--exclude-region x1,y1,x2,y2`. Region coordinates use source pixels, so each video or screenshot needs its own coordinates. These masks skip candidate boxes whose centers fall inside the marked areas; they do not crop or resize the source file.
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the step-by-step roadmap, current progress, and plain-language notes about each component.
 

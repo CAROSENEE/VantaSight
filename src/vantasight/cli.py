@@ -1,6 +1,7 @@
 """Command-line input inspector for VantaSight."""
 
 import argparse
+import json
 from pathlib import Path
 
 from vantasight.input import VideoReader, load_image
@@ -34,13 +35,15 @@ def _detect_and_save(
     pixels,
     args: argparse.Namespace,
     output_path: Path,
+    asset_name: str,
 ) -> None:
+    configured_regions = _load_excluded_regions(args.regions_file, asset_name)
     detector = TorchvisionPersonDetector(
         confidence_threshold=args.confidence_threshold,
         device=args.device,
         min_size=min(1080, args.max_side),
         max_size=args.max_side,
-        excluded_regions=args.exclude_region or (),
+        excluded_regions=(*configured_regions, *(args.exclude_region or ())),
     )
     detections = detector.detect(pixels)
     print(f"Device: {detector.device}")
@@ -54,6 +57,40 @@ def _detect_and_save(
     annotated = render_detections(pixels, detections)
     saved_path = save_annotated_image(annotated, output_path)
     print(f"Annotated preview: {saved_path}")
+
+
+def _load_excluded_regions(
+    regions_file: Path,
+    asset_name: str,
+) -> tuple[tuple[int, int, int, int], ...]:
+    """Load optional per-input exclusion rectangles from a local JSON file."""
+
+    if not regions_file.is_file():
+        return ()
+    try:
+        document = json.loads(regions_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Could not read exclusion regions from {regions_file}: {exc}") from exc
+
+    if not isinstance(document, dict):
+        raise ValueError(f"Expected an object at the top level of {regions_file}")
+    asset_regions = document.get(asset_name, [])
+    if not isinstance(asset_regions, list):
+        raise ValueError(f"Expected a list of regions for {asset_name} in {regions_file}")
+
+    regions: list[tuple[int, int, int, int]] = []
+    for index, record in enumerate(asset_regions):
+        box = record.get("box_xyxy") if isinstance(record, dict) else None
+        if not isinstance(box, list) or len(box) != 4 or not all(type(n) is int for n in box):
+            raise ValueError(
+                f"Region {index} for {asset_name} must have integer box_xyxy: [x1, y1, x2, y2]"
+            )
+        x1, y1, x2, y2 = box
+        if x1 < x2 and y1 < y2:
+            regions.append((x1, y1, x2, y2))
+        else:
+            raise ValueError(f"Region {index} for {asset_name} has invalid coordinates: {box}")
+    return tuple(regions)
 
 
 def main() -> int:
@@ -100,6 +137,12 @@ def main() -> int:
         action="append",
         help="Ignore detections centered inside x1,y1,x2,y2 source-pixel rectangle; may be repeated",
     )
+    parser.add_argument(
+        "--regions-file",
+        type=Path,
+        default=Path("data/annotations/source_regions.json"),
+        help="Optional per-input exclusion regions JSON (default: data/annotations/source_regions.json)",
+    )
     args = parser.parse_args()
     path: Path = args.input
 
@@ -113,7 +156,7 @@ def main() -> int:
             print(f"Type: image\nPath: {image.path}\nResolution: {image.width}x{image.height}")
             if args.detect_persons:
                 output = args.output or Path("data/previews") / f"{path.stem}_detections.png"
-                _detect_and_save(image.pixels, args, output)
+                _detect_and_save(image.pixels, args, output, path.name)
             return 0
 
         if args.output is not None and args.frame_index is None:
@@ -148,7 +191,7 @@ def main() -> int:
                         output = Path("data/previews") / (
                             f"{path.stem}_frame_{args.frame_index:06d}_detections.png"
                         )
-                    _detect_and_save(frame.pixels, args, output)
+                    _detect_and_save(frame.pixels, args, output, path.name)
                 else:
                     saved_path = save_frame_preview(frame, output)
                     print(

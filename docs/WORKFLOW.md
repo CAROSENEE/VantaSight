@@ -11,9 +11,10 @@
 - **M1 — Input foundation:** image loader, video metadata reader ও CLI লেখা এবং `vd-1.mp4` দিয়ে runtime-এ যাচাই করা হয়েছে।
 - **M2 — Frame preview:** নির্দিষ্ট video frame পড়া ও preview image save করা হয়েছে। Frame index 3540 (29.5 সেকেন্ড) সফলভাবে বের হয়েছে: `data/previews/vd-1_frame_003540.png`। ছয়টি অতিরিক্ত সময়ে frame দেখে contact sheet বানানো হয়েছে: `data/previews/vd-1_contact-sheet.jpg`।
 - **M3 — Baseline detection:** TorchVision COCO `person candidate` detector যোগ করে `ss-1`, `ss-2` এবং `vd-1`-এর frame 3000-এ runtime inference করা হয়েছে।
-- `ss-1`-এ doorway character candidate confidence 0.286-এ ধরা পড়েছে; একই সঙ্গে HUD-এর portrait/red mark-এ false positive এসেছে। `ss-2`-এর in-world negative sample-এ 3টি HUD/weapon false positive এসেছে।
-- `vd-1` frame 3000-এ gameplay character candidate confidence 0.963-এ ধরা পড়েছে; webcam inset ও HUD-ও candidate হয়েছে। এটা baseline মাত্র—এ ফল থেকে detection accuracy দাবি করা যাবে না।
-- ওই frame-এ webcam region `0,620,530,960` বাদ দিয়ে পুনরায় চালালে candidate 10 থেকে 8 হয়েছে; webcam-এর দুটি candidate বাদ গেছে এবং gameplay character candidate রয়ে গেছে। HUD/weapon false positive এখনো আছে। এই coordinate শুধু `vd-1`-এর জন্য।
+- প্রথম inference-এ `ss-1`-এর doorway character candidate confidence 0.286-এ ধরা পড়ে; HUD-তেও false positive ছিল। `ss-2`-এর in-world negative sample-এ 3টি HUD/weapon false positive আসে। `vd-1` frame 3000-এ character candidate confidence 0.963-এ ধরা পড়ে, তবে webcam/HUD/weapon-ও candidate হয়েছিল।
+- এরপর প্রতিটি source-এর জন্য আলাদা exclusion rectangle `data/annotations/source_regions.json`-এ যোগ করা হয়েছে। Mask candidate বাদ দেয়, source frame crop বা resize করে না; detection box মূল resolution-এই ফেরত আসে।
+- Mask-এর পর `ss-1`-এ doorway candidate (0.286) রয়ে গেছে। `ss-2`-এ একটি arm/weapon false positive (0.256) এখনো আছে। `vd-1` frame 3000-এ gameplay candidate (0.963) রয়ে গেছে, সঙ্গে first-person arm/weapon-এর 2টি false positive আছে।
+- Mask কিছু HUD ও webcam false positive কমিয়েছে, কিন্তু baseline model এখনো Valorant enemy চিনতে পারে না। এগুলো হাতে দেখা sample; accuracy metric নয়।
 - OpenCV `5.1.0.95` ও project package virtual environment-এ install হয়েছে।
 - `vd-1.mp4`-এর metadata: 59 সেকেন্ড, 2560×1440, 120 FPS, 7,080 frame, ফাইল প্রায় 203 MB।
 - 5, 15, 25, 35, 45 ও 55 সেকেন্ডের frame sample দেখা হয়েছে; এটি পুরো video review নয়। 25 ও 45 সেকেন্ডের sample-এ opponent দেখা যায়, তবে দূরে ও ছোট। সব frame-এ enemy থাকবে এমন নয়—enemy কিছু সময় অনুপস্থিত থেকে পরে দেখা দিতে পারে, সেটি স্বাভাবিক।
@@ -37,8 +38,8 @@
 |---|---|---|---|
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
-| 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | Code ও প্রথম sample inference হয়েছে; false positive বেশি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | দুই screenshot ও একটি video frame দিয়ে শুরু হয়েছে |
+| 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | দুই screenshot ও একটি video frame review হয়েছে; বিস্তৃত review বাকি |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Confidence-সহ region estimate | শুরু হয়নি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | শুরু হয়নি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | শুরু হয়নি |
@@ -112,7 +113,7 @@ Video frame 3000-এ চালাতে:
 python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --detect-persons --max-side 2560 --exclude-region 0,620,530,960
 ```
 
-Model image-কে ভিতরে resize করতে পারে, কিন্তু bounding box original source resolution-এ ফেরত দেয়। Webcam inset-এর মত region বাদ দিতে original-image pixel coordinate-এ `--exclude-region x1,y1,x2,y2` ব্যবহার করা যায়। Replay silhouette ও game HUD-কে enemy বলে ধরে নেওয়া হবে না।
+Model image-কে ভিতরে resize করতে পারে, কিন্তু bounding box original source resolution-এ ফেরত দেয়। Per-file HUD/webcam exclusion `data/annotations/source_regions.json`-এ রাখা হয়; `--exclude-region x1,y1,x2,y2` দিয়ে অতিরিক্ত region যোগ করা যায়। এগুলো full-resolution frame crop করে না—চিহ্নিত region-এর মধ্যে center থাকা detection candidate বাদ দেয়। Replay silhouette ও game HUD-কে enemy বলে ধরে নেওয়া হবে না।
 
 বর্তমান baseline COCO dataset-এর ordinary-person example-এ প্রশিক্ষিত; Valorant footage-এর জন্য তৈরি নয়। তাই result কেবল candidate—miss ও false positive হাতে পর্যালোচনা করতে হবে। Weight ও license detail: [MODEL_CARDS.md](MODEL_CARDS.md)।
 
@@ -131,7 +132,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1, M2 এবং M3-এর প্রথম runtime inference হয়েছে। Webcam exclusion region কাজ করেছে, তবে HUD/weapon false positive রয়ে গেছে। পরের কাজ হলো UI/replay overlay-এর false positive আলাদা করা এবং enemy আছে/নেই—দুই ধরনের আরও sample দিয়ে review করা। এখনই নতুন file দিতে হবে না; বিদ্যমান sample থেকেই পরের code ধাপ এগোবে।
+M1, M2 এবং M3-এর প্রথম runtime inference হয়েছে। Per-source exclusion mask যোগ করে HUD/webcam false positive কিছুটা কমেছে; `ss-2`-এর weapon/arm এবং `vd-1`-এর first-person weapon/arm এখনো ভুল candidate হচ্ছে। পরের কাজ হলো এই false positive-গুলোর জন্য নিরাপদ ও পুনর্ব্যবহারযোগ্য handling করা এবং বিদ্যমান `vd-1`-এর একাধিক frame পরীক্ষা করা। এখনই নতুন file দিতে হবে না। পরে detector-কে ভালোভাবে মাপতে হলে enemy আছে ও নেই—দুই ধরনের representative sample-এ হাতে label লাগবে।
 
 ## ভাষার নিয়ম
 
