@@ -221,3 +221,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# VantaSight local inputs and generated reports
+data/input/*
+!data/input/.gitkeep
+data/annotations/*
+!data/annotations/.gitkeep
+data/samples/*
+!data/samples/.gitkeep
+reports/*
+!reports/.gitkeep
+
+.task-tmp/

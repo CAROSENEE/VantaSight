@@ -1,0 +1,3 @@
+"""VantaSight offline visual analytics package."""
+
+__version__ = "0.1.0"
