@@ -109,6 +109,8 @@ def main() -> int:
             "video", "scored_frames", "positive_frames", "negative_frames", "ground_truth_boxes",
             "candidate_detections", "iou_threshold", "average_precision_101_point",
             "mean_ap_over_reported_iou_thresholds", "label_provenance", "unreviewed_scored_frames",
+            "model_architecture", "model_weights", "confidence_floor", "max_side", "device",
+            "excluded_region_count", "ap_method",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)
@@ -126,6 +128,13 @@ def main() -> int:
                     "mean_ap_over_reported_iou_thresholds": f"{mean_ap:.9f}",
                     "label_provenance": provenance,
                     "unreviewed_scored_frames": unreviewed_scored_frames,
+                    "model_architecture": "torchvision_fasterrcnn_mobilenet_v3_large_fpn",
+                    "model_weights": "COCO_V1",
+                    "confidence_floor": "0.0",
+                    "max_side": args.max_side,
+                    "device": str(detector.device),
+                    "excluded_region_count": len(regions),
+                    "ap_method": "101_point_interpolated_greedy_one_to_one",
                 })
 
         print(f"Device: {detector.device}")

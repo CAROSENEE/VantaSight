@@ -121,7 +121,7 @@ To evaluate confidence-ranked box localization over IoU thresholds `0.50` throug
 python tools/evaluate_iou_ap.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output reports/vd-1_iou_ap.csv
 ```
 
-The report uses 101-point interpolated AP, matching each prediction to at most one ground-truth box in its own frame. It is a small-sample research metric, not the full COCO evaluation protocol (which also defines max-detection and area rules). Unreviewed annotations require `--allow-unreviewed-labels` and remain marked exploratory.
+The report uses 101-point interpolated AP, matching each prediction to at most one ground-truth box in its own frame. It records model/weights, confidence floor, resize limit, device, exclusion-region count, and AP method. It is a small-sample research metric, not the full COCO evaluation protocol (which also defines max-detection and area rules). Unreviewed annotations require `--allow-unreviewed-labels` and remain marked exploratory.
 
 Load the confidence sweep and IoU AP report beside the matching video report in the offline dashboard with:
 

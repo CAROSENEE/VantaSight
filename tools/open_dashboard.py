@@ -179,6 +179,12 @@ def main(argv: list[str] | None = None) -> int:
             f"{first.ground_truth_boxes} boxes): mean over {len(iou_ap)} IoU thresholds "
             f"{first.mean_average_precision:.3f} | " + ap_values
         )
+        if first.model_architecture is not None:
+            ap_text += (
+                f" | {first.model_architecture} {first.model_weights}, score floor "
+                f"{first.confidence_floor:.2f}, max side {first.max_side}px, device {first.device}, "
+                f"excluded regions {first.excluded_region_count}"
+            )
     else:
         ap_text = "IoU AP: not available for this source (manual box labels required)."
     ttk.Label(header, text=ap_text, wraplength=1150).pack(anchor="w", pady=(4, 0))

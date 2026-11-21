@@ -63,6 +63,13 @@ class AveragePrecisionPoint:
     ground_truth_boxes: int
     candidate_detections: int
     label_provenance: str
+    model_architecture: str | None = None
+    model_weights: str | None = None
+    confidence_floor: float | None = None
+    max_side: int | None = None
+    device: str | None = None
+    excluded_region_count: int | None = None
+    ap_method: str | None = None
 
 
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
@@ -299,6 +306,13 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
         }
         if reader.fieldnames is None or not required.issubset(reader.fieldnames):
             raise ValueError(f"IoU AP CSV is missing required columns: {path}")
+        metadata_columns = {
+            "model_architecture", "model_weights", "confidence_floor", "max_side", "device",
+            "excluded_region_count", "ap_method",
+        }
+        has_metadata = metadata_columns.issubset(reader.fieldnames)
+        if metadata_columns.intersection(reader.fieldnames) and not has_metadata:
+            raise ValueError(f"IoU AP CSV has incomplete model metadata: {path}")
         for row in reader:
             if row.get("video") != video_name:
                 continue
@@ -313,6 +327,17 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                 mean_ap = float(row["mean_ap_over_reported_iou_thresholds"])
                 raw_ap = row["average_precision_101_point"].strip()
                 average_precision = float(raw_ap) if raw_ap else None
+                metadata = None
+                if has_metadata:
+                    metadata = (
+                        row["model_architecture"].strip(),
+                        row["model_weights"].strip(),
+                        float(row["confidence_floor"]),
+                        int(row["max_side"]),
+                        row["device"].strip(),
+                        int(row["excluded_region_count"]),
+                        row["ap_method"].strip(),
+                    )
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid IoU AP values in {path}") from exc
             provenance = row.get("label_provenance", "")
@@ -336,9 +361,20 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                 or (provenance == "manually_reviewed" and unreviewed_frames != 0)
             ):
                 raise ValueError(f"Invalid IoU AP sample metadata in {path}")
+            if metadata is not None and (
+                not metadata[0]
+                or not metadata[1]
+                or not math.isfinite(metadata[2])
+                or not 0 <= metadata[2] <= 1
+                or metadata[3] < 1
+                or not metadata[4]
+                or metadata[5] < 0
+                or metadata[6] != "101_point_interpolated_greedy_one_to_one"
+            ):
+                raise ValueError(f"Invalid IoU AP model metadata in {path}")
             contexts.add((
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
-                candidate_detections, mean_ap, provenance, unreviewed_frames,
+                candidate_detections, mean_ap, provenance, unreviewed_frames, metadata,
             ))
             points.append(AveragePrecisionPoint(
                 iou_threshold=threshold,
@@ -350,6 +386,13 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                 ground_truth_boxes=ground_truth_boxes,
                 candidate_detections=candidate_detections,
                 label_provenance=provenance,
+                model_architecture=metadata[0] if metadata else None,
+                model_weights=metadata[1] if metadata else None,
+                confidence_floor=metadata[2] if metadata else None,
+                max_side=metadata[3] if metadata else None,
+                device=metadata[4] if metadata else None,
+                excluded_region_count=metadata[5] if metadata else None,
+                ap_method=metadata[6] if metadata else None,
             ))
     if not points:
         return None
