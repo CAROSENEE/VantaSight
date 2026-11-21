@@ -55,7 +55,7 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
-| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay, detector/pose summary, confidence sweep ও IoU/AP curve-সহ dashboard আছে; Windows-এ পূর্ণ UI visual review বাকি |
+| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay, detector/pose summary, confidence sweep ও IoU/AP curve-সহ dashboard আছে; Windows launcher যোগ হয়েছে, পূর্ণ UI visual review বাকি |
 | 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector, screenshot-presence, pose ও AP evaluator আছে; provisional result আছে, user-verified representative labels এবং pose-region evaluation বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
@@ -466,3 +466,7 @@ Threshold-sweep ও IoU/AP evaluator-ও source video hash করে, analysis �
 ### M52: সাধারণ video frame preview-এর output option ঠিক করা
 
 README-তে দেখানো `--frame-index ... --output ...` command বাস্তবে চলছিল না: CLI ভুলভাবে `--detect-persons` বাধ্যতামূলক করছিল, যদিও plain frame preview-র জন্য detector লাগে না। Validation বদলে এখন video-র নির্দিষ্ট frame-এর সাধারণ preview-তে custom `--output` চলে; pose-only analysis-এ ভুল করে `--output` দিলে `--pose-output` ব্যবহারের নির্দেশ দেয়। `.venv` দিয়ে `vd-1.mp4` frame `3000` extract করে custom ও default path-এ PNG পাওয়া গেছে; দুই ফাইলের SHA-256 একই (`E307893F…8B004CF`)। Metadata: `2560×1440`, `120 FPS`, 7080 frame, duration 59s; frame 3000 timestamp 25.000s। PNG-টি সরাসরি দেখে নিশ্চিত হয়েছি যে সম্পূর্ণ captured frame, streamer inset-সহ, preview-তে আছে। Preview ও source video local ignored data—Git commit-এ যোগ হয়নি। Manual annotation এই ধাপের অংশ নয় এবং এখনো করা হয়নি।
+
+### M53: Windows-এ local dashboard launcher
+
+`tools/start_vd1_dashboard.bat` যোগ হয়েছে। এটি `.venv`, local `vd-1.mp4`, tracking JSON, fingerprint-সহ threshold-sweep CSV এবং IoU/AP CSV আছে কি না দেখে, তারপর একই reports-সহ offline Tk dashboard চালায়। কোনো input না থাকলে কোন file অনুপস্থিত এবং README-র কোন অংশ দেখতে হবে তা console-এ দেখায়। README-তে launcher-এর ব্যবহার লেখা হয়েছে। Batch file ও argument path staticভাবে যাচাই করা হয়েছে; Windows desktop lock screen-এ থাকায় launcher চালিয়ে dashboard window দেখা এই ধাপে সম্ভব হয়নি। UI visual QA এখনো pending; annotation চালানো হয়নি।
