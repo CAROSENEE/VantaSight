@@ -6,6 +6,7 @@ import csv
 from dataclasses import dataclass
 import math
 from pathlib import Path
+import re
 import statistics
 
 from vantasight.analytics import DetectionCounts, calculate_metrics
@@ -54,6 +55,7 @@ class ThresholdSweepPoint:
     max_side: int | None = None
     preserve_source_resolution: bool | None = None
     target_height_groups: dict[str, dict[str, int | float | None]] | None = None
+    source_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +77,7 @@ class AveragePrecisionPoint:
     excluded_region_count: int | None = None
     ap_method: str | None = None
     preserve_source_resolution: bool | None = None
+    source_sha256: str | None = None
 
 
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
@@ -162,7 +165,9 @@ def load_pose_evaluation(path: Path, video_name: str) -> list[PoseRegionSummary]
     return summaries
 
 
-def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoint] | None:
+def load_threshold_sweep(
+    path: Path, video_name: str, expected_source_sha256: str | None = None
+) -> list[ThresholdSweepPoint] | None:
     """Load and validate confidence-sweep metrics for one source video."""
     if not path.is_file():
         return None
@@ -189,6 +194,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
         has_resize_metadata = resize_columns.issubset(reader.fieldnames)
         if bool(resize_columns.intersection(reader.fieldnames)) and not has_resize_metadata:
             raise ValueError(f"Threshold sweep CSV has incomplete inference resize metadata: {path}")
+        has_source_fingerprint = "source_sha256" in reader.fieldnames
         group_names = ("tiny", "small", "medium", "large")
         group_metrics = ("ground_truth_boxes", "matched_boxes", "missed_boxes", "recall")
         size_columns = {"target_height_group_basis"} | {
@@ -265,8 +271,15 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                         ):
                             raise ValueError(f"Invalid {group} target-height metrics")
                         target_height_groups[group] = {**group_counts, "recall": group_recall}
+                source_sha256 = None
+                if has_source_fingerprint:
+                    source_sha256 = row["source_sha256"].strip()
+                    if re.fullmatch(r"[0-9a-f]{64}", source_sha256) is None:
+                        raise ValueError("source_sha256 must be a lowercase 64-character SHA-256 digest")
+                    if expected_source_sha256 is not None and source_sha256 != expected_source_sha256:
+                        raise ValueError("threshold sweep source fingerprint does not match the tracking report")
             except (KeyError, TypeError, ValueError) as exc:
-                raise ValueError(f"Invalid threshold sweep values in {path}") from exc
+                raise ValueError(f"Invalid threshold sweep values in {path}: {exc}") from exc
             provenance = row.get("label_provenance", "")
             if not math.isfinite(threshold) or not 0 <= threshold <= 1:
                 raise ValueError(f"Invalid confidence threshold in {path}")
@@ -309,6 +322,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
                 provenance, unreviewed_frames, iou_threshold, timing, resize_metadata,
                 row.get("target_height_group_basis") if has_size_metrics else None,
+                source_sha256,
             ))
             expected_metrics = calculate_metrics(DetectionCounts(*counts))
             for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
@@ -342,6 +356,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                     max_side=resize_metadata[1] if resize_metadata else None,
                     preserve_source_resolution=preserve_source_resolution,
                     target_height_groups=target_height_groups,
+                    source_sha256=source_sha256,
                 )
             )
     if not points:
@@ -366,7 +381,9 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
     return points
 
 
-def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePrecisionPoint] | None:
+def load_iou_average_precision(
+    path: Path, video_name: str, expected_source_sha256: str | None = None
+) -> list[AveragePrecisionPoint] | None:
     """Load 101-point AP values across IoU thresholds for one source video."""
     if not path.is_file():
         return None
@@ -389,6 +406,7 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
         if metadata_columns.intersection(reader.fieldnames) and not has_metadata:
             raise ValueError(f"IoU AP CSV has incomplete model metadata: {path}")
         has_resolution_metadata = "preserve_source_resolution" in reader.fieldnames
+        has_source_fingerprint = "source_sha256" in reader.fieldnames
         for row in reader:
             if row.get("video") != video_name:
                 continue
@@ -420,8 +438,15 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                     if raw_resolution_mode not in {"true", "false"}:
                         raise ValueError("preserve_source_resolution must be true or false")
                     preserve_source_resolution = raw_resolution_mode == "true"
+                source_sha256 = None
+                if has_source_fingerprint:
+                    source_sha256 = row["source_sha256"].strip()
+                    if re.fullmatch(r"[0-9a-f]{64}", source_sha256) is None:
+                        raise ValueError("source_sha256 must be a lowercase 64-character SHA-256 digest")
+                    if expected_source_sha256 is not None and source_sha256 != expected_source_sha256:
+                        raise ValueError("IoU AP source fingerprint does not match the tracking report")
             except (KeyError, TypeError, ValueError) as exc:
-                raise ValueError(f"Invalid IoU AP values in {path}") from exc
+                raise ValueError(f"Invalid IoU AP values in {path}: {exc}") from exc
             provenance = row.get("label_provenance", "")
             if not math.isfinite(threshold) or not 0 < threshold <= 1:
                 raise ValueError(f"Invalid IoU threshold in {path}")
@@ -458,6 +483,7 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
                 candidate_detections, mean_ap, provenance, unreviewed_frames, metadata,
                 preserve_source_resolution,
+                source_sha256,
             ))
             points.append(AveragePrecisionPoint(
                 iou_threshold=threshold,
@@ -477,6 +503,7 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                 excluded_region_count=metadata[5] if metadata else None,
                 ap_method=metadata[6] if metadata else None,
                 preserve_source_resolution=preserve_source_resolution,
+                source_sha256=source_sha256,
             ))
     if not points:
         return None

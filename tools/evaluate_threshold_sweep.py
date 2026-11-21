@@ -16,7 +16,7 @@ from vantasight.analytics import (
     validated_opponent_boxes,
 )
 from vantasight.cli import _load_excluded_regions
-from vantasight.input import VideoReader, verify_frame_fingerprint
+from vantasight.input import VideoReader, file_sha256, verify_frame_fingerprint
 from vantasight.vision import TorchvisionPersonDetector
 
 
@@ -65,6 +65,7 @@ def main() -> int:
     annotation_path = args.annotations.expanduser()
     output = args.output.expanduser()
     try:
+        source_sha256 = file_sha256(video)
         records = read_video_annotations(
             annotation_path, video.name, allow_unreviewed=args.allow_unreviewed_labels
         )
@@ -109,6 +110,8 @@ def main() -> int:
                 ))
         if not samples:
             raise ValueError("No scored frames remain after excluding uncertain annotations")
+        if file_sha256(video) != source_sha256:
+            raise RuntimeError("Source video changed during evaluation; refusing to write a mismatched report")
         sampled_analysis_elapsed_seconds = time.perf_counter() - analysis_started
         detector_latency_mean_ms = sum(inference_seconds) / len(inference_seconds) * 1000
         sampled_analysis_frames_per_second = len(samples) / sampled_analysis_elapsed_seconds
@@ -130,6 +133,7 @@ def main() -> int:
             "model_initialization_seconds", "inference_calls", "detector_latency_mean_ms",
             "sampled_analysis_elapsed_seconds", "sampled_analysis_frames_per_second",
             "device", "max_side", "preserve_source_resolution",
+            "source_sha256",
             "target_height_group_basis",
             *[
                 f"{group}_{metric}"
@@ -166,6 +170,7 @@ def main() -> int:
                     "device": str(detector.device),
                     "max_side": args.max_side,
                     "preserve_source_resolution": args.preserve_source_resolution,
+                    "source_sha256": source_sha256,
                 })
 
         print(f"Device: {detector.device}")

@@ -69,12 +69,18 @@ def main(argv: list[str] | None = None) -> int:
         detector_evaluation = load_detector_evaluation(detector_eval_path, report["source"]["file_name"])
         pose_evaluation = load_pose_evaluation(pose_eval_path, report["source"]["file_name"])
         threshold_sweep = (
-            load_threshold_sweep(args.threshold_sweep.expanduser(), report["source"]["file_name"])
+            load_threshold_sweep(
+                args.threshold_sweep.expanduser(), report["source"]["file_name"],
+                report["source"].get("source_sha256"),
+            )
             if args.threshold_sweep
             else None
         )
         iou_ap = (
-            load_iou_average_precision(args.iou_ap.expanduser(), report["source"]["file_name"])
+            load_iou_average_precision(
+                args.iou_ap.expanduser(), report["source"]["file_name"],
+                report["source"].get("source_sha256"),
+            )
             if args.iou_ap
             else None
         )

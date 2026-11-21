@@ -15,7 +15,7 @@ from vantasight.analytics import (
     validated_opponent_boxes,
 )
 from vantasight.cli import _load_excluded_regions
-from vantasight.input import VideoReader, verify_frame_fingerprint
+from vantasight.input import VideoReader, file_sha256, verify_frame_fingerprint
 from vantasight.vision import TorchvisionPersonDetector
 
 
@@ -57,6 +57,7 @@ def main() -> int:
     annotation_path = args.annotations.expanduser()
     output = args.output.expanduser()
     try:
+        source_sha256 = file_sha256(video)
         records = read_video_annotations(
             annotation_path, video.name, allow_unreviewed=args.allow_unreviewed_labels
         )
@@ -92,6 +93,8 @@ def main() -> int:
                 samples.append((predictions, ground_truth))
         if not samples:
             raise ValueError("No scored frames remain after excluding uncertain annotations")
+        if file_sha256(video) != source_sha256:
+            raise RuntimeError("Source video changed during evaluation; refusing to write a mismatched report")
 
         average_precisions = [
             evaluate_average_precision(samples, threshold) for threshold in args.iou_thresholds
@@ -112,7 +115,7 @@ def main() -> int:
             "candidate_detections", "iou_threshold", "average_precision_101_point",
             "mean_ap_over_reported_iou_thresholds", "label_provenance", "unreviewed_scored_frames",
             "model_architecture", "model_weights", "confidence_floor", "max_side", "device",
-            "preserve_source_resolution", "excluded_region_count", "ap_method",
+            "preserve_source_resolution", "source_sha256", "excluded_region_count", "ap_method",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)
@@ -135,6 +138,7 @@ def main() -> int:
                     "confidence_floor": "0.0",
                     "max_side": args.max_side,
                     "preserve_source_resolution": args.preserve_source_resolution,
+                    "source_sha256": source_sha256,
                     "device": str(detector.device),
                     "excluded_region_count": len(regions),
                     "ap_method": "101_point_interpolated_greedy_one_to_one",
