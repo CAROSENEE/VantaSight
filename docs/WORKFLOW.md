@@ -129,7 +129,7 @@ Model image-কে ভিতরে resize করতে পারে, কিন�
 Ground-truth box তৈরি করতে local desktop-এ চালাও:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 540,1080,1650,1800,3030,3210,3840,4650,4890,4980,6090,6480
 ```
 
 Window-তে `r` চেপে box mode-এ mouse drag করে প্রতিটি দৃশ্যমান in-world opponent-কে box করো। `y` = opponent দেখা যাচ্ছে, `n` = opponent দেখা যাচ্ছে না, `u` = নিশ্চিত নও, `Enter` = save করে পরের frame, `z` = শেষ box undo, `c` = সব box/point মুছে ফেলা, `q` = বন্ধ করা। Box মূল video resolution-এর pixel coordinate-এ save হয়; preview ছোট করা হলেও input frame বদলায় না। Streamer inset, teammate, নিজের first-person হাত/অস্ত্র, HUD বা replay silhouette-কে opponent box করবে না।
@@ -209,7 +209,7 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 User প্রস্তুত হয়ে annotation window নিজে দেখতে পারলে তখন blank review থেকে শুরু করবেন:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 540,1080,1650,1800,3030,3210,3840,4650,4890,4980,6090,6480 --output data/annotations/vd-1_user_verified.jsonl
 ```
 
 Frame ধরে দেখে user নিজে visible opponent-এর box/status নিশ্চিত করে save করবেন। Window দেখা যাচ্ছে কি না নিশ্চিত না হওয়া পর্যন্ত এই ধাপ শুরু হয়েছে বলা যাবে না; verified output user-পর্যবেক্ষণ ও save ছাড়া তৈরি হয়েছে বলে ধরা যাবে না। Evaluator কেবল user review শেষ হওয়ার পর আলাদা ধাপে চালানো হবে।
@@ -557,3 +557,9 @@ Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py repo
 ### M78: user review-এর জন্য deterministic frame shortlist
 
 `tools/create_review_shortlist.py` validated tracking report-এর sampled frame-গুলো ছয়টি chronological bin-এ ভাগ করে। প্রতি bin-এ সবচেয়ে ছোট person-candidate box থাকা একটি frame এবং থাকলে শূন্য person-candidate-সহ একটি frame বেছে নেয়। `vd-1_dashboard_tracks_dense.json`-এ চালিয়ে 12টি frame পেয়েছি: 6টি ছোট candidate-সহ ও 6টি zero-candidate। Output `reports/vd-1_manual_review_shortlist.csv`-এ frame index, timestamp, candidate count, source fingerprint ও selection reason আছে; এটি Git-ignored local review aid। Small box মানে enemy নয়, আর zero-candidate মানে enemy নেই—এমন নয়। কোনো label তৈরি বা evaluator চালানো হয়নি। README-তে command যোগ হয়েছে। Report-এ actual run দিয়ে যাচাই করেছি; test suite চালানো হয়নি। পরের review-তে CSV-এর frame index user নিজে দেখে annotation window দৃশ্যমান হলে তবেই label করবেন।
+
+### M79: shortlist-কে annotation-এর planned sample করা
+
+`vd-1_manual_review_shortlist.csv`-এর বর্তমান 12টি frame index `540,1080,1650,1800,3030,3210,3840,4650,4890,4980,6090,6480` annotation command ও Windows launcher-এ বসানো হয়েছে। এতে প্রতিটি chronological bin-এ model-এর সবচেয়ে ছোট candidate frame এবং candidate শূন্য থাকা frame—দুটিই review sample-এ আসে, তবে frame selection model output-ভিত্তিক; এটি label balance বা enemy presence নিশ্চিত করে না। Video বদলালে নতুন tracking report থেকে shortlist আবার তৈরি করে command/launcher-এর index হালনাগাদ করতে হবে। Threshold-sweep ও IoU/AP command-এর `--expected-frames`-ও একই sample list-এ মেলানো হয়েছে, যাতে পরে user-confirmed annotation করলে coverage gate সামঞ্জস্যপূর্ণ থাকে। কোনো annotation GUI চালানো বা label লেখা হয়নি।
+
+এই ধাপে Computer Use-এর `list_apps` আবার native pipe connection error দিয়েছে, তাই dashboard বা annotation window-এর দৃশ্যমানতা যাচাই হয়নি। User annotation পরে করবেন বলেছেন; launcher-এর update কেবল প্রস্তুতি, annotation সম্পন্ন হওয়ার প্রমাণ নয়। `ss-1`/`ss-2` presence evaluator চালিয়ে M17-এর pilot result (`TP=1, FP=1` @0.25) পুনরুৎপন্ন হয়েছে; sample n=2 হওয়ায় এটি নতুন general performance claim নয়। Test suite চালানো হয়নি।
