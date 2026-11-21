@@ -418,3 +418,9 @@ Annotation viewer প্রথমে frame render করে; zoom/pan, mouse dra
 ### M41: Windows-এ এক ক্লিকে annotation চালু
 
 `tools/start_vd1_annotation.bat` যোগ হয়েছে। এটি repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে provisional box suggestion-সহ `vd-1_user_verified.jsonl`-এ চালায়। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। README-তে double-click workflow যোগ হয়েছে। Shell থেকে launcher চালিয়ে frame 0-তে responsive annotation window পাওয়া গেছে; CUA window inventory Python HighGUI window-টি ফেরত দেয়নি, তাই user-visible visual confirmation ও Explorer double-click check বাকি।
+
+### M42: IoU-ভিত্তিক 101-point AP
+
+`evaluate_iou_ap.py` confidence score অনুযায়ী detections rank করে, frame-এর ভেতরে প্রতিটি prediction-কে সর্বোচ্চ একটি unmatched ground-truth box-এর সঙ্গে মেলায় এবং 101 recall point-এ interpolated AP হিসাব করে। Default-এ একই এক-pass inference data দিয়ে IoU `0.50` থেকে `0.95` পর্যন্ত 10টি threshold report হয়। Dashboard-এর `--iou-ap` option source video-র AP row ও mean দেখায়; loader sample composition, provenance, threshold uniqueness ও AP mean-এর consistency যাচাই করে।
+
+Provisional `vd-1` sample-এ 8 scored frame (4 positive/4 negative), 4 ground-truth box ও 88 candidate নিয়ে AP@0.50 `0.255`, AP@0.75 `0.051`, AP@0.90 `0.000`; 10 threshold-এ mean AP `0.143` হয়েছে। বেশি IoU-তে কম score box overlap দুর্বল হওয়ার ইঙ্গিত দেয়; তবে সব label provisional, তাই এটিকে detector accuracy বা model selection result বলা যাবে না। README-তে command ও metric limitation যোগ হয়েছে। Compile, CLI help, প্রকৃত video inference/CSV তৈরি এবং dashboard loader-এ 10-row report load pass করেছে; full unit suite চালানো হয়নি।

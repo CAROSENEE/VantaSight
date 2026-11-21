@@ -52,6 +52,19 @@ class ThresholdSweepPoint:
     sampled_analysis_frames_per_second: float | None = None
 
 
+@dataclass(frozen=True)
+class AveragePrecisionPoint:
+    iou_threshold: float
+    average_precision: float | None
+    mean_average_precision: float
+    scored_frames: int
+    positive_frames: int
+    negative_frames: int
+    ground_truth_boxes: int
+    candidate_detections: int
+    label_provenance: str
+
+
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
     """Aggregate per-frame TP/FP/FN for one source video from its evaluator CSV."""
 
@@ -268,4 +281,85 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
             raise ValueError(f"False negatives decrease with confidence threshold in {path}")
         if current.true_positives + current.false_negatives != truth_count:
             raise ValueError(f"Ground-truth count changes across thresholds in {path}")
+    return points
+
+
+def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePrecisionPoint] | None:
+    """Load 101-point AP values across IoU thresholds for one source video."""
+    if not path.is_file():
+        return None
+    points: list[AveragePrecisionPoint] = []
+    contexts: set[tuple[object, ...]] = set()
+    with path.open("r", encoding="utf-8-sig", newline="") as source:
+        reader = csv.DictReader(source)
+        required = {
+            "video", "scored_frames", "positive_frames", "negative_frames", "ground_truth_boxes",
+            "candidate_detections", "iou_threshold", "average_precision_101_point",
+            "mean_ap_over_reported_iou_thresholds", "label_provenance", "unreviewed_scored_frames",
+        }
+        if reader.fieldnames is None or not required.issubset(reader.fieldnames):
+            raise ValueError(f"IoU AP CSV is missing required columns: {path}")
+        for row in reader:
+            if row.get("video") != video_name:
+                continue
+            try:
+                scored_frames = int(row["scored_frames"])
+                positive_frames = int(row["positive_frames"])
+                negative_frames = int(row["negative_frames"])
+                ground_truth_boxes = int(row["ground_truth_boxes"])
+                candidate_detections = int(row["candidate_detections"])
+                unreviewed_frames = int(row["unreviewed_scored_frames"])
+                threshold = float(row["iou_threshold"])
+                mean_ap = float(row["mean_ap_over_reported_iou_thresholds"])
+                raw_ap = row["average_precision_101_point"].strip()
+                average_precision = float(raw_ap) if raw_ap else None
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid IoU AP values in {path}") from exc
+            provenance = row.get("label_provenance", "")
+            if not math.isfinite(threshold) or not 0 < threshold <= 1:
+                raise ValueError(f"Invalid IoU threshold in {path}")
+            if not math.isfinite(mean_ap) or not 0 <= mean_ap <= 1:
+                raise ValueError(f"Invalid mean AP in {path}")
+            if average_precision is not None and (
+                not math.isfinite(average_precision) or not 0 <= average_precision <= 1
+            ):
+                raise ValueError(f"Invalid AP value in {path}")
+            if (
+                scored_frames < 1
+                or min(positive_frames, negative_frames, ground_truth_boxes, candidate_detections) < 0
+                or positive_frames + negative_frames != scored_frames
+                or ground_truth_boxes < positive_frames
+                or (ground_truth_boxes > 0 and average_precision is None)
+                or (ground_truth_boxes == 0 and average_precision is not None)
+                or not 0 <= unreviewed_frames <= scored_frames
+                or provenance not in {"manually_reviewed", "unreviewed_exploratory"}
+                or (provenance == "manually_reviewed" and unreviewed_frames != 0)
+            ):
+                raise ValueError(f"Invalid IoU AP sample metadata in {path}")
+            contexts.add((
+                scored_frames, positive_frames, negative_frames, ground_truth_boxes,
+                candidate_detections, mean_ap, provenance, unreviewed_frames,
+            ))
+            points.append(AveragePrecisionPoint(
+                iou_threshold=threshold,
+                average_precision=average_precision,
+                mean_average_precision=mean_ap,
+                scored_frames=scored_frames,
+                positive_frames=positive_frames,
+                negative_frames=negative_frames,
+                ground_truth_boxes=ground_truth_boxes,
+                candidate_detections=candidate_detections,
+                label_provenance=provenance,
+            ))
+    if not points:
+        return None
+    points.sort(key=lambda point: point.iou_threshold)
+    if len({point.iou_threshold for point in points}) != len(points):
+        raise ValueError(f"Duplicate IoU threshold in {path}")
+    if len(contexts) != 1:
+        raise ValueError(f"Inconsistent IoU AP sample or provenance in {path}")
+    available_ap = [point.average_precision for point in points if point.average_precision is not None]
+    calculated_mean = sum(available_ap) / len(available_ap) if available_ap else None
+    if calculated_mean is None or not math.isclose(calculated_mean, points[0].mean_average_precision, abs_tol=1e-8):
+        raise ValueError(f"Mean AP does not match per-IoU values in {path}")
     return points

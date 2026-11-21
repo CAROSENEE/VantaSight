@@ -18,6 +18,7 @@ import numpy as np
 from vantasight.dashboard import load_tracking_report, summarize_alignment_errors
 from vantasight.dashboard.evaluation_summary import (
     load_detector_evaluation,
+    load_iou_average_precision,
     load_pose_evaluation,
     load_threshold_sweep,
 )
@@ -32,6 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--detector-evaluation", type=Path, help="Optional manual-label detector CSV")
     parser.add_argument("--pose-evaluation", type=Path, help="Optional manual-point pose CSV")
     parser.add_argument("--threshold-sweep", type=Path, help="Optional confidence-threshold sweep CSV")
+    parser.add_argument("--iou-ap", type=Path, help="Optional average precision report across IoU thresholds")
     args = parser.parse_args(argv)
 
     report_path = args.report.expanduser()
@@ -40,8 +42,8 @@ def main(argv: list[str] | None = None) -> int:
         source_is_image = report.get("analysis_type") == "offline_single_image_person_candidate_analysis"
         if source_is_image and args.video:
             raise ValueError("This is a screenshot report; pass its source with --image")
-        if source_is_image and args.threshold_sweep:
-            raise ValueError("Confidence threshold sweeps require a video report")
+        if source_is_image and (args.threshold_sweep or args.iou_ap):
+            raise ValueError("Confidence and IoU AP evaluations require a video report")
         if not source_is_image and args.image:
             raise ValueError("This is a video report; pass its source with --video")
         default_root = Path("data/input/screenshots" if source_is_image else "data/input/videos")
@@ -60,6 +62,11 @@ def main(argv: list[str] | None = None) -> int:
         threshold_sweep = (
             load_threshold_sweep(args.threshold_sweep.expanduser(), report["source"]["file_name"])
             if args.threshold_sweep
+            else None
+        )
+        iou_ap = (
+            load_iou_average_precision(args.iou_ap.expanduser(), report["source"]["file_name"])
+            if args.iou_ap
             else None
         )
         source_image = None
@@ -160,6 +167,21 @@ def main(argv: list[str] | None = None) -> int:
     else:
         pose_text = "Pose-region evaluation: not available (manual region points required)."
     ttk.Label(header, text=pose_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
+    if iou_ap:
+        first = iou_ap[0]
+        ap_values = " | ".join(
+            f"IoU {point.iou_threshold:.2f}: AP {point.average_precision:.3f}"
+            for point in iou_ap
+            if point.average_precision is not None
+        )
+        ap_text = (
+            f"101-point interpolated AP ({first.label_provenance}; {first.scored_frames} frames, "
+            f"{first.ground_truth_boxes} boxes): mean over {len(iou_ap)} IoU thresholds "
+            f"{first.mean_average_precision:.3f} | " + ap_values
+        )
+    else:
+        ap_text = "IoU AP: not available for this source (manual box labels required)."
+    ttk.Label(header, text=ap_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
     if threshold_sweep:
         format_metric = lambda value: "n/a" if value is None else f"{value:.2f}"
         sweep_entries = [

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections.abc import Sequence
+import math
 from typing import Any
 
 Box = tuple[int, int, int, int]
@@ -122,3 +123,61 @@ def evaluate_threshold_sweep(
             }
         )
     return results
+
+
+def evaluate_average_precision(
+    samples: Sequence[tuple[Sequence[tuple[float, Box]], Sequence[Box]]],
+    iou_threshold: float,
+) -> float | None:
+    """Calculate 101-point interpolated AP using confidence-ranked detections.
+
+    A prediction is matched greedily to the highest-IoU unmatched ground-truth
+    box in its own frame. Returns None when the sample has no ground-truth boxes.
+    """
+    if not 0.0 < iou_threshold <= 1.0:
+        raise ValueError("iou_threshold must be greater than 0 and at most 1")
+    ground_truth_total = sum(len(ground_truth) for _, ground_truth in samples)
+    if ground_truth_total == 0:
+        return None
+
+    ranked_predictions: list[tuple[float, int, int, Box]] = []
+    for sample_index, (predictions, _) in enumerate(samples):
+        for prediction_index, (score, box) in enumerate(predictions):
+            if not math.isfinite(score) or not 0.0 <= score <= 1.0:
+                raise ValueError("prediction confidence scores must be finite and between 0 and 1")
+            ranked_predictions.append((score, sample_index, prediction_index, box))
+    ranked_predictions.sort(key=lambda item: (-item[0], item[1], item[2]))
+
+    matched_by_frame: dict[int, set[int]] = {}
+    true_positives: list[int] = []
+    false_positives: list[int] = []
+    for _, sample_index, _, prediction in ranked_predictions:
+        ground_truth = samples[sample_index][1]
+        matched = matched_by_frame.setdefault(sample_index, set())
+        candidates = [
+            (box_iou(prediction, truth), truth_index)
+            for truth_index, truth in enumerate(ground_truth)
+            if truth_index not in matched
+        ]
+        best = max(candidates, default=(0.0, -1))
+        if best[0] >= iou_threshold:
+            matched.add(best[1])
+            true_positives.append(1)
+            false_positives.append(0)
+        else:
+            true_positives.append(0)
+            false_positives.append(1)
+
+    cumulative_tp = cumulative_fp = 0
+    precision_recall: list[tuple[float, float]] = []
+    for true_positive, false_positive in zip(true_positives, false_positives):
+        cumulative_tp += true_positive
+        cumulative_fp += false_positive
+        precision_recall.append((
+            cumulative_tp / ground_truth_total,
+            cumulative_tp / (cumulative_tp + cumulative_fp),
+        ))
+    return sum(
+        max((precision for recall, precision in precision_recall if recall >= target_recall), default=0.0)
+        for target_recall in (index / 100 for index in range(101))
+    ) / 101

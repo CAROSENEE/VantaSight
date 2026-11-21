@@ -115,10 +115,18 @@ python tools/evaluate_threshold_sweep.py "data/input/videos/vd-1.mp4" data/annot
 
 The default sweep covers confidence `0.25` through `0.95` in `0.05` increments. The CSV includes positive/negative scored-frame counts, ground-truth box count, and annotation provenance. The evaluator requires manually reviewed annotations unless `--allow-unreviewed-labels` is explicitly passed for exploratory analysis. It reuses detections across cutoffs, so each labeled frame runs through the model once.
 
-Load a saved sweep beside the matching video report in the offline dashboard with:
+To evaluate confidence-ranked box localization over IoU thresholds `0.50` through `0.95` in `0.05` increments, use:
 
 ```powershell
-python tools/open_dashboard.py reports/tracks.json --threshold-sweep reports/vd-1_threshold_sweep.csv
+python tools/evaluate_iou_ap.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output reports/vd-1_iou_ap.csv
+```
+
+The report uses 101-point interpolated AP, matching each prediction to at most one ground-truth box in its own frame. It is a small-sample research metric, not the full COCO evaluation protocol (which also defines max-detection and area rules). Unreviewed annotations require `--allow-unreviewed-labels` and remain marked exploratory.
+
+Load the confidence sweep and IoU AP report beside the matching video report in the offline dashboard with:
+
+```powershell
+python tools/open_dashboard.py reports/tracks.json --threshold-sweep reports/vd-1_threshold_sweep.csv --iou-ap reports/vd-1_iou_ap.csv
 ```
 
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
