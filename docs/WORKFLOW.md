@@ -48,7 +48,7 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | User-labeled 2-screenshot pilot-এ default 0.25 cutoff-এ TP=1, FP=1; video/general performance এখনো অপ্রমাণিত |
 | 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | Annotation process frame 540-এ চলছে; screen visibility user-confirmed নয়, verified video label বা metric নেই |
-| 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN inference frame 3000-এ দেখা হয়েছে; overlay false candidate-ও region পেয়েছে, label দিয়ে যাচাই বাকি |
+| 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | Screenshot pilot-এ 29×49 px target matched, arm false candidate unmatched; মাত্র n=2, video/manual-point validation বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; 59-frame coarse sample-এ 127 candidate track-এর 96টি এক observation-এ শেষ হয়েছে; continuity review বাকি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | `ss-1` ও `vd-1` frame 3000-এ runtime check হয়েছে; geometry-only, region label দিয়ে যাচাই বাকি |
 | 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay, detector/pose summary, confidence sweep ও IoU/AP curve-সহ dashboard আছে; Windows launcher যোগ হয়েছে, পূর্ণ UI visual review বাকি |
@@ -293,7 +293,7 @@ GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot p
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M87)
+## বর্তমান অবস্থান (M88)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -606,4 +606,15 @@ User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি sou
 .venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --confidence-threshold 0.25 --preserve-source-resolution --output reports\screenshot_presence_eval_latest.csv
 .venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --confidence-threshold 0.25 --output reports\screenshot_presence_eval_default_latest.csv
 .venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --thresholds 0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60,0.70,0.80,0.90,0.95 --preserve-source-resolution --output reports\screenshot_presence_threshold_sweep_latest.csv
+```
+
+### M88: screenshot pair-এ pose association probe
+
+`ss-1` ও `ss-2`-তে detector-এর পর একই COCO Keypoint R-CNN settings দিয়ে exploratory pose analysis চালিয়েছি। `ss-1`-এর 29×49 px doorway candidate pose box-এ match হয়েছে (`pose_person_score=0.966`), চারটি coarse body-region estimate ও source-pixel preview marker-ও তৈরি হয়েছে. `ss-2`-এর 185×340 px first-person arm/weapon candidate `pose_status=unmatched`; কোনো pose box তার সঙ্গে match হয়নি। এই দুই উদাহরণে pose association ছোট target রেখে arm false positive আলাদা করেছে বলে দেখায়, কিন্তু নমুনা অত্যন্ত ছোট এবং pose/person score বা raw heatmap response calibrated confidence নয়। তাই detector-কে pose দিয়ে auto-filter করা হয়নি; video frames-এ manual label দিয়ে পরীক্ষা বাকি। Local output `reports/ss-1_pose_alignment_latest.json`, `reports/ss-2_pose_alignment_latest.json` ও `data/previews/ss-1_body_regions.png`।
+
+পুনরায় চালাতে:
+
+```powershell
+.venv\Scripts\python.exe tools\analyze_image.py "data\input\screenshots\ss-1.png" --estimate-body-regions --measure-alignment --output reports\ss-1_pose_alignment_latest.csv --json-output reports\ss-1_pose_alignment_latest.json
+.venv\Scripts\python.exe tools\analyze_image.py "data\input\screenshots\ss-2.png" --estimate-body-regions --measure-alignment --output reports\ss-2_pose_alignment_latest.csv --json-output reports\ss-2_pose_alignment_latest.json
 ```
