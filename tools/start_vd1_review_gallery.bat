@@ -2,23 +2,47 @@
 setlocal
 cd /d "%~dp0\.."
 
+set "PYTHON=.venv\Scripts\python.exe"
+set "VIDEO=data\input\videos\vd-1.mp4"
+set "REPORT=reports\vd-1_dashboard_tracks_dense.json"
+set "SHORTLIST=reports\vd-1_manual_review_shortlist.csv"
 set "GALLERY=data\previews\vd-1_review_gallery\index.html"
 
-if not exist "%GALLERY%" (
-    echo The local vd-1 review gallery was not found.
-    echo Export it first with:
-    echo .venv\Scripts\python.exe tools\export_review_gallery.py "data\input\videos\vd-1.mp4" --shortlist-csv "reports\vd-1_manual_review_shortlist.csv" --output-dir "data\previews\vd-1_review_gallery"
-    pause
-    exit /b 1
+if not exist "%PYTHON%" (
+    echo VantaSight virtual environment not found. Set up the project dependencies first.
+    goto finish_error
+)
+if not exist "%VIDEO%" (
+    echo %VIDEO% was not found. Put the local vd-1 video there first.
+    goto finish_error
 )
 
-echo Opening the local offline gallery in your default browser.
-echo No labels are created until you review and save frames yourself.
+if not exist "%SHORTLIST%" (
+    if not exist "%REPORT%" (
+        echo The dense tracking report is missing. Generate it first with:
+        echo .venv\Scripts\python.exe tools\track_video.py "data\input\videos\vd-1.mp4" --frame-step 30 --preserve-source-resolution --output reports\vd-1_dashboard_tracks_dense.csv --json-output reports\vd-1_dashboard_tracks_dense.json
+        goto finish_error
+    )
+    echo Creating the local manual-review shortlist...
+    "%PYTHON%" tools\create_review_shortlist.py "%REPORT%" --output "%SHORTLIST%"
+    if errorlevel 1 goto finish_error
+)
+
+echo Refreshing the local review gallery from the current video and template...
+"%PYTHON%" tools\export_review_gallery.py "%VIDEO%" --shortlist-csv "%SHORTLIST%" --output-dir data\previews\vd-1_review_gallery
+if errorlevel 1 goto finish_error
+
+echo Opening the offline review gallery. No labels are created automatically.
 start "" "%CD%\%GALLERY%"
 if errorlevel 1 (
     echo Windows could not open the gallery automatically.
     echo Open this file manually: %CD%\%GALLERY%
-    pause
-    exit /b 1
+    goto finish_error
 )
+echo Review frames yourself and press Save frame to create manual labels.
+pause
+exit /b 0
 
+:finish_error
+pause
+exit /b 1

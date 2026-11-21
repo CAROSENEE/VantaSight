@@ -38,7 +38,7 @@
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে। এই pilot CSV ও `source_regions.json` tracked; পরবর্তী video annotation ও generated report Git ignore থাকে।
 - M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা; local object valid এবং push command সফল, কিন্তু fresh clone থেকে object download এখনো verify হয়নি।
 
-Enemy box label করার OpenCV tool `tools/annotate_video_frames.py`, browser-based offline gallery `tools/export_review_gallery.py`, এবং label থেকে metric হিসাবের evaluator আছে। OpenCV process frame 540-এ চলছে, তবে user-এর screen-এ window দৃশ্যমান কি না নিশ্চিত করা যায়নি। Browser gallery-তে ১২টি original-resolution review frame তৈরি হয়েছে; সেখানে এখনো কোনো label নেই। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
+Enemy box label করার OpenCV tool `tools/annotate_video_frames.py`, browser-based offline gallery `tools/export_review_gallery.py`, এবং label থেকে metric হিসাবের evaluator আছে। আগের OpenCV process বন্ধ; user window দেখতে পাননি। Browser gallery-তে ১২টি original-resolution review frame প্রস্তুত, কিন্তু কোনো label নেই। তাই verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -645,7 +645,7 @@ OpenCV window না দেখা গেলে user যেন একই fingerpr
 
 Runtime run-এ ১২/১২ frame 2560×1440-এ export হয়েছে; manifest-এ video SHA-256 `3917b7d5…` ও প্রতি source frame fingerprint আছে। `labels_saved` এখনো false এবং `vd-1_user_verified.jsonl` file নেই। HTML ও JPEG `data/previews/`-এ থাকায় Git-ignored; source utility ও template tracked হবে। UI screenshot/interaction browser bridge দিয়ে verify করা যায়নি, তাই visual/JavaScript interaction QA বাকি।
 
-Windows-এ gallery হাতে খোলার জন্য `tools/start_vd1_review_gallery.bat` যোগ করা হয়েছে। এটি generated HTML থাকলে default browser-এ খুলবে; gallery export না থাকলে export command দেখাবে। Launcher চালানো বা browser-এ page খোলা মানে annotation নয়—প্রতিটি frame মানুষ দেখে save না করা পর্যন্ত label file তৈরি হবে না। এই environment থেকে browser window-র দৃশ্যমানতা এখনো যাচাই করা যায়নি।
+Windows-এ gallery খোলার জন্য `tools/start_vd1_review_gallery.bat` আছে। Launcher local video ও virtual environment যাচাই করে, dense tracking report থাকলে shortlist না থাকলে সেটি তৈরি করে, তারপর বর্তমান template দিয়ে gallery refresh করে default browser-এ খোলে। Dense tracking report অনুপস্থিত হলে সেটি বানানোর command দেখায়। Launcher চালানো বা browser-এ page খোলা মানে annotation নয়—প্রতিটি frame মানুষ দেখে save না করা পর্যন্ত label file তৈরি হবে না। এই environment থেকে browser window-র দৃশ্যমানতা এখনো যাচাই করা যায়নি।
 
 ### M92: review page-এ unsaved edit রক্ষা
 
@@ -654,3 +654,7 @@ Save-এর আগে অন্য frame-এ যাওয়া বা page বন�
 ### M93: browser review-তে optional body-region point label
 
 ভিডিও pose-region evaluator opponent box-এর ভেতরে per-region manual center point চায়। Browser fallback-এ box/status label ছিল, কিন্তু point mode ছিল না। এখন reviewer box নির্বাচন করে ঐচ্ছিকভাবে head, chest, lower-torso, ও legs center mark করতে পারেন; points box-এর ভেতরে না হলে save হবে না এবং JSONL-এ evaluator-এর `opponent_body_regions_xy` schema-তে যাবে। এগুলো approximate visible-image center, game hitbox বা anatomical ground truth নয়। UI interaction ও evaluator integration runtime-এ এখনো যাচাই করা হয়নি।
+
+### M94: one-click gallery refresh
+
+Generated gallery `data/previews/`-এ ignored থাকায় নতুন checkout বা template update-এর পর পুরোনো/অনুপস্থিত HTML খোলার ঝুঁকি ছিল। Windows launcher এখন `.venv` ও `vd-1.mp4` যাচাই করে; shortlist না থাকলে local dense tracking JSON থেকে তৈরি করে; তারপর বর্তমান exporter/template দিয়ে ১২-frame gallery refresh করে এবং browser-এ খোলে। Dense report না থাকলে প্রয়োজনীয় tracking command দেখায়। এটি শুধু local recorded video পড়ে; browser page বা launcher কোনো annotation নিজে তৈরি করে না। Desktop-এ click করে launch path ও visible window এখনো হাতে QA করা হয়নি।
