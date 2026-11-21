@@ -417,7 +417,7 @@ Annotation viewer প্রথমে frame render করে; zoom/pan, mouse dra
 
 ### M41: Windows-এ এক ক্লিকে annotation চালু
 
-`tools/start_vd1_annotation.bat` যোগ হয়েছে। এটি repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে provisional box suggestion-সহ `vd-1_user_verified.jsonl`-এ চালায়। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। README-তে double-click workflow যোগ হয়েছে। Shell থেকে launcher চালিয়ে frame 0-তে responsive annotation window পাওয়া গেছে; CUA window inventory Python HighGUI window-টি ফেরত দেয়নি, তাই user-visible visual confirmation ও Explorer double-click check বাকি।
+`tools/start_vd1_annotation.bat` যোগ হয়েছে। এটি repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে provisional box suggestion-সহ `vd-1_user_verified.jsonl`-এ চালায়। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। README-তে double-click workflow যোগ হয়েছে। Launcher চালানোর পর process-এ frame 0-এর window title ও responsiveness দেখা গিয়েছিল, কিন্তু CUA window inventory Python HighGUI window-টি দেখায়নি। পরে user জানিয়েছেন annotation window তাঁর সামনে দেখা যায়নি; তাই আগের process check-কে window দৃশ্যমান ছিল বা annotation সম্পন্ন হয়েছে—এমন প্রমাণ ধরা যাবে না। Explorer থেকে চালানো এবং user-visible review এখনও বাকি।
 
 ### M42: IoU-ভিত্তিক 101-point AP
 
@@ -432,3 +432,7 @@ AP CSV-তে model architecture ও weight ID, confidence floor (`0.0`), max-si
 ### M44: dashboard-এ IoU/AP curve
 
 AP report dashboard-এ load হলে AP@IoU point-গুলো একটি responsive Tkinter chart-এ আঁকা হয়। IoU threshold x-axis-এ, AP 0–1 y-axis-এ; provenance, sample size, mean এবং model/run metadata chart-এর উপরের text summary-তে থাকে। Compile ও dashboard CLI help check pass করেছে; window-তে graph-এর visual review বাকি।
+
+### M45: annotation completion status পুনরায় যাচাই
+
+User নিশ্চিত করেছেন যে annotation window দেখা যায়নি; তাই annotation সম্পন্ন হয়েছে বলে আগের কোনো ইঙ্গিত সঠিক নয়। Local `data/annotations/`-এ `vd-1_provisional_review.jsonl` আছে, কিন্তু `vd-1_user_verified.jsonl` নেই। Provisional label-গুলো unreviewed; এগুলো user-verified ground truth নয়। একটি responsive Python process বা window title থাকলেই user GUI দেখেছেন বা label দিয়েছেন—এটা নিশ্চিত হয় না। 12টি frame interactive window-তে user নিজে review করে save না করা পর্যন্ত annotation ও তার ওপর নির্ভরশীল benchmark pending থাকবে। পরের ধাপ: launcher-এর বদলে annotation tool foreground-এ দেখা যাচ্ছে কি না user-এর screen-এ নিশ্চিত করে তারপর frame review শুরু করা।
