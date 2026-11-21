@@ -289,7 +289,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M74)
+## বর্তমান অবস্থান (M75)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -541,3 +541,7 @@ User নিশ্চিত করেছেন যে annotation window তিন
 চালু থাকা পুরোনো dashboard window-তে coarse `vd-1` report-এর পাশে `unreviewed_exploratory` AP ও threshold result দেখা গেছে। এগুলো আগের unverified label থেকে তৈরি; accuracy হিসেবে ব্যবহার করা যাবে না। Code audit-এ পাওয়া গেছে যে dashboard command-এ evaluation path না দিলেও `reports/detector_evaluation.csv` ও `reports/pose_region_evaluation.csv` নামে local file থাকলে সেগুলো auto-load হতো। `tools/open_dashboard.py`-তে এই default loading সরিয়ে এখন detector/pose CSV কেবল explicit `--detector-evaluation` / `--pose-evaluation` path দিলে load হয়। README ও M8-ও সেই নিয়ম জানায়; dense dashboard batch launcher কোনো evaluation CSV path দেয় না।
 
 বর্তমান খোলা window পুরোনো process/report; এই code change সেটির in-memory display বদলায় না। Computer-use refresh-এর সময় window-তে user input শনাক্ত হওয়ায় আর UI action করিনি। ফলে updated dense report-এর visible window ও playback এখনও verify হয়নি। `git diff --check` clean; test চালানো হয়নি।
+
+### M75: dense dashboard process চালু, visual review অসম্পূর্ণ
+
+Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py reports\vd-1_dashboard_tracks_dense.json` সরাসরি চালিয়েছি। Process live আছে এবং Windows-এর window enumeration-এ নতুন window title `VantaSight Offline Dashboard — vd-1.mp4 — vd-1_dashboard_tracks_dense` পাওয়া গেছে। কিন্তু Computer Use-এর `list_windows` এখনও শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window দেখাচ্ছে; নতুন window-তে screenshot/input দেওয়া যাচ্ছে না। তাই title/process দেখা গেছে বলা যায়, dense report-এর content, no-metric default, layout বা playback visually verified বলা যায় না। পুরোনো window-তে এখনো আগের in-memory `unreviewed_exploratory` AP/threshold panel দেখা যাচ্ছে; নতুন code সেই চলমান পুরোনো process-কে বদলায় না। নতুন process বন্ধ করিনি; একই live process handle রেখে next window refresh-এ পুনরায় দেখতে হবে, duplicate launch করা যাবে না।
