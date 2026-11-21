@@ -318,10 +318,11 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M63)
+## বর্তমান অবস্থান (M64)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
+- M64-এ dashboard-এর জন্য প্রতি 30 source frame (120 FPS-এ 0.25s) পরপর source-resolution `vd-1` report তৈরি হয়েছে; launcher এখন এই dense report খোলে। এতে ছোট/স্বল্পস্থায়ী উপস্থিতি দেখা যাওয়ার sampling chance আগের 1s sample-এর চেয়ে বেশি, তবে 0.25s-এর চেয়ে ছোট event বাদ পড়তে পারে।
 - M62-এর playback layout fix এবং M63-এর dashboard crosshair field-এর visual QA অসম্পূর্ণ। Computer-use window list dashboard দেখিয়েছে, কিন্তু window minimized; controls, field, playback বা layout চোখে দেখে যাচাই হয়নি।
 - Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
 - পরবর্তী gate: dashboard দৃশ্যমান হলে playback controls ও crosshair field যাচাই; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
@@ -522,3 +523,7 @@ Local-media analysis panel-এ custom crosshair `x,y` দেওয়ার field �
 M63 যাচাই: সংশ্লিষ্ট তিনটি Python file `compileall`-এ compile হয়েছে; screenshot analyzer ও video tracker-এর CLI help-এ `--crosshair` দেখা গেছে। `ss-1.png`-এ CUDA-তে প্রকৃত offline analysis চালিয়ে JSON report পরীক্ষা করেছি: 1917×1073 source, 1 person candidate, `settings.crosshair_xy=[100.0,100.0]`, এবং region distance `942.95px` / normalized `0.429225` ওই reference থেকে হিসাব হয়েছে। এটি option-to-report plumbing-এর যাচাই, detector বা pose accuracy-এর প্রমাণ নয়। Dashboard form-এ coordinate বসিয়ে চালানোর visual check CUA window access না থাকায় এখনো বাকি; video manual annotation deferred-ই আছে।
 
 ভিডিও runner-ও যাচাই: `vd-1.mp4` frame `3000`-এ এক-frame source-resolution-preserving নয় এমন default offline run-এ 3 candidate এসেছে; JSON-এ custom crosshair `[100.0,100.0]` এবং 8টি estimated-region distance ওই reference থেকে লেখা হয়েছে। এটি শুধু video CLI path-এর wiring; 1 frame-এর ফল accuracy evidence নয়।
+
+### M64: dense source-resolution dashboard report
+
+`tools/start_vd1_dashboard.bat` এখন `reports/vd-1_dashboard_tracks_dense.json` খোলে; report না থাকলে `.venv` command-এ `--frame-step 30 --preserve-source-resolution` দেখায়। README-তে একই generation command যোগ হয়েছে। `vd-1.mp4`-এ default confidence `0.25`, IoU `0.30`, `cuda:0`, source resolution `2560×1440` রেখে 236 sampled frame (`0` থেকে `7050`, প্রতি 30 source frame) চালিয়ে 816 COCO person-candidate detection পাওয়া গেছে; 27 sampled frame-এ candidate ছিল না। Analysis throughput `1.351 sampled frame/s`, detector latency mean `255.0ms`, p95 `287.6ms`; 386 temporary box tracks-এর মধ্যে 256 single-observation track, observed-span p95 `1.75s`, max `7.0s`। এগুলো sampling-এ পাওয়া generic person candidate—27টি frame-এ enemy ছিল না বা কোনো track একই player—এমন প্রমাণ নয়। পুরোনো 1-second report-এর সঙ্গে count/metric সরাসরি তুলনীয় নয়, কারণ sampling density ও inference resolution আলাদা। Dense report `reports/`-এ local ignored; GitHub-এ code/docs-ই push হবে। Dashboard-এর visual playback verification ও user-verified manual video annotation এখনো বাকি।

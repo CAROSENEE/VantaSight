@@ -4,7 +4,7 @@ cd /d "%~dp0\.."
 
 set "PYTHON=.venv\Scripts\python.exe"
 set "VIDEO=data\input\videos\vd-1.mp4"
-set "REPORT=reports\vd-1_dashboard_tracks.json"
+set "REPORT=reports\vd-1_dashboard_tracks_dense.json"
 set "SWEEP=reports\vd-1_provisional_threshold_sweep_fingerprint.csv"
 set "AP=reports\vd-1_provisional_iou_ap_fingerprint.csv"
 
@@ -23,7 +23,7 @@ if not exist "%VIDEO%" (
 
 if not exist "%REPORT%" (
     echo %REPORT% was not found. Generate it with:
-    echo .venv\Scripts\python.exe tools\track_video.py "data\input\videos\vd-1.mp4" --frame-step 120 --output reports\vd-1_dashboard_tracks.csv --json-output reports\vd-1_dashboard_tracks.json
+    echo .venv\Scripts\python.exe tools\track_video.py "data\input\videos\vd-1.mp4" --frame-step 30 --preserve-source-resolution --output reports\vd-1_dashboard_tracks_dense.csv --json-output reports\vd-1_dashboard_tracks_dense.json
     pause
     exit /b 1
 )
