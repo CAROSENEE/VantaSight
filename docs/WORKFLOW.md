@@ -293,7 +293,7 @@ GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot p
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M89)
+## বর্তমান অবস্থান (M90)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -622,3 +622,13 @@ User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি sou
 ### M89: Git LFS remote fetch পুনরায় যাচাই
 
 `git lfs fsck --objects` local `vd-1.mp4` object-কে valid জানিয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। কিন্তু fresh shallow clone-এ checkout আটকে যায়; `.git/lfs/incomplete`-এর video object 0 byte-এই ছিল, owning downloader process-এর কোনো remote TCP connection দেখা যায়নি। Clone process বন্ধ করে তৈরি করা isolated temp clone সরিয়েছি। তাই GitHub commit-এ LFS pointer ও local object আছে, push command সফল—কিন্তু নতুন clone থেকে remote video download প্রমাণিত নয়। Screenshot dataset GitHub-এ ordinary Git file হিসেবে আছে।
+
+### M90: CPU inference fallback pilot
+
+একই user-labeled দুই screenshot, default resize ও confidence threshold 0.25 দিয়ে `--device cpu` চালিয়েছি। CPU ফল GPU default mode-এর presence prediction-এর সঙ্গে মিলে: `ss-1`-এ candidate (`TP=1`), `ss-2`-এ false candidate (`FP=1`), `TN=0`, `FN=0`। দুই device-এ confidence সামান্য আলাদা ছিল (`ss-1`: CPU 0.2853/GPU 0.2863; `ss-2`: CPU 0.2582/GPU 0.2559), তাই score-গুলো bit-identical বা device-independent নয়। CPU path cache করা weights দিয়ে সফল হয়েছে; এই দুই-screenshot pilot hardware-general performance প্রমাণ করে না। Local output `reports/screenshot_presence_eval_cpu_latest.csv` Git-ignored।
+
+পুনরায় চালাতে:
+
+```powershell
+.venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --confidence-threshold 0.25 --device cpu --output reports\screenshot_presence_eval_cpu_latest.csv
+```
