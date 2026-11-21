@@ -406,3 +406,7 @@ Annotation window-তে `+`/`-` দিয়ে সর্বোচ্চ `8×` zoo
 ### M38: runtime হিসাবের গাণিতিক consistency
 
 Threshold-sweep dashboard loader এখন CSV-তে থাকা sampled throughput-কে `scored_frames / sampled_analysis_elapsed_seconds`-এর সঙ্গে মেলায়। পাশাপাশি সব inference call-এর mean latency যোগফল analysis elapsed-এর চেয়ে বেশি হলে CSV reject করে। এতে কেবল valid number থাকা নয়, timing field-গুলোর পারস্পরিক সামঞ্জস্যও যাচাই হয়। বর্তমান local provisional report-এর metadata এই নিয়মে load হয়েছে। এটি timing metadata যাচাই, model performance বা accuracy benchmark নয়।
+
+### M39: annotation window-এর idle CPU ব্যবহার কমানো
+
+একই স্থির frame প্রতি 25 ms-এ resize ও redraw না করে annotation window এখন 100 ms event-poll interval ব্যবহার করে। Still-frame review-তে এই গতি যথেষ্ট, আর idle redraw-এর CPU pressure কমার কথা; key/mouse response সর্বোচ্চ প্রায় 100 ms পিছোতে পারে। নতুন process-এ change কার্যকর হবে—আগে থেকে খোলা annotation window পুরোনো code-এই চলবে। Compile/help check pass করেছে; দীর্ঘ idle CPU ব্যবহার নতুন process-এ মাপা হয়নি।

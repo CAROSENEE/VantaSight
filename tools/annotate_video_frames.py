@@ -318,7 +318,7 @@ def _annotate_one(
                     cv2.LINE_AA,
                 )
             cv2.imshow(window_name, panel)
-            key = cv2.waitKey(25) & 0xFF
+            key = cv2.waitKey(100) & 0xFF
 
             if key in LABELS:
                 status = LABELS[key]
