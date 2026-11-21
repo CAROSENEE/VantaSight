@@ -42,7 +42,7 @@
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` আছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হয়। `vd-1`-এর পাঁচটি নির্বাচিত frame visual review করে local `data/annotations/vd-1_provisional_review.jsonl` বানানো হয়েছে; এতে প্রতিটি row-তে `assistant_visual_provisional_user_review_needed` note আছে, তাই এগুলো user-verified ground truth নয়। 55s frame-টি uncertain রাখা হয়েছে। এই চারটি নিশ্চিত frame-এ প্রাথমিক run detector-এর `TP=2, FP=7, FN=0`, precision `0.222`, recall `1.000`, F1 `0.364` দিয়েছে। Sample খুব ছোট ও label provisional—এই metric কেবল পরের data-collection ধাপ ঠিক করতে কাজে লাগবে। Body-region estimate এখনো কোনো manual point label দিয়ে যাচাই হয়নি।
+Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` আছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হয়। `vd-1`-এর 12টি frame visually review করে local `data/annotations/vd-1_provisional_review.jsonl` বানানো হয়েছে; এতে প্রতিটি row-তে `assistant_visual_provisional_user_review_needed` note আছে, তাই এগুলো user-verified ground truth নয়। 15s, 30s, 40s ও 55s frame uncertain রাখা হয়েছে; বাকিগুলোতে 10s, 20s, 25s ও 45s-এ opponent visible এবং 0s, 5s, 35s ও 50s-এ sightline-এ opponent visible নয় বলে provisional label হয়েছে। এই 8টি নিশ্চিত frame-এ detector `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194` দিয়েছে (`confidence 0.25`, `IoU 0.50`)। 20s-এর visible target-এ oversized candidate box-এর কারণে IoU threshold পাস হয়নি। Sample ছোট ও label provisional—metric-টি কেবল বর্তমান COCO baseline-এর দুর্বলতা/পরের data-collection প্রয়োজন বোঝায়। Body-region estimate এখনো কোনো manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -207,14 +207,14 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 
 বর্তমান dashboard-এর `Analyze a local video` panel-এ video বেছে নিয়ে প্রতি কত source frame পর analysis হবে তা নির্ধারণ করা যায়। ঐচ্ছিকভাবে body-region estimate ও frame-center alignment চালানো যায়; alignment নির্বাচন করতে body-region estimate-ও চালু থাকতে হবে। Analysis background process-এ চলে, `Cancel analysis` দিয়ে থামানো যায়, এবং সফল হলে নতুন JSON report নিজে থেকে dashboard-এ খোলে। CSV/JSON output timestamp-সহ নাম নিয়ে ignored `reports/` folder-এ লেখা হয়। এই workflow নির্বাচিত local recording পড়ে; live capture বা game control করে না। GUI flow এই environment-এ হাতে যাচাই করা যায়নি—তোমার desktop-এ নতুন video দিয়ে যাচাই দরকার।
 
-### M12: প্রথম provisional video evaluation
+### M12: provisional video evaluation
 
-Frame `600`, `3000`, `4200`, `5400`, `6600`-এর local preview/source frame দেখে প্রথম চারটি label করা হয়েছে (5s ও 35s-এ sightline-এ opponent নেই; 25s ও 45s-এ opponent দেখা যায়), আর 55s frame effect/outline-এর কারণে uncertain রাখা হয়েছে। Positive box: frame 3000 `[1247,505,1350,726]`, frame 5400 `[1085,675,1175,880]`; coordinates 2560×1440 original frame-এ। Annotation ও CSV Git-ignored local data। Confidence `0.25`, IoU `0.50`-এ 4 scored frame থেকে `TP=2, FP=7, FN=0`, precision `0.222`, recall `1.000`, F1 `0.364` হয়েছে। এটি provisional visual review, user-verified benchmark নয়। Box-এর সীমানা ও label-গুলো annotation window-তে user যাচাই/সংশোধন করলে এরপর আলাদা `vd-1_user_verified.jsonl` file দিয়ে evaluator rerun করতে হবে।
+Frame `0, 600, 1200, 1800, 2400, 3000, 3600, 4200, 4800, 5400, 6000, 6600`—প্রতি 5s-এ একটি—local preview/source frame দেখে review করা হয়েছে। 10s, 20s, 25s ও 45s positive; 0s, 5s, 35s ও 50s negative; 15s, 30s, 40s ও 55s uncertain রাখা হয়েছে। Positive box-গুলো original 2560×1440 frame coordinate-এ: frame 1200 `[1575,195,1760,625]`, 2400 `[1195,710,1267,866]`, 3000 `[1247,505,1350,726]`, 5400 `[1085,675,1175,880]`। Annotation ও CSV Git-ignored local data। Confidence `0.25`, IoU `0.50`-এ 8 scored frame থেকে `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194` হয়েছে। Frame 2400-এ person candidate-এর box এত বড় ছিল যে visible target-এর overlap IoU `0.50`-এ পৌঁছায়নি; তাই সেটি miss হিসেবে গণনা হয়েছে। এটি assistant-এর provisional visual review, user-verified benchmark নয়। Box ও উপস্থিতি-label user annotation window-তে যাচাই/সংশোধন করে আলাদা `vd-1_user_verified.jsonl` file দিয়ে evaluator rerun করতে হবে।
 
 User-verified copy বানাতে:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600 --output data/annotations/vd-1_user_verified.jsonl
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
 python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
 ```
 
@@ -247,7 +247,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow এবং M12 provisional evaluation আছে। পরের কাজ হলো annotation window দিয়ে ওই পাঁচটি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow এবং M12 provisional evaluation আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
 
 ## ভাষার নিয়ম
 
