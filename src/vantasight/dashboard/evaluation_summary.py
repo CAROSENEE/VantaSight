@@ -45,6 +45,11 @@ class ThresholdSweepPoint:
     ground_truth_boxes: int
     label_provenance: str
     iou_threshold: float
+    model_initialization_seconds: float | None = None
+    inference_calls: int | None = None
+    detector_latency_mean_ms: float | None = None
+    sampled_analysis_elapsed_seconds: float | None = None
+    sampled_analysis_frames_per_second: float | None = None
 
 
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
@@ -137,7 +142,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
     if not path.is_file():
         return None
     points: list[ThresholdSweepPoint] = []
-    contexts: set[tuple[int, str, int, float]] = set()
+    contexts: set[tuple[object, ...]] = set()
     with path.open("r", encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
         required = {
@@ -148,6 +153,13 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
         }
         if reader.fieldnames is None or not required.issubset(reader.fieldnames):
             raise ValueError(f"Threshold sweep CSV is missing required columns: {path}")
+        timing_columns = {
+            "model_initialization_seconds", "inference_calls", "detector_latency_mean_ms",
+            "sampled_analysis_elapsed_seconds", "sampled_analysis_frames_per_second",
+        }
+        has_timing = timing_columns.issubset(reader.fieldnames)
+        if bool(timing_columns.intersection(reader.fieldnames)) and not has_timing:
+            raise ValueError(f"Threshold sweep CSV has incomplete timing columns: {path}")
         for row in reader:
             if row.get("video") != video_name:
                 continue
@@ -162,6 +174,15 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 iou_threshold = float(row["iou_threshold"])
                 raw_metrics = [row[name].strip() for name in ("precision", "recall", "f1")]
                 metrics = [float(value) if value else None for value in raw_metrics]
+                timing = None
+                if has_timing:
+                    timing = (
+                        float(row["model_initialization_seconds"]),
+                        int(row["inference_calls"]),
+                        float(row["detector_latency_mean_ms"]),
+                        float(row["sampled_analysis_elapsed_seconds"]),
+                        float(row["sampled_analysis_frames_per_second"]),
+                    )
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid threshold sweep values in {path}") from exc
             provenance = row.get("label_provenance", "")
@@ -183,9 +204,16 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Invalid label provenance in {path}")
             if provenance == "manually_reviewed" and unreviewed_frames:
                 raise ValueError(f"Manual threshold sweep cannot contain unreviewed frames in {path}")
+            if timing is not None and (
+                any(not math.isfinite(value) or value < 0 for value in (timing[0], timing[2], timing[3], timing[4]))
+                or timing[1] != scored_frames
+                or timing[3] <= 0
+                or timing[4] <= 0
+            ):
+                raise ValueError(f"Invalid threshold sweep timing metadata in {path}")
             contexts.add((
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
-                provenance, unreviewed_frames, iou_threshold,
+                provenance, unreviewed_frames, iou_threshold, timing,
             ))
             expected_metrics = calculate_metrics(DetectionCounts(*counts))
             for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
@@ -210,6 +238,11 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                     ground_truth_boxes=ground_truth_boxes,
                     label_provenance=provenance,
                     iou_threshold=iou_threshold,
+                    model_initialization_seconds=timing[0] if timing else None,
+                    inference_calls=timing[1] if timing else None,
+                    detector_latency_mean_ms=timing[2] if timing else None,
+                    sampled_analysis_elapsed_seconds=timing[3] if timing else None,
+                    sampled_analysis_frames_per_second=timing[4] if timing else None,
                 )
             )
     if not points:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 from pathlib import Path
+import time
 
 from vantasight.analytics import (
     evaluate_threshold_sweep,
@@ -68,6 +69,7 @@ def main() -> int:
         if args.expected_frames is not None:
             validate_annotation_coverage(records, args.expected_frames)
         regions = _load_excluded_regions(args.regions_file, video.name)
+        initialization_started = time.perf_counter()
         detector = TorchvisionPersonDetector(
             confidence_threshold=args.thresholds[0],
             device=args.device,
@@ -75,9 +77,12 @@ def main() -> int:
             max_size=args.max_side,
             excluded_regions=regions,
         )
+        model_initialization_seconds = time.perf_counter() - initialization_started
 
         samples = []
         unreviewed_frames = 0
+        inference_seconds = []
+        analysis_started = time.perf_counter()
         with VideoReader(video) as reader:
             if reader.info is None:
                 raise RuntimeError("Could not read video metadata")
@@ -90,13 +95,18 @@ def main() -> int:
                     unreviewed_frames += record["status"] != "uncertain"
                 if record["status"] == "uncertain":
                     continue
+                inference_started = time.perf_counter()
                 detections = detector.detect(frame.pixels)
+                inference_seconds.append(time.perf_counter() - inference_started)
                 samples.append((
                     [(item.confidence, item.box_xyxy) for item in detections],
                     ground_truth,
                 ))
         if not samples:
             raise ValueError("No scored frames remain after excluding uncertain annotations")
+        sampled_analysis_elapsed_seconds = time.perf_counter() - analysis_started
+        detector_latency_mean_ms = sum(inference_seconds) / len(inference_seconds) * 1000
+        sampled_analysis_frames_per_second = len(samples) / sampled_analysis_elapsed_seconds
 
         results = evaluate_threshold_sweep(samples, args.thresholds, args.iou_threshold)
         positive_frames = sum(bool(ground_truth) for _, ground_truth in samples)
@@ -109,6 +119,8 @@ def main() -> int:
             "ground_truth_boxes", "true_positives", "false_positives",
             "false_negatives", "precision", "recall", "f1", "iou_threshold",
             "label_provenance", "unreviewed_scored_frames",
+            "model_initialization_seconds", "inference_calls", "detector_latency_mean_ms",
+            "sampled_analysis_elapsed_seconds", "sampled_analysis_frames_per_second",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)
@@ -124,10 +136,21 @@ def main() -> int:
                     "iou_threshold": args.iou_threshold,
                     "label_provenance": provenance,
                     "unreviewed_scored_frames": unreviewed_frames,
+                    "model_initialization_seconds": f"{model_initialization_seconds:.6f}",
+                    "inference_calls": len(inference_seconds),
+                    "detector_latency_mean_ms": f"{detector_latency_mean_ms:.3f}",
+                    "sampled_analysis_elapsed_seconds": f"{sampled_analysis_elapsed_seconds:.6f}",
+                    "sampled_analysis_frames_per_second": f"{sampled_analysis_frames_per_second:.6f}",
                 })
 
         print(f"Device: {detector.device}")
         print(f"Scored frames: {len(samples)}; threshold values: {len(results)}")
+        print(f"Detector inference calls: {len(inference_seconds)}; mean latency: {detector_latency_mean_ms:.1f} ms")
+        print(
+            f"Model initialization: {model_initialization_seconds:.2f} s; "
+            f"sample analysis: {sampled_analysis_elapsed_seconds:.2f} s "
+            f"({sampled_analysis_frames_per_second:.2f} scored frames/s)"
+        )
         print(f"Annotation provenance: {provenance}; unreviewed scored frames: {unreviewed_frames}")
         for result in results:
             precision = "n/a" if result["precision"] is None else f"{result['precision']:.3f}"

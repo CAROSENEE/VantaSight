@@ -173,8 +173,16 @@ def main(argv: list[str] | None = None) -> int:
             f"({threshold_sweep[0].label_provenance}; {threshold_sweep[0].scored_frames} frames, "
             f"{threshold_sweep[0].positive_frames} positive/{threshold_sweep[0].negative_frames} negative, "
             f"{threshold_sweep[0].ground_truth_boxes} boxes, "
-            f"IoU {threshold_sweep[0].iou_threshold:.2f}):"
+            f"IoU {threshold_sweep[0].iou_threshold:.2f}"
         ]
+        if threshold_sweep[0].inference_calls is not None:
+            sweep_lines[0] += (
+                f" {threshold_sweep[0].inference_calls} inference calls, "
+                f"mean detector {threshold_sweep[0].detector_latency_mean_ms:.1f} ms, "
+                f"analysis {threshold_sweep[0].sampled_analysis_frames_per_second:.2f} frames/s, "
+                f"model init {threshold_sweep[0].model_initialization_seconds:.2f} s"
+            )
+        sweep_lines[0] += "):"
         sweep_lines.extend(
             "  |  ".join(sweep_entries[index:index + 5])
             for index in range(0, len(sweep_entries), 5)
