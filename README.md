@@ -175,7 +175,7 @@ Use `--crosshair x,y` to set a different reference in source-image pixels. Pose 
 
 The frame step is in source frames. Unsampled video frames are skipped with indexed seeks while recorded frame indexes and timestamps remain tied to the original video. Use `--start-frame` and exclusive `--stop-frame` to analyze a segment. Results go to `reports/tracks.csv` and the structured `reports/tracks.json`; use `--output` and `--json-output` to choose other paths. The JSON report includes video metadata, analysis settings, per-frame detections, temporary IDs, image-plane velocity, runtime statistics, and descriptive temporary-track observation counts and observed spans. These spans cover sampled observations only and do not prove continuous presence or identity. An optional preview goes to `data/previews/`. IDs associate boxes only, can fragment when detections disappear or change shape, and do not identify players, teams, or enemies. Velocity is measured in source-image pixels per second, not game-world speed.
 
-Open the saved report in the separate offline dashboard:
+Open a saved report in the separate offline dashboard:
 
 ```powershell
 python tools/open_dashboard.py reports/tracks.json
@@ -183,7 +183,13 @@ python tools/open_dashboard.py reports/tracks.json
 
 The dashboard loads the report and its local source media, lets you browse sampled video frames or a single screenshot, and draws recorded candidate boxes, temporary IDs, pose points, and alignment references when present. New analysis reports include a SHA-256 fingerprint of the exact source file; the dashboard checks it before displaying results and rejects a same-named file if its contents changed. AP and confidence-sweep CSVs also include this fingerprint, and the dashboard checks that they match the tracking report. Older reports without a fingerprint remain supported. Hashing reads the source file when analyzing, evaluating, and opening the report, which can take a moment for large videos. Use Play samples, Pause, and Stop to review a video's analyzed frame sequence; playback advances only through sampled frames. The **Analyze local media** panel lets you choose an image or recorded video and shows dimensions plus video FPS/duration before running. Videos use the configured source-frame sampling interval and can be paused/resumed or cancelled; screenshot inference runs as one operation and cannot be paused mid-inference. Either can optionally enable experimental body-region and frame-center alignment estimates. The dashboard opens the new report on completion. Video reports record user-paused seconds separately and exclude those waits from throughput. Reports summarize detector candidate confidence (min/mean/median/p95/max) separately from evaluation metrics; these scores are not hit probability or accuracy. They also summarize mean keypoint heatmap responses by estimated body region. These raw model responses are not calibrated confidence or localization accuracy and may exceed 1. The header shows median/p95 candidate confidence and region heatmap responses, throughput, alignment-error distributions, and matching manual-label detector/pose evaluation CSVs from `reports/` when available; pass `--detector-evaluation` or `--pose-evaluation` to select other files. Pass `--image path\to\source.png` or `--video path\to\source.mp4` when opening a report whose source is outside the corresponding input folder. It does not capture the desktop or interact with a game.
 
-On Windows, double-click `tools/start_vd1_dashboard.bat` to open the local `vd-1` report with its provisional confidence sweep and IoU/AP summary. It checks that the virtual environment, source video, and three local report files exist first. These inputs and generated reports stay local and are ignored by Git.
+For `vd-1`, create a one-second-sampled report before opening the dashboard:
+
+```powershell
+.\.venv\Scripts\python.exe tools\track_video.py "data/input/videos/vd-1.mp4" --frame-step 120 --output "reports/vd-1_dashboard_tracks.csv" --json-output "reports/vd-1_dashboard_tracks.json"
+```
+
+On Windows, double-click `tools/start_vd1_dashboard.bat` to open that local `vd-1` report. If local confidence-sweep or IoU/AP CSVs are present, the launcher loads them too; otherwise the tracking dashboard still opens. The launcher checks that the virtual environment, source video, and tracking JSON exist. Inputs and generated reports stay local and are ignored by Git.
 
 Analyze one screenshot directly if needed:
 
