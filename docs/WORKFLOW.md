@@ -286,6 +286,16 @@ Screenshot ও video analysis JSON report-এ সব returned person-candidate-�
 
 Detector ও pose evaluator এখন default-এ কেবল interactive annotation tool দিয়ে হাতে review করে save করা row গ্রহণ করে (`reviewed_manually: true`, provisional note ছাড়া)। Assistant-এর provisional label বা marker-বিহীন পুরোনো JSONL default-এ ground truth হিসেবে চলবে না। কেবল exploratory comparison-এর জন্য `--allow-unreviewed-labels` দিতে হবে; output-এ `unreviewed_exploratory` provenance লেখা হবে এবং warning দেখাবে। এতে পুরোনো `vd-1_provisional_review.jsonl` হারায় না, কিন্তু সেটি user-verified বলে ভুল উপস্থাপন হয় না। যাচাইয়ে default run provisional file reject করেছে এবং কোনো CSV লেখেনি; explicit exploratory run 8 scored row লিখেছে, প্রত্যেকটিতে `unreviewed_exploratory`, metric আগের provisional ফলের সঙ্গে মিলে `TP=3, FP=24, FN=1` হয়েছে। 39 unit test pass, compileall ও diff check clean।
 
+### M20: পুরো `vd-1` clip-এ 1-second sampled tracking
+
+59-second, 120 FPS video-তে প্রতি 120 source frame-এ একটি sample চালানো হয়েছে:
+
+```powershell
+python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 120 --max-side 1920 --output reports/vd-1_coarse_1s_tracking.csv --json-output reports/vd-1_coarse_1s_tracking.json
+```
+
+59টি sampled frame-এ 188 person-candidate observation এসেছে; 11 frame-এ কোনো candidate আসেনি। 127 temporary ID-এর মধ্যে 96টি ID এক sample-এ দেখা গেছে; কোনো ID সর্বোচ্চ 6টি sample-এ candidate জুড়েছে। Detector latency mean `145.8ms`, p95 `195.7ms`; observed sampled analysis throughput `1.016 frame/s`। নতুন JSON report 59 frame-সহ dashboard report loader-এ validate হয়েছে। সব CSV/JSON output `reports/`-এ Git-ignored। এগুলো detector candidate ও sparse IoU association-এর পরিমাপ—enemy accuracy বা tracking continuity ground truth নয়; ID-গুলো player identity-ও নয়। Throughput এই machine/model/config-এ মাপা, অন্য hardware-এর benchmark নয়।
+
 
 ## M7: crosshair-to-region alignment
 
@@ -314,7 +324,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution এবং M19 annotation provenance gate আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate এবং M20 full-clip coarse tracking আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 
