@@ -15,6 +15,9 @@
 - এরপর প্রতিটি source-এর জন্য আলাদা exclusion rectangle `data/annotations/source_regions.json`-এ যোগ করা হয়েছে। Mask candidate বাদ দেয়, source frame crop বা resize করে না; detection box মূল resolution-এই ফেরত আসে।
 - Mask-এর পর `ss-1`-এ doorway candidate (0.286) রয়ে গেছে। `ss-2`-এ একটি arm/weapon false positive (0.256) এখনো আছে। `vd-1` frame 3000-এ gameplay candidate (0.963) রয়ে গেছে, সঙ্গে first-person arm/weapon-এর 2টি false positive আছে।
 - Mask কিছু HUD ও webcam false positive কমিয়েছে, কিন্তু baseline model এখনো Valorant enemy চিনতে পারে না। এগুলো হাতে দেখা sample; accuracy metric নয়।
+- `vd-1`-এর আরও পাঁচটি frame—5s, 25s, 35s, 45s ও 55s—GPU-তে বিশ্লেষণ করা হয়েছে। 25s ও 45s-এ দূরের opponent candidate ধরা পড়েছে; 5s, 35s ও 55s-এ দৃশ্যমান opponent না থাকলেও হাতে/অস্ত্রে, overlay বা artwork-এ ভুল candidate এসেছে। 35s-এর stream inset আগের mask-এর জায়গায় ছিল না—ভিডিওতে overlay-এর অবস্থান বদলাতে পারে।
+- পাঁচটি frame-এর হাতে দেখা ফল `data/annotations/vd-1_frame_review.csv`-এ রাখা হয়েছে: মোট 2টি সঠিক candidate এবং 9টি false candidate। এটি পাঁচটি নির্বাচিত frame-এর review মাত্র; পুরো video-র accuracy নয়।
+- Annotated frame-গুলো `data/previews/vd-1_frame_000600_detections.png` থেকে `vd-1_frame_006600_detections.png` পর্যন্ত আছে; একসঙ্গে দেখার sheet `data/previews/vd-1_detection_review_sheet.jpg`। এগুলো local ignored output।
 - OpenCV `5.1.0.95` ও project package virtual environment-এ install হয়েছে।
 - `vd-1.mp4`-এর metadata: 59 সেকেন্ড, 2560×1440, 120 FPS, 7,080 frame, ফাইল প্রায় 203 MB।
 - 5, 15, 25, 35, 45 ও 55 সেকেন্ডের frame sample দেখা হয়েছে; এটি পুরো video review নয়। 25 ও 45 সেকেন্ডের sample-এ opponent দেখা যায়, তবে দূরে ও ছোট। সব frame-এ enemy থাকবে এমন নয়—enemy কিছু সময় অনুপস্থিত থেকে পরে দেখা দিতে পারে, সেটি স্বাভাবিক।
@@ -39,7 +42,7 @@
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | দুই screenshot ও একটি video frame review হয়েছে; বিস্তৃত review বাকি |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | দুই screenshot ও `vd-1`-এর 5টি frame review হয়েছে; আরও বিস্তৃত review বাকি |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Confidence-সহ region estimate | শুরু হয়নি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | শুরু হয়নি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | শুরু হয়নি |
@@ -132,7 +135,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1, M2 এবং M3-এর প্রথম runtime inference হয়েছে। Per-source exclusion mask যোগ করে HUD/webcam false positive কিছুটা কমেছে; `ss-2`-এর weapon/arm এবং `vd-1`-এর first-person weapon/arm এখনো ভুল candidate হচ্ছে। পরের কাজ হলো এই false positive-গুলোর জন্য নিরাপদ ও পুনর্ব্যবহারযোগ্য handling করা এবং বিদ্যমান `vd-1`-এর একাধিক frame পরীক্ষা করা। এখনই নতুন file দিতে হবে না। পরে detector-কে ভালোভাবে মাপতে হলে enemy আছে ও নেই—দুই ধরনের representative sample-এ হাতে label লাগবে।
+M1 ও M2 সম্পন্ন। M3-এর detector পাঁচটি নির্বাচিত video frame-এ চালানো ও হাতে review করা হয়েছে: দূরের opponent ধরা পড়েছে, তবে first-person arm/weapon, artwork ও সরে যাওয়া overlay-এ false positive অনেক। পরের ধাপ হবে এই সীমাবদ্ধতা কমানোর পদ্ধতি পরীক্ষা করা এবং বেশি representative frame-এ label যোগ করা। বর্তমান model COCO `person` model, Valorant enemy model নয়; তাই এর ফলকে accuracy হিসেবে ধরা যাবে না।
 
 ## ভাষার নিয়ম
 
