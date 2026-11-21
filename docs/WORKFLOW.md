@@ -55,8 +55,8 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
-| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay ও manual-evaluation summary-সহ tracking dashboard যোগ হয়েছে; Windows-এ UI visual review বাকি |
-| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Evaluator ও সীমাবদ্ধতা আছে; provisional metric হয়েছে, user-verified representative labels ও pose-region metric বাকি |
+| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay, detector/pose summary, confidence sweep ও IoU/AP curve-সহ dashboard আছে; Windows-এ পূর্ণ UI visual review বাকি |
+| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector, screenshot-presence, pose ও AP evaluator আছে; provisional result আছে, user-verified representative labels এবং pose-region evaluation বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
 
