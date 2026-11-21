@@ -6,6 +6,18 @@ VantaSight is a computer-vision research project. The first target is Valorant f
 
 VantaSight analyzes recorded screenshots and video offline. The current prototype includes a COCO person-candidate detector, experimental body-region estimates, temporary box tracking, crosshair-distance measurements, CSV/JSON export, a separate report dashboard, and manual-label evaluation tools. It does not determine enemy/team identity reliably; model accuracy on the supplied footage still requires manual annotations and evaluation.
 
+## Example offline previews
+
+These previews come from the local `ss-1`, `ss-2`, and `vd-1` samples. Green boxes are generic COCO person candidates, not verified enemy detections or accuracy results. The video preview's webcam inset was covered after inference for sharing; the detector boxes were produced before that cover was added.
+
+| `ss-1`: a candidate overlaps the in-world character | `ss-2`: the candidate is a first-person arm/weapon false positive |
+|---|---|
+| <img src="docs/assets/ss-1_candidate_preview.jpg" alt="VantaSight person candidate on the in-world character in ss-1" width="480"> | <img src="docs/assets/ss-2_candidate_preview.jpg" alt="VantaSight person candidate incorrectly covers a first-person arm and weapon in ss-2" width="480"> |
+
+`vd-1`, source frame 3000 (25 seconds): the in-world character receives a candidate, while large candidates also overlap foreground/stream content. The webcam inset is hidden in this shared copy.
+
+<img src="docs/assets/vd-1_frame_003000_candidate_preview.jpg" alt="VantaSight person candidates on a Valorant frame, with the webcam inset hidden" width="720">
+
 ## Requirements
 
 - Python 3.11 or newer (the current development environment uses Python 3.13)

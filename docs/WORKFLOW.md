@@ -289,7 +289,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M75)
+## বর্তমান অবস্থান (M76)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -545,3 +545,7 @@ User নিশ্চিত করেছেন যে annotation window তিন
 ### M75: dense dashboard process চালু, visual review অসম্পূর্ণ
 
 Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py reports\vd-1_dashboard_tracks_dense.json` সরাসরি চালিয়েছি। Process live আছে এবং Windows-এর window enumeration-এ নতুন window title `VantaSight Offline Dashboard — vd-1.mp4 — vd-1_dashboard_tracks_dense` পাওয়া গেছে। কিন্তু Computer Use-এর `list_windows` এখনও শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window দেখাচ্ছে; নতুন window-তে screenshot/input দেওয়া যাচ্ছে না। তাই title/process দেখা গেছে বলা যায়, dense report-এর content, no-metric default, layout বা playback visually verified বলা যায় না। পুরোনো window-তে এখনো আগের in-memory `unreviewed_exploratory` AP/threshold panel দেখা যাচ্ছে; নতুন code সেই চলমান পুরোনো process-কে বদলায় না। নতুন process বন্ধ করিনি; একই live process handle রেখে next window refresh-এ পুনরায় দেখতে হবে, duplicate launch করা যাবে না।
+
+### M76: GitHub-এ সীমিত demo preview যোগ
+
+`ss-1`, `ss-2` ও `vd-1` frame 3000-এর detector preview থেকে তিনটি JPEG বানিয়ে `docs/assets/`-এ রাখা হয়েছে; মোট আকার প্রায় 0.9 MB। `vd-1` copy-তে per-source webcam rectangle কালো করে ঢেকে দেওয়া হয়েছে, কিন্তু model-এর আগে থেকে আঁকা green candidate box-গুলো অপরিবর্তিত আছে—তাই webcam-সংলগ্ন box-ও verified target নয়। README-তে পাশাপাশি screenshot-গুলো এবং video-frame preview দেখানো হয়েছে, আর caption-এ in-game character candidate ও `ss-2` arm/weapon false-positive-র উদাহরণ ব্যাখ্যা করা হয়েছে। সব preview model output; manual annotation বা detector accuracy-র প্রমাণ নয়। `git diff --check` ও image content/size review করা হয়েছে; test চালানো হয়নি। Raw video বা local annotation/evaluation data যোগ করা হয়নি।
