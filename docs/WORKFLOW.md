@@ -591,3 +591,7 @@ Dashboard-এ কোনো sampled frame-এ detection না থাকলে de
 ### M85: reproducible sample media GitHub-এ
 
 দুটি source screenshot, `screenshot_presence.csv`-এর user-provided yes/no label, এবং HUD exclusion-region configuration repository-তে যোগ হয়েছে। GitHub clone-এ default screenshot evaluator তাই original sample input পাবে। 212,593,238-byte `vd-1.mp4`-কে `.gitattributes`-এ `*.mp4` Git LFS দিয়ে track করেছি; commit `ed8c3cf` push হয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। Local `git lfs fsck`-ও OK। Fresh shallow clone-এ remote LFS object fetch দিয়ে যাচাই করতে গিয়েছিলাম, কিন্তু দুই মিনিটেও LFS cache-এ object আসেনি; পরের `git ls-remote`-ও GitHub proxy connection error দিয়েছে। তাই LFS object remote থেকে download করা যায় কি না এখনো unverified; temporary clone সরানো হয়েছে। নতুন video annotation file commit হয়নি।
+
+### M86: manual annotation window খোলা
+
+User annotation window দেখতে পাননি বলে আগের `--dry-run`-কে annotation হিসেবে ধরা হয়নি; এটি শুধু frame preflight ছিল। এবার project `.venv`-এর OpenCV WIN32 GUI দিয়ে `tools/annotate_video_frames.py` চালিয়ে actual window খুলেছি। Window title `VantaSight annotation - vd-1.mp4 frame 540`; ১২-frame shortlist-এর প্রথম frame দেখানো হচ্ছে। Annotation output file এখনো তৈরি হয়নি, কোনো frame label/box-ও save হয়নি। User frame নিজে দেখে `y` (opponent দেখা যায়), `n` (দেখা যায় না), অথবা `u` (অনিশ্চিত) বেছে নেবেন; `Enter` দিয়ে save/পরের frame, `q` দিয়ে বাকি review থামানো যায়। Box আঁকতে frame-এর ওপর left-drag করতে হয়। User review শেষ হওয়ার আগে কোনো video benchmark নেই।
