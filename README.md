@@ -116,6 +116,14 @@ Inspect every frame, press `y`, `n`, or `u` yourself, draw boxes when an opponen
 
 The preview initially fits the frame in the window; saved coordinates always use the original video pixels. Use `+`/`-` to zoom around the current view, `0` to reset to the whole frame, and right-drag to pan. On Windows, the mouse wheel also zooms at the cursor. In box mode (`r`), drag around each visible in-world opponent. Do not label the streamer inset, teammates, first-person hands/weapons, HUD, or replay silhouettes as opponents. Use `u` if the frame is ambiguous. Press `y` to mark an opponent visible, `n` for none visible, and `Enter` to save and continue. Use `z` to undo the latest box, `c` to clear, and `q` to stop; saved rows remain. Optional body-region points can be added inside the selected opponent box: press `1` for head, `2` for chest, `3` for lower torso, or `4` for legs, then click the region center. Use `[` and `]` to select a different opponent box. Labels append to the local, Git-ignored `data/annotations/manual_enemy_boxes.jsonl` file.
 
+If the OpenCV annotation window is difficult to find, export a standalone browser-based review page. It uses the same fingerprint-checked shortlist, shows original-resolution frames without detector proposals, and lets you draw boxes and mark `y`/`n`/`u` labels offline:
+
+```powershell
+python tools/export_review_gallery.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --output-dir data/previews/vd-1_review_gallery
+```
+
+Open `data/previews/vd-1_review_gallery/index.html` in a browser. Save each reviewed frame, then choose **Download reviewed JSONL**. Move the downloaded `vd-1_user_verified.jsonl` into `data/annotations/` before running evaluation. The page stores saved rows in browser local storage when available; export before closing if the page reports that browser storage is unavailable. It does not access a live display, send game inputs, or use the network.
+
 After labeling, calculate offline detection metrics with:
 
 ```powershell

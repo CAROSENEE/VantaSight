@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VantaSight Offline Frame Review</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; }
+    body { margin: 0; padding: 22px; background: #10151c; color: #edf2f7; }
+    main { max-width: 1500px; margin: auto; }
+    h1 { margin: 0 0 8px; font-size: 25px; }
+    .muted { color: #bcc8d4; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; }
+    button { border: 1px solid #617080; border-radius: 6px; padding: 9px 13px; background: #202a36; color: #f4f7fa; font: inherit; cursor: pointer; }
+    button:hover { background: #2d3948; }
+    button[aria-pressed="true"] { border-color: #60c5b2; box-shadow: inset 0 0 0 1px #60c5b2; }
+    button.primary { background: #176e5f; border-color: #47b69f; }
+    button:disabled { opacity: .45; cursor: default; }
+    .frame-wrap { position: relative; width: min(100%, 1280px); margin: 14px auto; line-height: 0; background: #080b0f; }
+    #frame-image { display: block; width: 100%; height: auto; }
+    #box-canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+    .status { min-height: 24px; margin: 12px 0; color: #a8e6d8; }
+    .instructions { padding: 12px 16px; border: 1px solid #3b4654; border-radius: 8px; background: #1b232d; line-height: 1.5; }
+    .progress { margin-left: auto; }
+    @media (max-width: 720px) { body { padding: 12px; } .progress { width: 100%; margin-left: 0; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1 id="title">VantaSight Offline Frame Review</h1>
+  <div id="source-info" class="muted"></div>
+  <div class="toolbar">
+    <button id="previous">Previous</button>
+    <button id="next">Next</button>
+    <button id="visible" aria-pressed="false">Opponent visible (Y)</button>
+    <button id="none" aria-pressed="false">No opponent (N)</button>
+    <button id="uncertain" aria-pressed="false">Uncertain (U)</button>
+    <button id="undo">Undo box</button>
+    <button id="clear">Clear boxes</button>
+    <button id="save" class="primary">Save frame (Enter)</button>
+    <button id="export">Download reviewed JSONL</button>
+    <span id="progress" class="progress"></span>
+  </div>
+  <div id="frame-title"></div>
+  <div class="frame-wrap">
+    <img id="frame-image" alt="Original-resolution recorded gameplay frame">
+    <canvas id="box-canvas" aria-label="Draw boxes around visible in-world opponents"></canvas>
+  </div>
+  <div id="message" class="status" role="status"></div>
+  <section class="instructions">
+    <strong>Offline manual review:</strong> inspect only the recorded gameplay scene. Draw one box around each visible in-world opponent, then select <kbd>Y</kbd> and save. Select <kbd>N</kbd> when none is visible; select <kbd>U</kbd> when you cannot decide. Do not label teammates, the streamer inset, first-person hands/weapons, HUD, or replay silhouettes. Click an image to draw; coordinates are saved in original source pixels. Nothing is sent over the network.
+    <p class="muted">Review frames are sampled from the exact video fingerprint shown above. This page does not show detector proposals. Export downloads a JSONL file only after you explicitly save reviewed frames.</p>
+  </section>
+</main>
+<script>
+"use strict";
+const dataset = JSON.parse(atob("__GALLERY_DATA__"));
+const frames = dataset.frames;
+const labels = {};
+const storageKey = `vantasight-review:${dataset.source_video}:${dataset.source_sha256}`;
+let current = 0;
+let status = null;
+let boxes = [];
+let dragStart = null;
+let dragEnd = null;
+let persistentStorage = true;
+
+try {
+  Object.assign(labels, JSON.parse(localStorage.getItem(storageKey) || "{}"));
+} catch (_) {
+  persistentStorage = false;
+}
+
+const image = document.getElementById("frame-image");
+const canvas = document.getElementById("box-canvas");
+const context = canvas.getContext("2d");
+const message = document.getElementById("message");
+const buttons = {
+  opponent_visible: document.getElementById("visible"),
+  no_opponent_visible: document.getElementById("none"),
+  uncertain: document.getElementById("uncertain"),
+};
+
+function currentFrame() { return frames[current]; }
+
+function saveState() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(labels));
+    persistentStorage = true;
+  } catch (_) {
+    persistentStorage = false;
+  }
+  updateProgress();
+}
+
+function updateProgress() {
+  document.getElementById("progress").textContent =
+    `${Object.keys(labels).length}/${frames.length} frames saved${persistentStorage ? "" : " · browser storage unavailable; export before closing"}`;
+}
+
+function draw() {
+  if (!image.naturalWidth || !canvas.width) return;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  const scale = canvas.width / 640;
+  context.lineWidth = Math.max(3, scale * 2);
+  context.font = `${Math.max(18, scale * 13)}px Segoe UI, sans-serif`;
+  boxes.forEach((box, index) => {
+    context.strokeStyle = "#54f09a";
+    context.fillStyle = "#54f09a";
+    context.strokeRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    context.fillText(`Opponent ${index + 1}`, box[0] + 4, Math.max(20, box[1] - 5));
+  });
+  if (dragStart && dragEnd) {
+    context.strokeStyle = "#ffd166";
+    context.strokeRect(dragStart[0], dragStart[1], dragEnd[0] - dragStart[0], dragEnd[1] - dragStart[1]);
+  }
+}
+
+function setStatus(nextStatus) {
+  status = nextStatus;
+  for (const [name, button] of Object.entries(buttons)) {
+    button.setAttribute("aria-pressed", String(name === status));
+  }
+  message.textContent = `Selected: ${status.replaceAll("_", " ")}. Save this frame when ready.`;
+}
+
+function loadFrame(index) {
+  if (index < 0 || index >= frames.length) return;
+  current = index;
+  const frame = currentFrame();
+  const saved = labels[String(frame.frame_index)];
+  status = saved?.status || null;
+  boxes = saved ? saved.opponent_boxes_xyxy.map(box => [...box]) : [];
+  for (const [name, button] of Object.entries(buttons)) {
+    button.setAttribute("aria-pressed", String(name === status));
+  }
+  document.getElementById("title").textContent = `VantaSight Offline Review — ${dataset.source_video}`;
+  document.getElementById("source-info").textContent =
+    `SHA-256 ${dataset.source_sha256} · ${dataset.source_width}×${dataset.source_height} · offline local files`;
+  document.getElementById("frame-title").textContent =
+    `Frame ${frame.frame_index} · ${frame.timestamp_seconds.toFixed(3)} seconds · ${current + 1}/${frames.length}`;
+  image.onload = () => {
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    draw();
+  };
+  image.src = frame.image_file;
+  message.textContent = saved ? `Previously saved as ${status.replaceAll("_", " ")}.` : "No label saved for this frame yet.";
+  document.getElementById("previous").disabled = current === 0;
+  document.getElementById("next").disabled = current === frames.length - 1;
+  updateProgress();
+}
+
+function pointerPosition(event) {
+  const rect = canvas.getBoundingClientRect();
+  return [
+    Math.max(0, Math.min(canvas.width, Math.round((event.clientX - rect.left) * canvas.width / rect.width))),
+    Math.max(0, Math.min(canvas.height, Math.round((event.clientY - rect.top) * canvas.height / rect.height))),
+  ];
+}
+
+canvas.addEventListener("pointerdown", event => {
+  if (event.button !== 0) return;
+  canvas.setPointerCapture(event.pointerId);
+  dragStart = pointerPosition(event);
+  dragEnd = dragStart;
+  draw();
+});
+canvas.addEventListener("pointermove", event => {
+  if (!dragStart) return;
+  dragEnd = pointerPosition(event);
+  draw();
+});
+canvas.addEventListener("pointerup", event => {
+  if (!dragStart) return;
+  const end = pointerPosition(event);
+  const x1 = Math.min(dragStart[0], end[0]);
+  const y1 = Math.min(dragStart[1], end[1]);
+  const x2 = Math.max(dragStart[0], end[0]);
+  const y2 = Math.max(dragStart[1], end[1]);
+  if (x2 - x1 >= 4 && y2 - y1 >= 4) {
+    boxes.push([x1, y1, x2, y2]);
+    status = "opponent_visible";
+    for (const [name, button] of Object.entries(buttons)) {
+      button.setAttribute("aria-pressed", String(name === status));
+    }
+  }
+  dragStart = null;
+  dragEnd = null;
+  draw();
+});
+
+function saveFrame() {
+  const frame = currentFrame();
+  if (!status) { message.textContent = "Choose Y, N, or U before saving."; return; }
+  if (status === "opponent_visible" && boxes.length === 0) {
+    message.textContent = "Draw a box around each visible in-world opponent before saving Y.";
+    return;
+  }
+  if (status !== "opponent_visible" && boxes.length > 0) {
+    message.textContent = "Clear boxes before saving N or U.";
+    return;
+  }
+  labels[String(frame.frame_index)] = {
+    video: dataset.source_video,
+    frame_index: frame.frame_index,
+    timestamp_seconds: Number(frame.timestamp_seconds.toFixed(6)),
+    source_width: dataset.source_width,
+    source_height: dataset.source_height,
+    source_frame_sha256: frame.source_frame_sha256,
+    status,
+    opponent_boxes_xyxy: boxes.map(box => [...box]),
+    reviewed_manually: true,
+    provisional_prefill_used: false,
+    opponent_body_regions_xy: [],
+  };
+  saveState();
+  message.textContent = `Saved your manual label for frame ${frame.frame_index}.`;
+  if (current < frames.length - 1) loadFrame(current + 1);
+}
+
+document.getElementById("previous").addEventListener("click", () => loadFrame(current - 1));
+document.getElementById("next").addEventListener("click", () => loadFrame(current + 1));
+buttons.opponent_visible.addEventListener("click", () => setStatus("opponent_visible"));
+buttons.no_opponent_visible.addEventListener("click", () => setStatus("no_opponent_visible"));
+buttons.uncertain.addEventListener("click", () => setStatus("uncertain"));
+document.getElementById("undo").addEventListener("click", () => { boxes.pop(); draw(); });
+document.getElementById("clear").addEventListener("click", () => { boxes = []; draw(); });
+document.getElementById("save").addEventListener("click", saveFrame);
+document.getElementById("export").addEventListener("click", () => {
+  const records = Object.values(labels).sort((a, b) => a.frame_index - b.frame_index);
+  if (!records.length) { message.textContent = "No reviewed labels to export yet."; return; }
+  const jsonl = records.map(record => JSON.stringify(record)).join("\n") + "\n";
+  const url = URL.createObjectURL(new Blob([jsonl], { type: "application/x-ndjson" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${dataset.source_video.replace(/\.mp4$/i, "")}_user_verified.jsonl`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  message.textContent = `Downloaded ${records.length} manually reviewed label(s). Place the JSONL in data/annotations/ for evaluation.`;
+});
+document.addEventListener("keydown", event => {
+  if (event.target !== document.body) return;
+  if (event.key.toLowerCase() === "y") setStatus("opponent_visible");
+  else if (event.key.toLowerCase() === "n") setStatus("no_opponent_visible");
+  else if (event.key.toLowerCase() === "u") setStatus("uncertain");
+  else if (event.key === "Enter") saveFrame();
+  else if (event.key === "ArrowLeft") loadFrame(current - 1);
+  else if (event.key === "ArrowRight") loadFrame(current + 1);
+});
+
+loadFrame(0);
+</script>
+</body>
+</html>

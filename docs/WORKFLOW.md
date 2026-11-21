@@ -2,7 +2,7 @@
 
 এটি VantaSight তৈরির ধাপে ধাপে কাজের তালিকা। প্রতিটি ধাপ শুরুর আগে কী করতে যাচ্ছি তা জানাব। ধাপ শেষ হলে কী বদলেছে, কেন দরকার, কীভাবে ব্যবহার করতে হবে এবং কোনো সীমাবদ্ধতা আছে কি না—সহজ ভাষায় বুঝিয়ে দেব। কোনো কাজ যাচাই করা না গেলে সেটিও পরিষ্কার করে বলব।
 
-**Annotation status (2026-11-21):** আগের annotation attempt-এ window user দেখেননি, তাই সেটি annotation ছিল না। এখন actual OpenCV WIN32 annotation process চলছে এবং frame 540-এর window title process list-এ দেখা গেছে; Computer Use screenshot bridge অনুপলব্ধ থাকায় user-এর screen-এ foreground visibility নিশ্চিত করা যায়নি। `vd-1_user_verified.jsonl` এখনো নেই এবং কোনো video label save/confirm হয়নি। তাই verified video ground truth বা detector/pose accuracy metric নেই; annotation user review ও label-নির্ভর evaluation pending। আগের unverified provisional label ও derived local reports মুছে ফেলা হয়েছে।
+**Annotation status (2026-11-21):** আগের annotation attempt-এ window user দেখেননি, তাই সেটি annotation ছিল না। এখন OpenCV WIN32 annotation process frame 540-এ চলছে; Computer Use screenshot bridge অনুপলব্ধ থাকায় user-এর screen-এ foreground visibility নিশ্চিত করা যায়নি। বিকল্প হিসেবে local browser review gallery-ও তৈরি হয়েছে, কিন্তু `vd-1_user_verified.jsonl` এখনো নেই এবং কোনো video label save/confirm হয়নি। তাই verified video ground truth বা detector/pose accuracy metric নেই; annotation user review ও label-নির্ভর evaluation pending। আগের unverified provisional label ও derived local reports মুছে ফেলা হয়েছে।
 
 ## প্রকল্পের লক্ষ্য
 
@@ -38,7 +38,7 @@
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে। এই pilot CSV ও `source_regions.json` tracked; পরবর্তী video annotation ও generated report Git ignore থাকে।
 - M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা; local object valid এবং push command সফল, কিন্তু fresh clone থেকে object download এখনো verify হয়নি।
 
-Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে metric হিসাবের evaluator আছে। Annotation process frame 540-এ চলছে, তবে user-এর screen-এ window দৃশ্যমান কি না নিশ্চিত করা যায়নি; কোনো video label user confirm করেননি। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
+Enemy box label করার OpenCV tool `tools/annotate_video_frames.py`, browser-based offline gallery `tools/export_review_gallery.py`, এবং label থেকে metric হিসাবের evaluator আছে। OpenCV process frame 540-এ চলছে, তবে user-এর screen-এ window দৃশ্যমান কি না নিশ্চিত করা যায়নি। Browser gallery-তে ১২টি original-resolution review frame তৈরি হয়েছে; সেখানে এখনো কোনো label নেই। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -47,7 +47,7 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | User-labeled 2-screenshot pilot-এ default 0.25 cutoff-এ TP=1, FP=1; video/general performance এখনো অপ্রমাণিত |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | Annotation process frame 540-এ চলছে; screen visibility user-confirmed নয়, verified video label বা metric নেই |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | OpenCV window ও local HTML gallery প্রস্তুত; ১২ frame-এ user label বাকি, verified video metric নেই |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | Screenshot pilot-এ 31×49 px target matched, arm false candidate unmatched; মাত্র n=2, video/manual-point validation বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; 59-frame coarse sample-এ 127 candidate track-এর 96টি এক observation-এ শেষ হয়েছে; continuity review বাকি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | `ss-1` ও `vd-1` frame 3000-এ runtime check হয়েছে; geometry-only, region label দিয়ে যাচাই বাকি |
@@ -293,7 +293,7 @@ GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot p
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M90)
+## বর্তমান অবস্থান (M91)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -307,7 +307,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M71-এ dashboard title-এ source video এবং report filename দুটোই থাকবে; একই footage-এর পুরোনো ও dense analysis window আলাদা করে চেনা যাবে।
 - M72-এ নতুন title-সহ dense dashboard সরাসরি launch করে দেখা হয়েছে। Python process চললেও CUA inventory-তে শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window ছিল; নতুন window/screenshot বা error পাওয়া যায়নি। শুধু এই attempt-এর process বন্ধ করেছি। তাই report-specific title code আছে, কিন্তু নতুন window visible/targetable হওয়া নিশ্চিত নয়।
 - Video manual annotation এখনো হয়নি। M86-এ blank annotation window frame 540-এ চালু হয়েছে, কিন্তু screen visibility user-confirmed নয় এবং কোনো label save হয়নি। `vd-1_user_verified.jsonl` নেই; আগের provisional labels ও derived metrics মুছে ফেলা হয়েছে.
-- পরবর্তী gate: user annotation window দেখতে পাচ্ছেন কি না নিশ্চিত করে ১২টি sampled frame নিজে review করে label save করা। তারপর evaluator আলাদা ধাপে চলবে। Dashboard dense-report playback-এর visual QA-ও এখনো বাকি।
+- পরবর্তী gate: OpenCV window বা `data/previews/vd-1_review_gallery/index.html` ব্যবহার করে ১২টি sampled frame নিজে review করে label save করা। Browser page থেকে JSONL download করে `data/annotations/`-এ রাখার পর evaluator চলবে। Dashboard dense-report playback-এর visual QA-ও এখনো বাকি।
 
 ## আমরা যেভাবে কাজ করব
 
@@ -632,3 +632,15 @@ User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি sou
 ```powershell
 .venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --confidence-threshold 0.25 --device cpu --output reports\screenshot_presence_eval_cpu_latest.csv
 ```
+
+### M91: browser-এ manual review gallery
+
+OpenCV window না দেখা গেলে user যেন একই fingerprint-checked sample frame হাতে review করতে পারেন, তাই `tools/export_review_gallery.py` যোগ করেছি। এটি video SHA-256 যাচাই করে shortlist-এর ১২টি frame source resolution-এ JPEG-এ export করে এবং প্রতি frame-এর raw-pixel SHA-256-সহ manifest বানায়। `data/previews/vd-1_review_gallery/index.html` একটি standalone offline HTML page: user নিজে opponent status (`y`/`n`/`u`) বেছে নিতে এবং canvas-এ source-pixel box আঁকতে পারেন; page-টি detector proposal দেখায় না। `Save frame` চাপলেই row browser storage-এ থাকে; `Download reviewed JSONL` চাপলে `reviewed_manually: true` ও frame fingerprint-সহ JSONL নামে। কোনো label বা metric স্বয়ংক্রিয়ভাবে তৈরি হয় না, browser data network-এ যায় না।
+
+চালানোর command:
+
+```powershell
+.venv\Scripts\python.exe tools\export_review_gallery.py "data\input\videos\vd-1.mp4" --shortlist-csv "reports\vd-1_manual_review_shortlist.csv" --output-dir "data\previews\vd-1_review_gallery"
+```
+
+Runtime run-এ ১২/১২ frame 2560×1440-এ export হয়েছে; manifest-এ video SHA-256 `3917b7d5…` ও প্রতি source frame fingerprint আছে। `labels_saved` এখনো false এবং `vd-1_user_verified.jsonl` file নেই। HTML ও JPEG `data/previews/`-এ থাকায় Git-ignored; source utility ও template tracked হবে। UI screenshot/interaction browser bridge দিয়ে verify করা যায়নি, তাই visual/JavaScript interaction QA বাকি।
