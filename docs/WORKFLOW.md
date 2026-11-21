@@ -320,7 +320,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M71)
+## বর্তমান অবস্থান (M72)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -332,6 +332,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M69-এ `reports/VantaSight Dashboard Review.lnk`-এর পুরোনো target পাওয়া গেছে: এটি `m50_tracks.json` ও unverified evaluation CSV খুলত। Local shortcut-টি এখন `tools/start_vd1_dashboard.bat` চালায়, যা dense report ব্যবহার করে। `.lnk` Git-ignored, তাই এটি শুধু এই PC-তে বদলেছে; tracked batch launcher-ই GitHub-এ আছে। Shortcut থেকে launch চেষ্টা করা হলেও নতুন window CUA-তে targetable হয়নি, তাই UI launch এখনো অসম্পূর্ণভাবে যাচাইকৃত।
 - M70-এ annotation batch launcher চালুর আগে blank review ও প্রত্যাশিত window title prefix console-এ জানায়; ভুল হলে console খোলা রেখে error পড়তে বলে। এতে পরে annotation শুরু করলে কী window খুঁজতে হবে বোঝা যাবে। Annotation tool চালানো হয়নি।
 - M71-এ dashboard title-এ source video এবং report filename দুটোই থাকবে; একই footage-এর পুরোনো ও dense analysis window আলাদা করে চেনা যাবে।
+- M72-এ নতুন title-সহ dense dashboard সরাসরি launch করে দেখা হয়েছে। Python process চললেও CUA inventory-তে শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window ছিল; নতুন window/screenshot বা error পাওয়া যায়নি। শুধু এই attempt-এর process বন্ধ করেছি। তাই report-specific title code আছে, কিন্তু নতুন window visible/targetable হওয়া নিশ্চিত নয়।
 - Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
 - পরবর্তী gate: corrected launcher দিয়ে dense report-এর visible window নিশ্চিত করা এবং playback interaction যাচাই করা; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
 
@@ -563,3 +564,7 @@ Ignored `reports/VantaSight Dashboard Review.lnk` COM properties পড়ে দ�
 ### M71: dashboard window-তে report name
 
 `tools/open_dashboard.py`-র window title-এ source filename-এর পরে report filename stem যোগ হয়েছে। ফলে একই `vd-1.mp4`-এর পুরোনো coarse report এবং `vd-1_dashboard_tracks_dense.json`-এর window একই নামে গুলিয়ে যাবে না। README-তে title-এর নিয়ম লেখা হয়েছে। এটি window-identification change; dashboard launch বা playback interaction এখনো আলাদাভাবে verify করা দরকার।
+
+### M72: নতুন dashboard launch attempt-এর ফল
+
+সর্বশেষ source ও matching dense report দিয়ে `.venv\Scripts\python.exe tools\open_dashboard.py reports\vd-1_dashboard_tracks_dense.json` চালানো হয়েছিল। Process চলমান ছিল, কিন্তু CUA window inventory-তে নতুন report-specific title আসেনি এবং screenshot তোলা যায়নি; terminal-এও error text আসেনি। কেবল ওই launch attempt-এর console session বন্ধ করেছি। এটি সফল visible launch নয়। পরের UI verification-এ user-এর desktop-এ shortcut double-click করে দেখা বা visible console-এর error/output সংগ্রহ করা দরকার।
