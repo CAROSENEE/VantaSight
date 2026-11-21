@@ -85,17 +85,6 @@ def _read_prefill(path: Path | None, video_name: str) -> dict[int, dict]:
     return suggestions
 
 
-def _draw_box(image, box: tuple[int, int, int, int], scale_x: float, scale_y: float) -> None:
-    x1, y1, x2, y2 = box
-    cv2.rectangle(
-        image,
-        (round(x1 * scale_x), round(y1 * scale_y)),
-        (round(x2 * scale_x), round(y2 * scale_y)),
-        (40, 230, 80),
-        2,
-    )
-
-
 def _build_annotation_record(
     frame: VideoFrame,
     video_name: str,
@@ -141,8 +130,30 @@ def _annotate_one(
     scale = min(max_width / source_width, max_height / source_height, 1.0)
     display_width = max(1, round(source_width * scale))
     display_height = max(1, round(source_height * scale))
-    scale_x = display_width / source_width
-    scale_y = display_height / source_height
+    zoom = 1.0
+    view_center_x = source_width / 2
+    view_center_y = source_height / 2
+
+    def view_bounds() -> tuple[int, int, int, int]:
+        view_width = max(1, round(source_width / zoom))
+        view_height = max(1, round(source_height / zoom))
+        left = min(max(round(view_center_x - view_width / 2), 0), source_width - view_width)
+        top = min(max(round(view_center_y - view_height / 2), 0), source_height - view_height)
+        return left, top, left + view_width, top + view_height
+
+    def to_source(x: int, y: int) -> tuple[int, int]:
+        left, top, right, bottom = view_bounds()
+        return (
+            max(0, min(source_width, round(left + x * (right - left) / display_width))),
+            max(0, min(source_height, round(top + y * (bottom - top) / display_height))),
+        )
+
+    def to_display(x: int, y: int) -> tuple[int, int]:
+        left, top, right, bottom = view_bounds()
+        return (
+            round((x - left) * display_width / (right - left)),
+            round((y - top) * display_height / (bottom - top)),
+        )
 
     boxes: list[tuple[int, int, int, int]] = []
     if suggestion is not None:
@@ -165,10 +176,40 @@ def _annotate_one(
     drag_start: tuple[int, int] | None = None
     drag_current: tuple[int, int] | None = None
     pending_point: tuple[int, int] | None = None
+    pan_start: tuple[int, int, float, float] | None = None
     window_name = f"VantaSight annotation - {video_name} frame {frame.index}"
 
     def mouse_callback(event: int, x: int, y: int, flags: int, _userdata: object) -> None:
         nonlocal drag_start, drag_current, pending_point, notice
+        nonlocal zoom, view_center_x, view_center_y, pan_start
+        if event == cv2.EVENT_MOUSEWHEEL and y < display_height:
+            left, top, right, bottom = view_bounds()
+            anchor_x = left + x * (right - left) / display_width
+            anchor_y = top + y * (bottom - top) / display_height
+            wheel_delta = (flags >> 16) & 0xFFFF
+            if wheel_delta > 32767:
+                wheel_delta -= 65536
+            next_zoom = min(8.0, zoom * 1.5) if wheel_delta > 0 else max(1.0, zoom / 1.5)
+            if next_zoom != zoom:
+                next_width = source_width / next_zoom
+                next_height = source_height / next_zoom
+                fraction_x = x / display_width
+                fraction_y = y / display_height
+                view_center_x = anchor_x + (0.5 - fraction_x) * next_width
+                view_center_y = anchor_y + (0.5 - fraction_y) * next_height
+                zoom = next_zoom
+            return
+        if event == cv2.EVENT_RBUTTONDOWN and zoom > 1.0:
+            pan_start = (x, y, view_center_x, view_center_y)
+            return
+        if event == cv2.EVENT_MOUSEMOVE and pan_start is not None:
+            left, top, right, bottom = view_bounds()
+            view_center_x = pan_start[2] - (x - pan_start[0]) * (right - left) / display_width
+            view_center_y = pan_start[3] - (y - pan_start[1]) * (bottom - top) / display_height
+            return
+        if event == cv2.EVENT_RBUTTONUP and pan_start is not None:
+            pan_start = None
+            return
         if event == cv2.EVENT_LBUTTONDOWN and y < display_height:
             location = (min(max(x, 0), display_width), min(max(y, 0), display_height))
             if active_region is None:
@@ -184,10 +225,7 @@ def _annotate_one(
             elif selected_box_index >= len(boxes):
                 notice = "draw an opponent box before marking body regions"
             else:
-                source_point = (
-                    max(0, min(source_width, round(x / scale_x))),
-                    max(0, min(source_height, round(y / scale_y))),
-                )
+                source_point = to_source(x, y)
                 x1, y1, x2, y2 = boxes[selected_box_index]
                 if x1 <= source_point[0] <= x2 and y1 <= source_point[1] <= y2:
                     region_points_by_box.setdefault(selected_box_index, {})[active_region] = source_point
@@ -200,12 +238,9 @@ def _annotate_one(
             left, right = sorted((drag_start[0], end[0]))
             top, bottom = sorted((drag_start[1], end[1]))
             if right - left >= 4 and bottom - top >= 4:
-                box = (
-                    max(0, min(source_width, round(left / scale_x))),
-                    max(0, min(source_height, round(top / scale_y))),
-                    max(0, min(source_width, round(right / scale_x))),
-                    max(0, min(source_height, round(bottom / scale_y))),
-                )
+                box_left, box_top = to_source(left, top)
+                box_right, box_bottom = to_source(right, bottom)
+                box = (box_left, box_top, box_right, box_bottom)
                 boxes.append(box)
                 status = "opponent_visible"
             drag_start = None
@@ -213,7 +248,7 @@ def _annotate_one(
 
     try:
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-        cv2.resizeWindow(window_name, display_width, display_height + 110)
+        cv2.resizeWindow(window_name, display_width, display_height + 180)
         cv2.setMouseCallback(window_name, mouse_callback)
     except cv2.error as exc:
         raise RuntimeError(
@@ -224,21 +259,25 @@ def _annotate_one(
     result: dict | None = None
     try:
         while True:
-            canvas = cv2.resize(frame.pixels, (display_width, display_height))
+            view_left, view_top, view_right, view_bottom = view_bounds()
+            canvas = cv2.resize(
+                frame.pixels[view_top:view_bottom, view_left:view_right],
+                (display_width, display_height),
+            )
             for box in boxes:
-                _draw_box(canvas, box, scale_x, scale_y)
+                cv2.rectangle(canvas, to_display(box[0], box[1]), to_display(box[2], box[3]), (40, 230, 80), 2)
             if boxes:
                 x1, y1, x2, y2 = boxes[min(selected_box_index, len(boxes) - 1)]
                 cv2.rectangle(
                     canvas,
-                    (round(x1 * scale_x), round(y1 * scale_y)),
-                    (round(x2 * scale_x), round(y2 * scale_y)),
+                    to_display(x1, y1),
+                    to_display(x2, y2),
                     (255, 255, 0),
                     3,
                 )
             for box_index, points in region_points_by_box.items():
                 for region_name, (px, py) in points.items():
-                    display_point = (round(px * scale_x), round(py * scale_y))
+                    display_point = to_display(px, py)
                     color = BODY_REGION_COLORS[region_name]
                     cv2.drawMarker(canvas, display_point, color, cv2.MARKER_CROSS, 14, 2)
                     cv2.putText(canvas, region_name, (display_point[0] + 7, max(14, display_point[1] - 6)),
@@ -247,7 +286,7 @@ def _annotate_one(
                 cv2.rectangle(canvas, drag_start, drag_current, (0, 220, 255), 2)
 
             panel = cv2.copyMakeBorder(
-                canvas, 0, 110, 0, 0, cv2.BORDER_CONSTANT, value=(25, 25, 25)
+                canvas, 0, 180, 0, 0, cv2.BORDER_CONSTANT, value=(25, 25, 25)
             )
             status_text = status or "not labeled"
             mode_text = f"box {selected_box_index + 1}" if active_region is None else f"{active_region} point for box {selected_box_index + 1}"
@@ -259,13 +298,13 @@ def _annotate_one(
             )
             instructions = [
                 f"Review {review_position}/{review_total} | {video_name} | frame {frame.index} | "
-                f"{frame.timestamp_seconds:.3f}s | {source_width}x{source_height}",
+                f"{frame.timestamp_seconds:.3f}s | {source_width}x{source_height} | zoom {zoom:.1f}x",
                 f"Label: {status_text} | Opponent boxes: {len(boxes)} | Mode: {mode_text}",
                 f"Note: {notice_text}",
                 suggestion_text,
                 "Drag to add box. r: box mode | 1=head 2=chest 3=lower torso 4=legs, then click center inside selected box",
                 "[/] select box | y: confirm visible | n: none (clear boxes first) | u: unsure | z: undo | c: clear",
-                "Enter: save only after choosing y/n/u | q: quit",
+                "Enter: save only after choosing y/n/u | q: quit | +/-: zoom | wheel: Windows zoom | right-drag: pan | 0: reset",
             ]
             for line_number, text in enumerate(instructions):
                 cv2.putText(
@@ -292,6 +331,14 @@ def _annotate_one(
             elif key == ord("r"):
                 active_region = None
                 notice = None
+            elif key == ord("0"):
+                zoom = 1.0
+                view_center_x = source_width / 2
+                view_center_y = source_height / 2
+            elif key in (ord("+"), ord("=")):
+                zoom = min(8.0, zoom * 1.5)
+            elif key in (ord("-"), ord("_")):
+                zoom = max(1.0, zoom / 1.5)
             elif key == ord("]"):
                 if boxes:
                     selected_box_index = (selected_box_index + 1) % len(boxes)
