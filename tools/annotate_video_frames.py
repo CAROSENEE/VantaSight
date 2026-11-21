@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
 import cv2
 
-from vantasight.input import VideoFrame, VideoReader, frame_sha256
+from vantasight.input import VideoFrame, VideoReader, file_sha256, frame_sha256
 
 
 LABELS = {
@@ -34,6 +35,41 @@ def _parse_frames(value: str) -> list[int]:
         raise argparse.ArgumentTypeError("Frame indexes must be zero or greater")
     if len(set(frames)) != len(frames):
         raise argparse.ArgumentTypeError("Frame indexes must not repeat")
+    return frames
+
+
+def _read_shortlist(path: Path, video: Path) -> list[int]:
+    """Read frame indexes only when the shortlist is for this exact source video."""
+    video_hash = file_sha256(video)
+    frames: list[int] = []
+    seen: set[int] = set()
+    required = {"source_video", "source_sha256", "frame_index"}
+    with path.open("r", newline="", encoding="utf-8-sig") as source:
+        reader = csv.DictReader(source)
+        if reader.fieldnames is None or not required.issubset(reader.fieldnames):
+            raise ValueError(f"Shortlist CSV must contain columns: {', '.join(sorted(required))}")
+        for line_number, row in enumerate(reader, start=2):
+            if row.get("source_video") != video.name:
+                raise ValueError(
+                    f"Shortlist video on CSV line {line_number} does not match {video.name}"
+                )
+            source_hash = row.get("source_sha256")
+            if not isinstance(source_hash, str) or source_hash.lower() != video_hash:
+                raise ValueError(
+                    f"Shortlist source fingerprint on CSV line {line_number} does not match {video}"
+                )
+            try:
+                frame_index = int(row["frame_index"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid frame_index on shortlist CSV line {line_number}") from exc
+            if frame_index < 0:
+                raise ValueError(f"Negative frame_index on shortlist CSV line {line_number}")
+            if frame_index in seen:
+                raise ValueError(f"Duplicate frame_index {frame_index} in shortlist CSV")
+            seen.add(frame_index)
+            frames.append(frame_index)
+    if not frames:
+        raise ValueError(f"Shortlist CSV contains no frames: {path}")
     return frames
 
 
@@ -410,7 +446,17 @@ def main() -> int:
         description="Review selected recorded-video frames and label visible opponents offline."
     )
     parser.add_argument("video", type=Path, help="Path to a recorded video")
-    parser.add_argument("--frames", type=_parse_frames, required=True, help="Comma-separated zero-based frame indexes")
+    frame_group = parser.add_mutually_exclusive_group(required=True)
+    frame_group.add_argument(
+        "--frames",
+        type=_parse_frames,
+        help="Comma-separated zero-based frame indexes",
+    )
+    frame_group.add_argument(
+        "--shortlist-csv",
+        type=Path,
+        help="Use frame indexes from a shortlist CSV, validating its source-video fingerprint",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -437,12 +483,13 @@ def main() -> int:
     video = args.video.expanduser()
     output = args.output.expanduser()
     try:
+        frames = args.frames or _read_shortlist(args.shortlist_csv.expanduser(), video)
         completed = _read_existing(output)
         suggestions = _read_prefill(args.prefill.expanduser() if args.prefill else None, video.name)
         with VideoReader(video) as reader:
-            for review_position, frame_index in enumerate(args.frames, start=1):
+            for review_position, frame_index in enumerate(frames, start=1):
                 if (video.name, frame_index) in completed:
-                    print(f"Review {review_position}/{len(args.frames)}: skipping saved frame {frame_index}.")
+                    print(f"Review {review_position}/{len(frames)}: skipping saved frame {frame_index}.")
                     continue
                 frame = reader.read_frame(frame_index)
                 record = _annotate_one(
@@ -452,7 +499,7 @@ def main() -> int:
                     args.max_height,
                     suggestions.get(frame_index),
                     review_position,
-                    len(args.frames),
+                    len(frames),
                     args.keep_on_top,
                 )
                 if record is None:
@@ -464,12 +511,12 @@ def main() -> int:
                     destination.flush()
                 completed.add((video.name, frame_index))
                 print(
-                    f"Review {review_position}/{len(args.frames)}: saved frame {frame_index}: "
+                    f"Review {review_position}/{len(frames)}: saved frame {frame_index}: "
                     f"{record['status']} ({len(record['opponent_boxes_xyxy'])} boxes)"
                 )
         print(f"Annotations: {output.resolve()}")
         return 0
-    except (FileNotFoundError, IndexError, OSError, ValueError, RuntimeError, cv2.error) as exc:
+    except (FileNotFoundError, IndexError, OSError, ValueError, RuntimeError, csv.Error, cv2.error) as exc:
         parser.exit(2, f"annotation tool: error: {exc}\n")
 
 

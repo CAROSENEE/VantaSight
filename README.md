@@ -93,16 +93,17 @@ See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the step-by-step roadmap, current p
 
 ## Manually label opponent boxes
 
-Use the local annotation tool to create review labels for selected recorded-video frames. The current `vd-1` shortlist samples the smallest model-candidate frame and a zero-candidate frame per time bin, where available:
+Use the local annotation tool to create review labels for selected recorded-video frames. First create a time-spread shortlist from the tracking report, then review its frames. The annotation tool verifies that the shortlist fingerprint belongs to the exact video before opening any frame:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 540,1080,1650,1800,3030,3210,3840,4650,4890,4980,6090,6480
+python tools/create_review_shortlist.py reports/vd-1_dashboard_tracks_dense.json --output reports/vd-1_manual_review_shortlist.csv
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv
 ```
 
 No `vd-1` video annotations have been verified; the old provisional labels were removed. Start this tool only when you are ready to inspect the actual annotation window and label frames yourself. Each unsaved frame starts blank; previously saved manual rows are skipped. On Windows, after setting up `.venv` and placing the local video in `data/input/videos/vd-1.mp4`, you can double-click `tools/start_vd1_annotation.bat` to launch the 12-frame review. The console names the expected window title prefix (`VantaSight annotation - vd-1.mp4 frame`) and stays open if the tool reports an error. The launcher keeps the annotation window above other windows to make it easier to find. If an earlier annotation window is already open, close it with `q` first to avoid duplicate sessions. For direct command-line use, add `--keep-on-top` if the window opens behind other applications.
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 540,1080,1650,1800,3030,3210,3840,4650,4890,4980,6090,6480 --output data/annotations/vd-1_user_verified.jsonl
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --output data/annotations/vd-1_user_verified.jsonl
 ```
 
 Inspect every frame, press `y`, `n`, or `u` yourself, draw boxes when an opponent is visible, then press `Enter` to save. Press `c` to clear boxes if needed. Saved records include `reviewed_manually: true` and a SHA-256 fingerprint of the decoded source frame. Evaluators reject annotations whose frame fingerprint no longer matches; older annotations without a fingerprint remain supported.
