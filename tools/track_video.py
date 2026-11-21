@@ -39,6 +39,11 @@ def main() -> int:
     parser.add_argument("--confidence-threshold", type=float, default=0.25)
     parser.add_argument("--iou-threshold", type=float, default=0.30)
     parser.add_argument("--max-missed-updates", type=int, default=1)
+    parser.add_argument(
+        "--predict-after-missed-updates",
+        action="store_true",
+        help="Experimentally use velocity-predicted boxes when matching after a missed update",
+    )
     parser.add_argument("--max-side", type=int, default=1920)
     parser.add_argument("--preserve-source-resolution", action="store_true", help="Disable model-side resizing for each frame (higher memory use)")
     parser.add_argument("--estimate-body-regions", action="store_true")
@@ -106,6 +111,7 @@ def main() -> int:
         tracker = IoUTracker(
             iou_threshold=args.iou_threshold,
             max_missed_updates=args.max_missed_updates,
+            predict_after_missed_updates=args.predict_after_missed_updates,
         )
         pose_estimator = (
             TorchvisionBodyRegionEstimator(
@@ -320,6 +326,7 @@ def main() -> int:
                 "confidence_threshold": args.confidence_threshold,
                 "iou_threshold": args.iou_threshold,
                 "max_missed_updates": args.max_missed_updates,
+                "predict_after_missed_updates": args.predict_after_missed_updates,
                 "device": str(detector.device),
                 "preserve_source_resolution": args.preserve_source_resolution,
                 "body_region_estimation": args.estimate_body_regions,

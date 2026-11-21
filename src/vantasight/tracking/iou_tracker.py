@@ -44,7 +44,7 @@ def _predicted_box(track: _TrackState, timestamp_seconds: float) -> tuple[int, i
 
     velocity = track.velocity_xy_pixels_per_second
     elapsed = timestamp_seconds - track.last_timestamp_seconds
-    if velocity is None or elapsed <= 0:
+    if track.missed_updates == 0 or velocity is None or elapsed <= 0:
         return track.box_xyxy
     dx, dy = velocity[0] * elapsed, velocity[1] * elapsed
     x1, y1, x2, y2 = track.box_xyxy
@@ -54,13 +54,19 @@ def _predicted_box(track: _TrackState, timestamp_seconds: float) -> tuple[int, i
 class IoUTracker:
     """Associate nearby boxes over time; IDs are temporary and not identity claims."""
 
-    def __init__(self, iou_threshold: float = 0.30, max_missed_updates: int = 1) -> None:
+    def __init__(
+        self,
+        iou_threshold: float = 0.30,
+        max_missed_updates: int = 1,
+        predict_after_missed_updates: bool = False,
+    ) -> None:
         if not 0.0 < iou_threshold <= 1.0:
             raise ValueError("iou_threshold must be greater than 0 and at most 1")
         if max_missed_updates < 0:
             raise ValueError("max_missed_updates must be zero or greater")
         self.iou_threshold = iou_threshold
         self.max_missed_updates = max_missed_updates
+        self.predict_after_missed_updates = predict_after_missed_updates
         self._tracks: dict[int, _TrackState] = {}
         self._next_track_id = 1
 
@@ -74,7 +80,11 @@ class IoUTracker:
 
         track_ids = list(self._tracks)
         predicted_boxes = {
-            track_id: _predicted_box(self._tracks[track_id], timestamp_seconds)
+            track_id: (
+                _predicted_box(self._tracks[track_id], timestamp_seconds)
+                if self.predict_after_missed_updates
+                else self._tracks[track_id].box_xyxy
+            )
             for track_id in track_ids
         }
         pairs = sorted(
