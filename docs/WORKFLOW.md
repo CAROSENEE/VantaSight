@@ -662,3 +662,7 @@ Generated gallery `data/previews/`-এ ignored থাকায় নতুন chec
 ### M95: fresh clone থেকে Git LFS sample video যাচাই
 
 LFS smudge skip করে normal depth-1 checkout করা আলাদা temporary clone-এ `git lfs fetch --include=data/input/videos/vd-1.mp4 origin main` দিয়ে object নামিয়েছি। Clone-এর LFS cache-এ 212,593,238 bytes পাওয়া গেছে, `git lfs fsck --objects` OK দিয়েছে, `git lfs checkout` দিয়ে video materialize হয়েছে, file size `212593238` byte এবং SHA-256 `3917b7d52fe197c69d9305a698a50ff087e9378f01b3ab8c3f26668e5447c930` project source-র সঙ্গে মিলে গেছে। GitHub-hosted sample video fresh clone-এ পাওয়া যায়—এখন তা যাচাই করা হয়েছে।
+
+### M96: ছোট target-এর জন্য browser gallery zoom
+
+Video source resolution আগের মতো পূর্ণ 2560×1440 থাকে; gallery শুরুতে 50% view-তে দেখায়। ছোট দূরের opponent-এ box ও region point ঠিকভাবে বসানোর সুবিধার জন্য 50–200% zoom slider যোগ করেছি। Zoom শুধু screen-এ দেখার আকার বদলায়; canvas source pixels-এই থাকে, তাই JSONL coordinates evaluator-এর frame size-এর সঙ্গে মেলে। Horizontal/vertical overflow হলে gallery-র image pane scroll করা যাবে। Browser visual QA এখনো বাকি।

@@ -17,7 +17,9 @@
     button.primary { background: #176e5f; border-color: #47b69f; }
     button:disabled { opacity: .45; cursor: default; }
     select { border: 1px solid #617080; border-radius: 6px; padding: 9px; background: #202a36; color: #f4f7fa; font: inherit; }
-    .frame-wrap { position: relative; width: min(100%, 1280px); margin: 14px auto; line-height: 0; background: #080b0f; }
+    input[type="range"] { accent-color: #60c5b2; }
+    .frame-scroll { max-width: 100%; overflow: auto; background: #080b0f; }
+    .frame-wrap { position: relative; width: min(100%, 1280px); margin: 14px 0; line-height: 0; background: #080b0f; }
     #frame-image { display: block; width: 100%; height: auto; }
     #box-canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
     .status { min-height: 24px; margin: 12px 0; color: #a8e6d8; }
@@ -51,14 +53,22 @@
     <button id="region-legs" data-region="legs" aria-pressed="false">Legs center</button>
     <button id="clear-points">Clear region points</button>
   </div>
+  <div class="toolbar">
+    <label for="zoom">Frame zoom</label>
+    <input id="zoom" type="range" min="50" max="200" step="10" value="50">
+    <output id="zoom-level" for="zoom">50%</output>
+    <span class="muted">Zoom changes the view only; saved coordinates remain in source pixels.</span>
+  </div>
   <div id="frame-title"></div>
-  <div class="frame-wrap">
-    <img id="frame-image" alt="Original-resolution recorded gameplay frame">
-    <canvas id="box-canvas" aria-label="Draw boxes around visible in-world opponents"></canvas>
+  <div class="frame-scroll">
+    <div class="frame-wrap">
+      <img id="frame-image" alt="Original-resolution recorded gameplay frame">
+      <canvas id="box-canvas" aria-label="Draw boxes around visible in-world opponents"></canvas>
+    </div>
   </div>
   <div id="message" class="status" role="status"></div>
   <section class="instructions">
-    <strong>Offline manual review:</strong> inspect only the recorded gameplay scene. Draw one box around each visible in-world opponent, then select <kbd>Y</kbd> and save. Select <kbd>N</kbd> when none is visible; select <kbd>U</kbd> when you cannot decide. Do not label teammates, the streamer inset, first-person hands/weapons, HUD, or replay silhouettes. Click-drag on the image to draw boxes. Optional: choose an opponent box, select a region, then click its center. Region points are approximate visual centers, not anatomical or hitbox labels. Coordinates are saved in original source pixels. Nothing is sent over the network.
+    <strong>Offline manual review:</strong> inspect only the recorded gameplay scene. Draw one box around each visible in-world opponent, then select <kbd>Y</kbd> and save. Select <kbd>N</kbd> when none is visible; select <kbd>U</kbd> when you cannot decide. Do not label teammates, the streamer inset, first-person hands/weapons, HUD, or replay silhouettes. Click-drag on the image to draw boxes; zoom in when a distant enemy is small. Optional: choose an opponent box, select a region, then click its center. Region points are approximate visual centers, not anatomical or hitbox labels. Coordinates are saved in original source pixels. Nothing is sent over the network.
     <p class="muted">Review frames are sampled from the exact video fingerprint shown above. This page does not show detector proposals. Export downloads a JSONL file only after you explicitly save reviewed frames.</p>
   </section>
 </main>
@@ -89,6 +99,8 @@ try {
 const image = document.getElementById("frame-image");
 const canvas = document.getElementById("box-canvas");
 const context = canvas.getContext("2d");
+const frameWrap = document.querySelector(".frame-wrap");
+const zoomControl = document.getElementById("zoom");
 const message = document.getElementById("message");
 const buttons = {
   opponent_visible: document.getElementById("visible"),
@@ -100,6 +112,19 @@ const regionColors = { head: "#ffbe00", chest: "#00b4ff", lower_torso: "#c080ff"
 const boxSelect = document.getElementById("box-select");
 
 function currentFrame() { return frames[current]; }
+
+function applyZoom() {
+  const scale = Number(zoomControl.value) / 100;
+  const width = Math.round(dataset.source_width * scale);
+  const height = Math.round(dataset.source_height * scale);
+  image.style.width = `${width}px`;
+  image.style.maxWidth = "none";
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  frameWrap.style.width = `${width}px`;
+  document.getElementById("zoom-level").textContent = `${zoomControl.value}%`;
+  draw();
+}
 
 function saveState() {
   try {
@@ -200,7 +225,7 @@ function loadFrame(index) {
   image.onload = () => {
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
-    draw();
+    applyZoom();
   };
   image.src = frame.image_file;
   message.textContent = saved ? `Previously saved as ${status.replaceAll("_", " ")}.` : "No label saved for this frame yet.";
@@ -337,6 +362,7 @@ document.getElementById("clear-points").addEventListener("click", () => {
   updateProgress();
   draw();
 });
+zoomControl.addEventListener("input", applyZoom);
 buttons.opponent_visible.addEventListener("click", () => setStatus("opponent_visible"));
 buttons.no_opponent_visible.addEventListener("click", () => setStatus("no_opponent_visible"));
 buttons.uncertain.addEventListener("click", () => setStatus("uncertain"));
