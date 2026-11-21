@@ -36,7 +36,7 @@
 - `README.md`-তে setup ও ব্যবহারের নির্দেশনা আছে। `.gitignore` সাধারণ input media ও generated preview বাদ রাখে; নির্বাচিত reproducibility sample আলাদা করে track করা।
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে। এই pilot CSV ও `source_regions.json` tracked; পরবর্তী video annotation ও generated report Git ignore থাকে।
-- M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা; local object valid এবং push command সফল, কিন্তু fresh clone থেকে object download এখনো verify হয়নি।
+- M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা; M95-এ fresh clone থেকে download ও checksum verify হয়েছে।
 
 Enemy box label করার OpenCV tool `tools/annotate_video_frames.py`, browser-based offline gallery `tools/export_review_gallery.py`, এবং label থেকে metric হিসাবের evaluator আছে। আগের OpenCV process বন্ধ; user window দেখতে পাননি। Browser gallery-তে ১২টি original-resolution review frame প্রস্তুত, কিন্তু কোনো label নেই। তাই verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
@@ -590,7 +590,7 @@ Dashboard-এ কোনো sampled frame-এ detection না থাকলে de
 
 ### M85: reproducible sample media GitHub-এ
 
-দুটি source screenshot, `screenshot_presence.csv`-এর user-provided yes/no label, এবং HUD exclusion-region configuration repository-তে যোগ হয়েছে। GitHub clone-এ default screenshot evaluator তাই original sample input পাবে। 212,593,238-byte `vd-1.mp4`-কে `.gitattributes`-এ `*.mp4` Git LFS দিয়ে track করেছি; commit `ed8c3cf` push হয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। Local `git lfs fsck`-ও OK। Fresh shallow clone-এ remote LFS object fetch দিয়ে যাচাই করতে গিয়েছিলাম, কিন্তু দুই মিনিটেও LFS cache-এ object আসেনি; পরের `git ls-remote`-ও GitHub proxy connection error দিয়েছে। তাই LFS object remote থেকে download করা যায় কি না এখনো unverified; temporary clone সরানো হয়েছে। নতুন video annotation file commit হয়নি।
+দুটি source screenshot, `screenshot_presence.csv`-এর user-provided yes/no label, এবং HUD exclusion-region configuration repository-তে যোগ হয়েছে। GitHub clone-এ default screenshot evaluator তাই original sample input পাবে। 212,593,238-byte `vd-1.mp4`-কে `.gitattributes`-এ `*.mp4` Git LFS দিয়ে track করেছি; commit `ed8c3cf` push হয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। M85-এ fresh clone থেকে fetch তখন আটকে গিয়েছিল; M95-এ পরে সফলভাবে যাচাই হয়েছে। নতুন video annotation file commit হয়নি।
 
 ### M86: manual annotation window খোলা
 
@@ -621,7 +621,7 @@ User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি sou
 
 ### M89: Git LFS remote fetch পুনরায় যাচাই
 
-`git lfs fsck --objects` local `vd-1.mp4` object-কে valid জানিয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। কিন্তু fresh shallow clone-এ checkout আটকে যায়; `.git/lfs/incomplete`-এর video object 0 byte-এই ছিল, owning downloader process-এর কোনো remote TCP connection দেখা যায়নি। Clone process বন্ধ করে তৈরি করা isolated temp clone সরিয়েছি। তাই GitHub commit-এ LFS pointer ও local object আছে, push command সফল—কিন্তু নতুন clone থেকে remote video download প্রমাণিত নয়। Screenshot dataset GitHub-এ ordinary Git file হিসেবে আছে।
+সেই সময় `git lfs fsck --objects` local object valid জানিয়েছিল এবং `git lfs push origin main` exit code 0 দিয়েছিল, কিন্তু fresh shallow clone fetch তখনও আটকে ছিল; M95-এ নতুন normal shallow clone দিয়ে আবার যাচাই করা হয়েছে। Screenshot dataset GitHub-এ ordinary Git file হিসেবে আছে।
 
 ### M90: CPU inference fallback pilot
 
@@ -658,3 +658,7 @@ Save-এর আগে অন্য frame-এ যাওয়া বা page বন�
 ### M94: one-click gallery refresh
 
 Generated gallery `data/previews/`-এ ignored থাকায় নতুন checkout বা template update-এর পর পুরোনো/অনুপস্থিত HTML খোলার ঝুঁকি ছিল। Windows launcher এখন `.venv` ও `vd-1.mp4` যাচাই করে; shortlist না থাকলে local dense tracking JSON থেকে তৈরি করে; তারপর বর্তমান exporter/template দিয়ে ১২-frame gallery refresh করে এবং browser-এ খোলে। Dense report না থাকলে প্রয়োজনীয় tracking command দেখায়। এটি শুধু local recorded video পড়ে; browser page বা launcher কোনো annotation নিজে তৈরি করে না। Desktop-এ click করে launch path ও visible window এখনো হাতে QA করা হয়নি।
+
+### M95: fresh clone থেকে Git LFS sample video যাচাই
+
+LFS smudge skip করে normal depth-1 checkout করা আলাদা temporary clone-এ `git lfs fetch --include=data/input/videos/vd-1.mp4 origin main` দিয়ে object নামিয়েছি। Clone-এর LFS cache-এ 212,593,238 bytes পাওয়া গেছে, `git lfs fsck --objects` OK দিয়েছে, `git lfs checkout` দিয়ে video materialize হয়েছে, file size `212593238` byte এবং SHA-256 `3917b7d52fe197c69d9305a698a50ff087e9378f01b3ab8c3f26668e5447c930` project source-র সঙ্গে মিলে গেছে। GitHub-hosted sample video fresh clone-এ পাওয়া যায়—এখন তা যাচাই করা হয়েছে।
