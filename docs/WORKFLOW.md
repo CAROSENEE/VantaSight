@@ -260,6 +260,7 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,60
 ### M16: চলমান video analysis pause/resume
 
 Dashboard-এ video analysis চলাকালে `Pause video analysis` চাপলে থামবে, `Resume video analysis` চাপলে আবার চলবে, আর `Cancel analysis` পুরো run বন্ধ করবে। Pauseটি video-এর sampled-frame boundary-তে কার্যকর; paused সময়ে model inference চলে না। JSON report-এর `analysis_paused_seconds`-এ user-এর pause time থাকে; `analysis_elapsed_seconds` ও analysis throughput হিসাব থেকে ওই অপেক্ষার সময় বাদ যায়। Screenshot analysis এক-frame atomic inference হওয়ায় pause button সক্রিয় হয় না। GUI হাতে চালিয়ে button যাচাই করা এখনো বাকি।
+`vd-1.mp4`-এর 3 sampled frame (`0–60`, step 30) দিয়ে local CUDA smoke run-এ pause sentinel 21.31s রাখা হয়েছিল। Run শেষে 3 frame complete হয়েছে; report-এ paused `21.31s`, active elapsed `4.04s`, throughput `0.742 sampled frame/s` ছিল—pause সময় বাদ পড়েছে। এটি pause accounting-এর implementation check; 3 frame-এর throughput performance benchmark নয়। `25` unit test pass, `compileall` ও `git diff --check` clean. CUA app inventory-তে Tkinter dashboard window expose হয়নি, তাই button-গুলোর visual/manual interaction যাচাই বাকি।
 
 ## M7: crosshair-to-region alignment
 
