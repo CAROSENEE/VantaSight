@@ -105,6 +105,14 @@ python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-thre
 
 For a planned frame sample, optionally require exact annotation coverage with `--expected-frames 0,600,1200`; the evaluator reports missing or extra indexes before inference.
 
+Compare multiple cutoffs from one detector pass with:
+
+```powershell
+python tools/evaluate_threshold_sweep.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output reports/vd-1_threshold_sweep.csv
+```
+
+The default sweep covers confidence `0.25` through `0.95` in `0.05` increments. The evaluator requires manually reviewed annotations unless `--allow-unreviewed-labels` is explicitly passed for exploratory analysis. It reuses detections across cutoffs, so each labeled frame runs through the model once.
+
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
 
 By default, detector and pose evaluators require records saved from the interactive annotation tool, which marks each manually reviewed row. For an explicitly exploratory run on provisional or legacy rows, pass `--allow-unreviewed-labels`; the output labels that provenance and warns that the metrics are not a reviewed ground-truth benchmark.

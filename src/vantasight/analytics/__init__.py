@@ -7,11 +7,13 @@ from vantasight.analytics.alignment import (
 )
 from vantasight.analytics.annotation_provenance import annotation_provenance
 from vantasight.analytics.annotation_coverage import parse_frame_indexes, validate_annotation_coverage
+from vantasight.analytics.annotation_reader import read_video_annotations, validated_opponent_boxes
 from vantasight.analytics.detection_evaluation import (
     DetectionCounts,
     DetectionMetrics,
     box_iou,
     calculate_metrics,
+    evaluate_threshold_sweep,
     match_boxes,
 )
 from vantasight.analytics.distribution import (
@@ -38,6 +40,8 @@ __all__ = [
     "annotation_provenance",
     "parse_frame_indexes",
     "validate_annotation_coverage",
+    "read_video_annotations",
+    "validated_opponent_boxes",
     "DetectionCounts",
     "DetectionMetrics",
     "RegionLocalization",
@@ -47,6 +51,7 @@ __all__ = [
     "box_iou",
     "associate_pose_observations",
     "calculate_metrics",
+    "evaluate_threshold_sweep",
     "calculate_presence_metrics",
     "center_crosshair",
     "compare_body_region_points",

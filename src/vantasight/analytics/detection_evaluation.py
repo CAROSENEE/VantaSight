@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Sequence
+from typing import Any
 
 Box = tuple[int, int, int, int]
 
@@ -85,3 +87,38 @@ def calculate_metrics(counts: DetectionCounts) -> DetectionMetrics:
         else None
     )
     return DetectionMetrics(precision=precision, recall=recall, f1=f1)
+
+
+def evaluate_threshold_sweep(
+    samples: Sequence[tuple[Sequence[tuple[float, Box]], Sequence[Box]]],
+    thresholds: Sequence[float],
+    iou_threshold: float,
+) -> list[dict[str, Any]]:
+    """Evaluate confidence cutoffs over cached per-frame predictions."""
+    if not thresholds or any(not 0.0 <= threshold <= 1.0 for threshold in thresholds):
+        raise ValueError("thresholds must be a nonempty sequence between 0 and 1")
+    if len(set(thresholds)) != len(thresholds):
+        raise ValueError("thresholds must not repeat")
+    results: list[dict[str, Any]] = []
+    for threshold in thresholds:
+        total_tp = total_fp = total_fn = 0
+        for scored_predictions, ground_truth in samples:
+            boxes = [box for score, box in scored_predictions if score >= threshold]
+            counts = match_boxes(boxes, list(ground_truth), iou_threshold)
+            total_tp += counts.true_positives
+            total_fp += counts.false_positives
+            total_fn += counts.false_negatives
+        counts = DetectionCounts(total_tp, total_fp, total_fn)
+        metrics = calculate_metrics(counts)
+        results.append(
+            {
+                "confidence_threshold": threshold,
+                "true_positives": total_tp,
+                "false_positives": total_fp,
+                "false_negatives": total_fn,
+                "precision": metrics.precision,
+                "recall": metrics.recall,
+                "f1": metrics.f1,
+            }
+        )
+    return results
