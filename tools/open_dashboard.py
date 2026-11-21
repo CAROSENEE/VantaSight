@@ -75,39 +75,43 @@ def main(argv: list[str] | None = None) -> int:
     header = ttk.Frame(root, padding=10)
     header.pack(fill="x")
     ttk.Label(header, text="VantaSight — Offline Analysis", font=("Segoe UI", 16, "bold")).pack(anchor="w")
-    summary_text = (
+    summary_lines = [
         f"Source: {source.get('file_name')}  |  {source.get('width')}×{source.get('height')}  |  "
-        f"{source_rate}    •    Sampled frames: {summary.get('sampled_frames', 0)}    •    "
-        f"Person candidates: {summary.get('candidate_detections', 0)}    •    "
-        f"Analysis throughput: {summary.get('sampled_frames_per_second', 0):.2f} sampled frames/s    •    "
-        f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms"
-    )
+        f"{source_rate}  |  Sampled frames: {summary.get('sampled_frames', 0)}",
+        f"Person candidates: {summary.get('candidate_detections', 0)}  |  "
+        f"Throughput: {summary.get('sampled_frames_per_second', 0):.2f} sampled frames/s  |  "
+        f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms",
+    ]
     if summary.get("analysis_paused_seconds", 0) > 0:
-        summary_text += f"    •    User-paused: {summary['analysis_paused_seconds']:.1f}s (excluded from throughput)"
+        summary_lines[-1] += f"  |  User-paused: {summary['analysis_paused_seconds']:.1f}s (excluded from throughput)"
     confidence_summary = summary.get("detector_confidence")
     if confidence_summary and confidence_summary.get("count", 0):
-        summary_text += (
-            f"    •    Candidate confidence median/p95: "
+        summary_lines.append(
+            f"Candidate confidence median/p95: "
             f"{confidence_summary['median']:.3f}/{confidence_summary['p95']:.3f}"
         )
-    for region_name, values in summary.get("body_region_heatmap_response", {}).items():
-        if values.get("count", 0):
-            summary_text += (
-                f"    •    {region_name} raw heatmap median/p95: "
-                f"{values['median']:.3f}/{values['p95']:.3f}"
-            )
+    region_values = [
+        f"{region_name}: {values['median']:.3f}/{values['p95']:.3f}"
+        for region_name, values in summary.get("body_region_heatmap_response", {}).items()
+        if values.get("count", 0)
+    ]
+    if region_values:
+        summary_lines.append("Raw heatmap response median/p95 by region: " + "  |  ".join(region_values))
     track_summary = summary.get("temporary_tracks")
     if track_summary:
         spans = track_summary["observed_span_seconds_per_track"]
-        summary_text += (
-            f"    •    Temporary IDs: {track_summary['track_count']}"
+        track_line = (
+            f"Temporary IDs: {track_summary['track_count']}"
             f" ({track_summary['single_observation_tracks']} single-sample)"
         )
         if spans.get("count", 0):
-            summary_text += f"    •    Observed span median/max: {spans['median']:.2f}/{spans['max']:.2f}s"
+            track_line += f"  |  Observed span median/max: {spans['median']:.2f}/{spans['max']:.2f}s"
+        summary_lines.append(track_line)
     if summary.get("pose_latency_mean_ms") is not None:
-        summary_text += f"    •    Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms"
-    ttk.Label(header, text=summary_text).pack(anchor="w", pady=(5, 0))
+        summary_lines.append(f"Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms")
+    ttk.Label(header, text="\n".join(summary_lines), wraplength=1200, justify="left").pack(
+        anchor="w", pady=(5, 0)
+    )
     ttk.Label(
         header,
         text="Offline COCO person candidates only. Boxes and temporary IDs do not verify enemy, team, or player identity.",
