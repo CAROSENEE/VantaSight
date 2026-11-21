@@ -413,8 +413,8 @@ Threshold-sweep dashboard loader এখন CSV-তে থাকা sampled throu
 
 ### M40: annotation frame শুধু পরিবর্তনে redraw
 
-Annotation viewer প্রথমে frame render করে; zoom/pan, mouse drag, label বা keyboard control বদলালে নতুন করে render করে। Idle অবস্থায় `waitKey(100)` শুধু mouse/keyboard event poll করে, full-resolution frame resize ও overlay redraw করে না। এতে static review-তে CPU pressure কমার উচিত; actual long-idle CPU measurement ও zoom/box GUI visual review বাকি। Compile/help check pass করেছে.
+Annotation viewer প্রথমে frame render করে; zoom/pan, mouse drag, label বা keyboard control বদলালে নতুন করে render করে। Idle অবস্থায় `waitKey(100)` শুধু mouse/keyboard event poll করে, full-resolution frame resize ও overlay redraw করে না। নতুন launcher-started window-তে input ছাড়া 15-second sample-এ process CPU time `0.09 s` বেড়েছে (এক logical core-এর প্রায় `0.6%`); এটি দীর্ঘ benchmark নয়। Compile/help check pass করেছে; zoom/box coordinate mapping-এর visual review বাকি।
 
 ### M41: Windows-এ এক ক্লিকে annotation চালু
 
-`tools/start_vd1_annotation.bat` যোগ হয়েছে। এটি repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে provisional box suggestion-সহ `vd-1_user_verified.jsonl`-এ চালায়। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। README-তে double-click workflow যোগ হয়েছে। Batch launcher syntax source review হয়েছে; Explorer থেকে launch/window visibility end-to-end check এখনো বাকি।
+`tools/start_vd1_annotation.bat` যোগ হয়েছে। এটি repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে provisional box suggestion-সহ `vd-1_user_verified.jsonl`-এ চালায়। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। README-তে double-click workflow যোগ হয়েছে। Shell থেকে launcher চালিয়ে frame 0-তে responsive annotation window পাওয়া গেছে; CUA window inventory Python HighGUI window-টি ফেরত দেয়নি, তাই user-visible visual confirmation ও Explorer double-click check বাকি।
