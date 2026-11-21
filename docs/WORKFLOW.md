@@ -490,3 +490,7 @@ Frame `3000`-এ COCO Keypoint R-CNN 2 person-candidate-কে pose estimate দ
 ### M58: একই frame-এ resize mode তুলনা
 
 Frame `3000`-এ default TorchVision resizing ও `--preserve-source-resolution`—দুই mode-তেই 3 person-candidate পাওয়া গেছে। Main in-game candidate-এর box IoU `0.9037`; detector score `0.963` থেকে `0.982` হয়েছে, কিন্তু box-count বাড়েনি। Lower-screen foreground/streamer-সংশ্লিষ্ট বড় candidate-ও দুই run-এ রয়ে গেছে (`0.993→0.986` এবং `0.663→0.269`, default cutoff `0.25`)। এটি একটি frame-এর unreviewed output; confidence বদল মানেই accuracy বদল নয়, আর এতে tiny target recall যাচাই হয়নি। Native-resolution mode বেশি GPU memory ও সময় নিতে পারে। দুই preview `data/previews/`-এ local ignored output; accuracy comparison-এর জন্য representative user-reviewed frame দরকার।
+
+### M59: pose model-এর resize বনাম source-resolution comparison
+
+Frame `3000`-এ default pose mode 2 person-candidate estimate দিয়েছে, source-resolution mode 6টি। Native mode-এর অতিরিক্ত 4টি estimate lower-screen streamer/foreground area-তে পড়ে। Main in-game candidate-এর head/chest/lower-torso/legs crosshair distance default mode-এ `158.86/148.85/103.41/31.40 px`; source-resolution mode-এ `160.80/146.33/101.43/32.65 px`—point-ভেদে প্রায় `1–3 px` পার্থক্য। Score `0.996`-ից `0.983` হয়েছে. এটি এক frame-এর spot check; false positive/label ground truth ছাড়া source-resolution pose mode ভালো বা খারাপ—এমন ব্যাপক সিদ্ধান্ত নয়। Default pose resize অপরিবর্তিত; দুই preview local ignored `data/previews/`-এ আছে।
