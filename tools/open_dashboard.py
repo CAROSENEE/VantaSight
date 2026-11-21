@@ -98,9 +98,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.exit(2, f"dashboard: error: {exc}\n")
 
     root = tk.Tk()
+    root.state("normal")
+    root.deiconify()
     root.title(f"VantaSight Offline Dashboard — {report['source'].get('file_name', source_path.name)}")
     root.geometry("1280x800")
     root.minsize(900, 600)
+    root.lift()
+    root.focus_force()
 
     summary = report["summary"]
     source = report["source"]
@@ -308,7 +312,6 @@ def main(argv: list[str] | None = None) -> int:
     body.add(image_panel, weight=4)
     body.add(side_panel, weight=1)
     canvas = tk.Canvas(image_panel, background="#141820", highlightthickness=0)
-    canvas.pack(fill="both", expand=True)
     analysis_controls = ttk.LabelFrame(side_panel, text="Analyze local media", padding=8)
     analysis_controls.pack(fill="x", pady=(0, 10))
 
@@ -648,14 +651,18 @@ def main(argv: list[str] | None = None) -> int:
 
     frame_list.bind("<<ListboxSelect>>", on_select)
     controls = ttk.Frame(image_panel, padding=(0, 8, 0, 0))
-    controls.pack(fill="x")
+    controls.pack(side="bottom", fill="x")
     ttk.Button(controls, text="◀ Previous", command=lambda: (stop_playback(), show_frame(current_index - 1))).pack(side="left")
     ttk.Button(controls, text="Next ▶", command=lambda: (stop_playback(), show_frame(current_index + 1))).pack(side="left", padx=8)
     ttk.Button(controls, text="▶ Play samples", command=play_sampled_frames).pack(side="left", padx=(14, 4))
     ttk.Button(controls, text="Pause", command=stop_playback).pack(side="left", padx=4)
     ttk.Button(controls, text="Stop", command=lambda: (stop_playback(), show_frame(0))).pack(side="left", padx=4)
     ttk.Label(controls, text=f"Report: {report_path}").pack(side="right")
-    ttk.Label(image_panel, text="Playback advances through analyzed samples only; it does not play every source-video frame.").pack(anchor="w")
+    ttk.Label(
+        image_panel,
+        text="Playback advances through analyzed samples only; it does not play every source-video frame.",
+    ).pack(side="bottom", anchor="w")
+    canvas.pack(fill="both", expand=True)
 
     root.update_idletasks()
     show_frame(0)
