@@ -1,6 +1,10 @@
 import unittest
 
-from vantasight.analytics import summarize_body_region_responses, summarize_distribution
+from vantasight.analytics import (
+    summarize_body_region_responses,
+    summarize_distribution,
+    summarize_temporary_tracks,
+)
 
 
 class DistributionSummaryTests(unittest.TestCase):
@@ -34,6 +38,17 @@ class DistributionSummaryTests(unittest.TestCase):
         self.assertEqual(summary["head"]["count"], 2)
         self.assertEqual(summary["head"]["median"], 0.5)
         self.assertEqual(summary["chest"]["count"], 1)
+
+    def test_temporary_tracks_report_observed_counts_and_spans(self):
+        summary = summarize_temporary_tracks([
+            {"timestamp_seconds": 0.0, "detections": [{"track_id": 1}, {"track_id": 2}]},
+            {"timestamp_seconds": 0.5, "detections": [{"track_id": 1}]},
+            {"timestamp_seconds": 1.0, "detections": [{"track_id": 1}]},
+        ])
+        self.assertEqual(summary["track_count"], 2)
+        self.assertEqual(summary["single_observation_tracks"], 1)
+        self.assertEqual(summary["observations_per_track"]["median"], 2.0)
+        self.assertEqual(summary["observed_span_seconds_per_track"]["max"], 1.0)
 
 
 if __name__ == "__main__":

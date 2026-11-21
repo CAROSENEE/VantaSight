@@ -96,6 +96,15 @@ def main(argv: list[str] | None = None) -> int:
                 f"    •    {region_name} raw heatmap median/p95: "
                 f"{values['median']:.3f}/{values['p95']:.3f}"
             )
+    track_summary = summary.get("temporary_tracks")
+    if track_summary:
+        spans = track_summary["observed_span_seconds_per_track"]
+        summary_text += (
+            f"    •    Temporary IDs: {track_summary['track_count']}"
+            f" ({track_summary['single_observation_tracks']} single-sample)"
+        )
+        if spans.get("count", 0):
+            summary_text += f"    •    Observed span median/max: {spans['median']:.2f}/{spans['max']:.2f}s"
     if summary.get("pose_latency_mean_ms") is not None:
         summary_text += f"    •    Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms"
     ttk.Label(header, text=summary_text).pack(anchor="w", pady=(5, 0))

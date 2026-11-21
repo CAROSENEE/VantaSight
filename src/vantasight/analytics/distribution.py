@@ -34,3 +34,20 @@ def summarize_body_region_responses(frames: Sequence[Mapping[str, Any]]) -> dict
             for region in detection.get("body_regions", []):
                 values.setdefault(region["name"], []).append(float(region["mean_keypoint_score"]))
     return {name: summarize_distribution(scores) for name, scores in sorted(values.items())}
+
+
+def summarize_temporary_tracks(frames: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Describe observed temporary track IDs without asserting identity or continuity."""
+    observations: dict[int, list[float]] = {}
+    for frame in frames:
+        timestamp = float(frame["timestamp_seconds"])
+        for detection in frame.get("detections", []):
+            observations.setdefault(int(detection["track_id"]), []).append(timestamp)
+    counts = [len(times) for times in observations.values()]
+    spans = [max(times) - min(times) for times in observations.values()]
+    return {
+        "track_count": len(observations),
+        "single_observation_tracks": sum(count == 1 for count in counts),
+        "observations_per_track": summarize_distribution(counts),
+        "observed_span_seconds_per_track": summarize_distribution(spans),
+    }

@@ -13,7 +13,11 @@ from vantasight.analytics.detection_evaluation import (
     calculate_metrics,
     match_boxes,
 )
-from vantasight.analytics.distribution import summarize_body_region_responses, summarize_distribution
+from vantasight.analytics.distribution import (
+    summarize_body_region_responses,
+    summarize_distribution,
+    summarize_temporary_tracks,
+)
 from vantasight.analytics.pose_association import associate_pose_observations
 from vantasight.analytics.presence_evaluation import (
     PresenceCounts,
@@ -48,5 +52,6 @@ __all__ = [
     "summarize_region_localizations",
     "summarize_distribution",
     "summarize_body_region_responses",
+    "summarize_temporary_tracks",
     "write_tracking_report",
 ]
