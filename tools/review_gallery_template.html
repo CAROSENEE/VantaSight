@@ -64,6 +64,7 @@ let boxes = [];
 let dragStart = null;
 let dragEnd = null;
 let persistentStorage = true;
+let dirty = false;
 
 try {
   Object.assign(labels, JSON.parse(localStorage.getItem(storageKey) || "{}"));
@@ -95,7 +96,7 @@ function saveState() {
 
 function updateProgress() {
   document.getElementById("progress").textContent =
-    `${Object.keys(labels).length}/${frames.length} frames saved${persistentStorage ? "" : " · browser storage unavailable; export before closing"}`;
+    `${Object.keys(labels).length}/${frames.length} frames saved${dirty ? " · current frame has unsaved edits" : ""}${persistentStorage ? "" : " · browser storage unavailable; export before closing"}`;
 }
 
 function draw() {
@@ -118,6 +119,7 @@ function draw() {
 
 function setStatus(nextStatus) {
   status = nextStatus;
+  dirty = true;
   for (const [name, button] of Object.entries(buttons)) {
     button.setAttribute("aria-pressed", String(name === status));
   }
@@ -126,9 +128,11 @@ function setStatus(nextStatus) {
 
 function loadFrame(index) {
   if (index < 0 || index >= frames.length) return;
+  if (dirty && !window.confirm("This frame has unsaved edits. Discard them and continue?")) return;
   current = index;
   const frame = currentFrame();
   const saved = labels[String(frame.frame_index)];
+  dirty = false;
   status = saved?.status || null;
   boxes = saved ? saved.opponent_boxes_xyxy.map(box => [...box]) : [];
   for (const [name, button] of Object.entries(buttons)) {
@@ -181,6 +185,7 @@ canvas.addEventListener("pointerup", event => {
   if (x2 - x1 >= 4 && y2 - y1 >= 4) {
     boxes.push([x1, y1, x2, y2]);
     status = "opponent_visible";
+    dirty = true;
     for (const [name, button] of Object.entries(buttons)) {
       button.setAttribute("aria-pressed", String(name === status));
     }
@@ -215,6 +220,8 @@ function saveFrame() {
     opponent_body_regions_xy: [],
   };
   saveState();
+  dirty = false;
+  updateProgress();
   message.textContent = `Saved your manual label for frame ${frame.frame_index}.`;
   if (current < frames.length - 1) loadFrame(current + 1);
 }
@@ -224,10 +231,11 @@ document.getElementById("next").addEventListener("click", () => loadFrame(curren
 buttons.opponent_visible.addEventListener("click", () => setStatus("opponent_visible"));
 buttons.no_opponent_visible.addEventListener("click", () => setStatus("no_opponent_visible"));
 buttons.uncertain.addEventListener("click", () => setStatus("uncertain"));
-document.getElementById("undo").addEventListener("click", () => { boxes.pop(); draw(); });
-document.getElementById("clear").addEventListener("click", () => { boxes = []; draw(); });
+document.getElementById("undo").addEventListener("click", () => { if (boxes.length) dirty = true; boxes.pop(); draw(); updateProgress(); });
+document.getElementById("clear").addEventListener("click", () => { if (boxes.length) dirty = true; boxes = []; draw(); updateProgress(); });
 document.getElementById("save").addEventListener("click", saveFrame);
 document.getElementById("export").addEventListener("click", () => {
+  if (dirty) { message.textContent = "Save or discard the current frame edits before exporting."; return; }
   const records = Object.values(labels).sort((a, b) => a.frame_index - b.frame_index);
   if (!records.length) { message.textContent = "No reviewed labels to export yet."; return; }
   const jsonl = records.map(record => JSON.stringify(record)).join("\n") + "\n";
@@ -238,6 +246,11 @@ document.getElementById("export").addEventListener("click", () => {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   message.textContent = `Downloaded ${records.length} manually reviewed label(s). Place the JSONL in data/annotations/ for evaluation.`;
+});
+window.addEventListener("beforeunload", event => {
+  if (!dirty && (persistentStorage || Object.keys(labels).length === 0)) return;
+  event.preventDefault();
+  event.returnValue = "";
 });
 document.addEventListener("keydown", event => {
   if (event.target !== document.body) return;

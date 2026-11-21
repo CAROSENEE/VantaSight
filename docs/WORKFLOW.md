@@ -646,3 +646,7 @@ OpenCV window না দেখা গেলে user যেন একই fingerpr
 Runtime run-এ ১২/১২ frame 2560×1440-এ export হয়েছে; manifest-এ video SHA-256 `3917b7d5…` ও প্রতি source frame fingerprint আছে। `labels_saved` এখনো false এবং `vd-1_user_verified.jsonl` file নেই। HTML ও JPEG `data/previews/`-এ থাকায় Git-ignored; source utility ও template tracked হবে। UI screenshot/interaction browser bridge দিয়ে verify করা যায়নি, তাই visual/JavaScript interaction QA বাকি।
 
 Windows-এ gallery হাতে খোলার জন্য `tools/start_vd1_review_gallery.bat` যোগ করা হয়েছে। এটি generated HTML থাকলে default browser-এ খুলবে; gallery export না থাকলে export command দেখাবে। Launcher চালানো বা browser-এ page খোলা মানে annotation নয়—প্রতিটি frame মানুষ দেখে save না করা পর্যন্ত label file তৈরি হবে না। এই environment থেকে browser window-র দৃশ্যমানতা এখনো যাচাই করা যায়নি।
+
+### M92: review page-এ unsaved edit রক্ষা
+
+Save-এর আগে অন্য frame-এ যাওয়া বা page বন্ধ করলে box/status edit হারানোর ঝুঁকি ছিল। এখন frame navigation-এ discard confirmation আসে, unsaved edit থাকা অবস্থায় JSONL export থামে, progress-এ current edit দেখা যায় এবং page বন্ধের আগেও browser সতর্ক করে। `Save frame`-ই label store করার একমাত্র action; auto-generated label নেই। Browser interaction QA এখনো user-এর local browser-এ করা বাকি।
