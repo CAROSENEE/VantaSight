@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path, PureWindowsPath
+import statistics
 from typing import Any
 
 
@@ -43,6 +44,23 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
             raise ValueError(f"Source {dimension} must be a positive integer")
     if not _finite_number(source.get("fps")) or source["fps"] < 0:
         raise ValueError("Source fps must be a finite nonnegative number")
+    for field in ("sampled_frames", "candidate_detections"):
+        if type(summary.get(field)) is not int or summary[field] < 0:
+            raise ValueError(f"Summary {field} must be a nonnegative integer")
+    for field in (
+        "sampled_frames_per_second",
+        "detector_latency_mean_ms",
+        "detector_latency_p95_ms",
+    ):
+        if not _finite_number(summary.get(field)) or summary[field] < 0:
+            raise ValueError(f"Summary {field} must be a finite nonnegative number")
+    for field in ("pose_latency_mean_ms", "pose_latency_p95_ms"):
+        value = summary.get(field)
+        if value is not None and (not _finite_number(value) or value < 0):
+            raise ValueError(f"Summary {field} must be null or a finite nonnegative number")
+    elapsed = summary.get("analysis_elapsed_seconds")
+    if elapsed is not None and (not _finite_number(elapsed) or elapsed < 0):
+        raise ValueError("Summary analysis_elapsed_seconds must be null or finite and nonnegative")
 
     previous_frame_index = -1
     for frame in frames:
@@ -55,11 +73,16 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
         previous_frame_index = frame["frame_index"]
         if not _finite_number(frame.get("timestamp_seconds")) or frame["timestamp_seconds"] < 0:
             raise ValueError("Each report frame must have a finite nonnegative timestamp")
-        if frame.get("detection_count") != len(frame["detections"]):
+        if type(frame.get("detection_count")) is not int or frame["detection_count"] != len(frame["detections"]):
             raise ValueError("detection_count must match the frame detections list")
         for detection in frame["detections"]:
             if not isinstance(detection, dict):
                 raise ValueError("Each frame detection must be an object")
+            confidence = detection.get("detector_score")
+            if not _finite_number(confidence) or not 0 <= confidence <= 1:
+                raise ValueError("Each frame detection must have a detector_score between 0 and 1")
+            if type(detection.get("track_id")) is not int or detection["track_id"] < 1:
+                raise ValueError("Each frame detection must have a positive temporary track_id")
             box = detection.get("box_xyxy")
             if not isinstance(box, list) or len(box) != 4 or not all(_finite_number(value) for value in box):
                 raise ValueError("Each frame detection must contain a four-coordinate box_xyxy")
@@ -71,6 +94,9 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
             for region in detection.get("body_regions", []):
                 if not isinstance(region, dict):
                     raise ValueError("Each body region must be an object")
+                region_name = region.get("name")
+                if not isinstance(region_name, str) or region_name not in {"head", "chest", "lower_torso", "legs"}:
+                    raise ValueError("Body-region name is not supported")
                 point = region.get("center_xy")
                 if not isinstance(point, list) or len(point) != 2 or not all(_finite_number(v) for v in point):
                     raise ValueError("Each body region must have a finite center_xy point")
@@ -86,4 +112,38 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
                         alignment.get("distance_normalized")
                     ):
                         raise ValueError("Alignment distances must be finite numbers")
+                    if alignment["distance_pixels"] < 0 or alignment["distance_normalized"] < 0:
+                        raise ValueError("Alignment distances must be nonnegative")
     return report
+
+
+def summarize_alignment_errors(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """Summarize recorded geometric alignment errors by estimated body region."""
+
+    errors: dict[str, list[tuple[float, float]]] = {}
+    for frame in report["frames"]:
+        for detection in frame["detections"]:
+            for region in detection.get("body_regions", []):
+                alignment = region.get("alignment")
+                if alignment is None:
+                    continue
+                errors.setdefault(region["name"], []).append(
+                    (alignment["distance_pixels"], alignment["distance_normalized"])
+                )
+
+    summaries = []
+    for name, values in sorted(errors.items()):
+        pixel_values = sorted(value[0] for value in values)
+        normalized_values = sorted(value[1] for value in values)
+        p95_index = max(0, math.ceil(0.95 * len(values)) - 1)
+        summaries.append(
+            {
+                "region_name": name,
+                "measurements": len(values),
+                "median_error_pixels": statistics.median(pixel_values),
+                "p95_error_pixels": pixel_values[p95_index],
+                "median_error_normalized": statistics.median(normalized_values),
+                "p95_error_normalized": normalized_values[p95_index],
+            }
+        )
+    return summaries

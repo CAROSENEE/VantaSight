@@ -10,7 +10,7 @@ from tkinter import ttk
 import cv2
 import numpy as np
 
-from vantasight.dashboard import load_tracking_report
+from vantasight.dashboard import load_tracking_report, summarize_alignment_errors
 from vantasight.dashboard.evaluation_summary import load_detector_evaluation, load_pose_evaluation
 
 
@@ -49,6 +49,7 @@ def main() -> int:
 
     summary = report["summary"]
     source = report["source"]
+    alignment_summaries = summarize_alignment_errors(report)
     header = ttk.Frame(root, padding=10)
     header.pack(fill="x")
     ttk.Label(header, text="VantaSight — Offline Analysis", font=("Segoe UI", 16, "bold")).pack(anchor="w")
@@ -56,6 +57,7 @@ def main() -> int:
         f"Source: {source.get('file_name')}  |  {source.get('width')}×{source.get('height')}  |  "
         f"{source.get('fps', 0):.2f} FPS    •    Sampled frames: {summary.get('sampled_frames', 0)}    •    "
         f"Person candidates: {summary.get('candidate_detections', 0)}    •    "
+        f"Analysis throughput: {summary.get('sampled_frames_per_second', 0):.2f} sampled frames/s    •    "
         f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms"
     )
     if summary.get("pose_latency_mean_ms") is not None:
@@ -97,6 +99,15 @@ def main() -> int:
     else:
         pose_text = "Pose-region evaluation: not available (manual region points required)."
     ttk.Label(header, text=pose_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
+    if alignment_summaries:
+        alignment_text = "Geometric alignment error: " + " | ".join(
+            f"{item['region_name']} n={item['measurements']}, median={item['median_error_pixels']:.1f}px "
+            f"(p95 {item['p95_error_pixels']:.1f}px)"
+            for item in alignment_summaries
+        )
+    else:
+        alignment_text = "Geometric alignment: not recorded in this report."
+    ttk.Label(header, text=alignment_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
 
     body = ttk.Panedwindow(root, orient="horizontal")
     body.pack(fill="both", expand=True, padx=10, pady=(0, 10))

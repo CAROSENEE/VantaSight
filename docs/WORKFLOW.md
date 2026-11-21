@@ -197,7 +197,7 @@ Saved JSON report ও তার source video দেখতে:
 python tools/open_dashboard.py reports/tracks.json
 ```
 
-Dashboard sampled frame-এর তালিকা দেয়; frame নির্বাচন করলে local video থেকে ওই frame পড়ে JSON report-এর candidate box/temporary ID এবং থাকলে pose-region/alignment overlay আঁকে। পাশে timestamp, detector score, box coordinate ও image-plane velocity দেখা যায়। `reports/detector_evaluation.csv` ও `reports/pose_region_evaluation.csv` থাকলে একই video-র precision/recall/F1 এবং region coverage/error-ও header-এ দেখায়। অন্য folder-এর video হলে `--video path\to\clip.mp4` দাও। Dashboard live screen/game capture করে না। এই environment থেকে Windows window-তে click করে visual review করা যায়নি; স্থানীয় desktop-এ চালিয়ে UI layout দেখে নিতে হবে।
+Dashboard sampled frame-এর তালিকা দেয়; frame নির্বাচন করলে local video থেকে ওই frame পড়ে JSON report-এর candidate box/temporary ID এবং থাকলে pose-region/alignment overlay আঁকে। পাশে timestamp, detector score, box coordinate ও image-plane velocity দেখা যায়। Header-এ analysis throughput ও region অনুযায়ী alignment error-এর median/p95 থাকে। `reports/detector_evaluation.csv` ও `reports/pose_region_evaluation.csv` থাকলে একই video-র precision/recall/F1 এবং region coverage/error-ও দেখায়। অন্য folder-এর video হলে `--video path\to\clip.mp4` দাও। Dashboard live screen/game capture করে না। এই environment থেকে Windows window-তে click করে visual review করা যায়নি; স্থানীয় desktop-এ চালিয়ে UI layout দেখে নিতে হবে।
 
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
