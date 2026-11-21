@@ -56,7 +56,7 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
 | 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, tracking dashboard, body-region/alignment JSON fields যোগ হয়েছে; Windows-এ UI visual review বাকি |
-| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Maximum one-to-one detector matching ও metric module আছে; representative frame label ও pose-region evaluation বাকি |
+| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector ও pose-region evaluator আছে; representative frame label ও বাস্তব metric বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
 
@@ -137,7 +137,9 @@ Ground-truth box তৈরি করতে local desktop-এ চালাও:
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600
 ```
 
-Window-তে mouse টেনে প্রতিটি দৃশ্যমান in-world opponent-কে box করো। `y` = opponent দেখা যাচ্ছে, `n` = opponent দেখা যাচ্ছে না, `u` = নিশ্চিত নও, `Enter` = save করে পরের frame, `z` = শেষ box undo, `c` = frame-এর box মুছে ফেলা, `q` = বন্ধ করা। Box মূল video resolution-এর pixel coordinate-এ save হয়; preview ছোট করা হলেও input frame বদলায় না। Streamer inset, teammate, নিজের first-person হাত/অস্ত্র, HUD বা replay silhouette-কে opponent box করবে না।
+Window-তে `r` চেপে box mode-এ mouse drag করে প্রতিটি দৃশ্যমান in-world opponent-কে box করো। `y` = opponent দেখা যাচ্ছে, `n` = opponent দেখা যাচ্ছে না, `u` = নিশ্চিত নও, `Enter` = save করে পরের frame, `z` = শেষ box undo, `c` = সব box/point মুছে ফেলা, `q` = বন্ধ করা। Box মূল video resolution-এর pixel coordinate-এ save হয়; preview ছোট করা হলেও input frame বদলায় না। Streamer inset, teammate, নিজের first-person হাত/অস্ত্র, HUD বা replay silhouette-কে opponent box করবে না।
+
+একই frame-এ pose-region যাচাইয়ের জন্য box আঁকার পর box-এর ভেতরে point চিহ্নিত করা ঐচ্ছিক: `1` = head, `2` = chest, `3` = lower torso, `4` = legs; এরপর selected opponent box-এর ভেতরের ওই region center-এ একবার click করো। `[` ও `]` দিয়ে একাধিক box-এর মধ্যে selected box বদলাও। শুধু detector evaluation করতে চাইলে কোনো region point না দিয়েও frame save করো।
 
 প্রতিটি frame নিশ্চিত করে save করলে annotation `data/annotations/manual_enemy_boxes.jsonl`-এ append হবে; আগে save করা frame আবার skip হবে। Output file Git-ignored এবং source video-ও পরিবর্তিত হয় না।
 
@@ -148,6 +150,14 @@ python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-thre
 ```
 
 Evaluator এক frame-এর detector box ও hand-labeled opponent box-কে IoU threshold দিয়ে one-to-one মেলায়। এখন matching algorithm threshold পেরোনো সব সম্ভাব্য pair থেকে maximum number of matches খোঁজে; শুধু সবচেয়ে বড় IoU pair আগে নেওয়ার কারণে বৈধ match বাদ পড়ে না। Uncertain frame বাদ পড়ে; CSV `reports/detector_evaluation.csv`-এ যায়। মোট TP/FP/FN থেকে precision, recall ও F1 বের হয়। Label file তৈরি না হওয়া পর্যন্ত metric বানানো হবে না, আর threshold comparison-কে ground-truth evaluation বলা যাবে না।
+
+Pose-region point চিহ্নিত করে থাকলে model center-এর সঙ্গে তুলনা চালাও:
+
+```powershell
+python tools/evaluate_pose_regions.py "data/input/videos/vd-1.mp4"
+```
+
+এটি প্রতিটি region-এর pixel/normalized localization error এবং estimate coverage দেখায়; CSV `reports/pose_region_evaluation.csv`-এ যায়। Model region না পেলে error বানানো হয় না—coverage কমে। কয়েকটি হাতে label করা frame দিয়ে Valorant জুড়ে model-এর সাধারণ accuracy প্রমাণ হয় না।
 
 ## M5: experimental body-region estimate
 
@@ -218,7 +228,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। M9 detector evaluator-এ one-to-one maximum matching যোগ হয়েছে; এখন representative gameplay frame label ছাড়া বাস্তব metric বাকি। পরের কাজ local annotation window-তে frame 600, 3000, 4200, 5400 ও 6600-এর opponent box label করে evaluator চালানো। Pose-region estimate যাচাইয়ের label format ও metric-ও যোগ করতে হবে। Label ছাড়া detector, pose বা tracking accuracy দাবি করা যাবে না।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। M9 detector evaluator-এ one-to-one maximum matching, আর pose-region evaluator-এ point-error/coverage metric যোগ হয়েছে। এখন representative gameplay frame label ছাড়া বাস্তব metric বাকি। পরের কাজ local annotation window-তে frame 600, 3000, 4200, 5400 ও 6600-এর opponent box label করা; চাইলে একই সঙ্গে body-region point চিহ্নিত করা; এরপর দুই evaluator চালানো। Label ছাড়া detector বা pose accuracy দাবি করা যাবে না।
 
 ## ভাষার নিয়ম
 

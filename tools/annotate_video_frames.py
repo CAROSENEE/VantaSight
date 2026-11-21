@@ -16,6 +16,13 @@ LABELS = {
     ord("n"): "no_opponent_visible",
     ord("u"): "uncertain",
 }
+BODY_REGIONS = {ord("1"): "head", ord("2"): "chest", ord("3"): "lower_torso", ord("4"): "legs"}
+BODY_REGION_COLORS = {
+    "head": (255, 190, 0),
+    "chest": (0, 180, 255),
+    "lower_torso": (0, 240, 240),
+    "legs": (255, 80, 180),
+}
 
 
 def _parse_frames(value: str) -> list[int]:
@@ -66,18 +73,44 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
     scale_y = display_height / source_height
 
     boxes: list[tuple[int, int, int, int]] = []
+    region_points_by_box: dict[int, dict[str, tuple[int, int]]] = {}
     status: str | None = None
+    notice: str | None = None
+    active_region: str | None = None
+    selected_box_index = 0
     drag_start: tuple[int, int] | None = None
     drag_current: tuple[int, int] | None = None
+    pending_point: tuple[int, int] | None = None
     window_name = f"VantaSight annotation - {video_name} frame {frame.index}"
 
     def mouse_callback(event: int, x: int, y: int, flags: int, _userdata: object) -> None:
-        nonlocal drag_start, drag_current, status
+        nonlocal drag_start, drag_current, pending_point, notice
         if event == cv2.EVENT_LBUTTONDOWN and y < display_height:
-            drag_start = (min(max(x, 0), display_width), min(max(y, 0), display_height))
-            drag_current = drag_start
+            location = (min(max(x, 0), display_width), min(max(y, 0), display_height))
+            if active_region is None:
+                drag_start = location
+                drag_current = drag_start
+            else:
+                pending_point = location
         elif event == cv2.EVENT_MOUSEMOVE and drag_start is not None:
             drag_current = (min(max(x, 0), display_width), min(max(y, 0), display_height))
+        elif event == cv2.EVENT_LBUTTONUP and pending_point is not None and active_region is not None:
+            if not (0 <= x < display_width and 0 <= y < display_height):
+                notice = "click inside the video frame to mark a body point"
+            elif selected_box_index >= len(boxes):
+                notice = "draw an opponent box before marking body regions"
+            else:
+                source_point = (
+                    max(0, min(source_width, round(x / scale_x))),
+                    max(0, min(source_height, round(y / scale_y))),
+                )
+                x1, y1, x2, y2 = boxes[selected_box_index]
+                if x1 <= source_point[0] <= x2 and y1 <= source_point[1] <= y2:
+                    region_points_by_box.setdefault(selected_box_index, {})[active_region] = source_point
+                    notice = f"{active_region} point set for box {selected_box_index + 1}"
+                else:
+                    notice = "body point must be inside the selected opponent box"
+            pending_point = None
         elif event == cv2.EVENT_LBUTTONUP and drag_start is not None:
             end = (min(max(x, 0), display_width), min(max(y, 0), display_height))
             left, right = sorted((drag_start[0], end[0]))
@@ -96,7 +129,7 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
 
     try:
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-        cv2.resizeWindow(window_name, display_width, display_height + 86)
+        cv2.resizeWindow(window_name, display_width, display_height + 110)
         cv2.setMouseCallback(window_name, mouse_callback)
     except cv2.error as exc:
         raise RuntimeError(
@@ -110,23 +143,43 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
             canvas = cv2.resize(frame.pixels, (display_width, display_height))
             for box in boxes:
                 _draw_box(canvas, box, scale_x, scale_y)
+            if boxes:
+                x1, y1, x2, y2 = boxes[min(selected_box_index, len(boxes) - 1)]
+                cv2.rectangle(
+                    canvas,
+                    (round(x1 * scale_x), round(y1 * scale_y)),
+                    (round(x2 * scale_x), round(y2 * scale_y)),
+                    (255, 255, 0),
+                    3,
+                )
+            for box_index, points in region_points_by_box.items():
+                for region_name, (px, py) in points.items():
+                    display_point = (round(px * scale_x), round(py * scale_y))
+                    color = BODY_REGION_COLORS[region_name]
+                    cv2.drawMarker(canvas, display_point, color, cv2.MARKER_CROSS, 14, 2)
+                    cv2.putText(canvas, region_name, (display_point[0] + 7, max(14, display_point[1] - 6)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1, cv2.LINE_AA)
             if drag_start is not None and drag_current is not None:
                 cv2.rectangle(canvas, drag_start, drag_current, (0, 220, 255), 2)
 
             panel = cv2.copyMakeBorder(
-                canvas, 0, 86, 0, 0, cv2.BORDER_CONSTANT, value=(25, 25, 25)
+                canvas, 0, 110, 0, 0, cv2.BORDER_CONSTANT, value=(25, 25, 25)
             )
             status_text = status or "not labeled"
+            mode_text = f"box {selected_box_index + 1}" if active_region is None else f"{active_region} point for box {selected_box_index + 1}"
+            notice_text = notice or "draw a box or mark optional body-region points"
             instructions = [
                 f"{video_name} | frame {frame.index} | {frame.timestamp_seconds:.3f}s | {source_width}x{source_height}",
-                f"Status: {status_text} | Enemy boxes: {len(boxes)}",
-                "Drag left mouse: add enemy box | y: enemy visible | n: no enemy | u: unsure | z: undo | c: clear | Enter: save/next | q: quit",
+                f"Label: {status_text} | Opponent boxes: {len(boxes)} | Mode: {mode_text}",
+                f"Note: {notice_text}",
+                "Drag to add box. r: box mode | 1=head 2=chest 3=lower torso 4=legs, then click center inside selected box",
+                "[/] select opponent box | y: opponent visible | n: none | u: unsure | z: undo box | c: clear | Enter: save | q: quit",
             ]
             for line_number, text in enumerate(instructions):
                 cv2.putText(
                     panel,
                     text,
-                    (8, display_height + 20 + line_number * 24),
+                    (8, display_height + 18 + line_number * 23),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.48,
                     (235, 235, 235),
@@ -138,14 +191,40 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
 
             if key in LABELS:
                 status = LABELS[key]
+                notice = None
+            elif key in BODY_REGIONS:
+                active_region = BODY_REGIONS[key]
+                notice = None
+                if boxes:
+                    selected_box_index = min(selected_box_index, len(boxes) - 1)
+            elif key == ord("r"):
+                active_region = None
+                notice = None
+            elif key == ord("]"):
+                if boxes:
+                    selected_box_index = (selected_box_index + 1) % len(boxes)
+                    active_region = None
+                    notice = None
+            elif key == ord("["):
+                if boxes:
+                    selected_box_index = (selected_box_index - 1) % len(boxes)
+                    active_region = None
+                    notice = None
             elif key == ord("z"):
                 if boxes:
+                    removed_index = len(boxes) - 1
                     boxes.pop()
+                    region_points_by_box.pop(removed_index, None)
+                    selected_box_index = min(selected_box_index, max(0, len(boxes) - 1))
                 if not boxes and status == "opponent_visible":
                     status = None
             elif key == ord("c"):
                 boxes.clear()
+                region_points_by_box.clear()
+                selected_box_index = 0
+                active_region = None
                 status = None
+                notice = None
             elif key in (10, 13):
                 if status is None:
                     print(f"Frame {frame.index}: choose y, n, or u before saving.")
@@ -164,6 +243,14 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
                     "source_height": source_height,
                     "status": status,
                     "opponent_boxes_xyxy": [list(box) for box in boxes],
+                    "opponent_body_regions_xy": [
+                        {
+                            "box_index": box_index,
+                            "points": {name: list(point) for name, point in points.items()},
+                        }
+                        for box_index, points in sorted(region_points_by_box.items())
+                        if points
+                    ],
                 }
                 break
             elif key == ord("q"):

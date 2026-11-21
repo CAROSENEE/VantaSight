@@ -87,7 +87,7 @@ Use the local annotation tool to create review labels for selected recorded-vide
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600
 ```
 
-The preview is scaled only to fit the window; saved boxes use the original video pixel coordinates. Drag around each visible in-world opponent. Do not label the streamer inset, teammates, first-person hands/weapons, HUD, or replay silhouettes as opponents. Use `u` if the frame is ambiguous. Press `y` to mark an opponent visible, `n` for none visible, and `Enter` to save and continue. Use `z` to undo the latest box, `c` to clear, and `q` to stop; saved rows remain. Labels append to the local, Git-ignored `data/annotations/manual_enemy_boxes.jsonl` file.
+The preview is scaled only to fit the window; saved coordinates use the original video pixels. In box mode (`r`), drag around each visible in-world opponent. Do not label the streamer inset, teammates, first-person hands/weapons, HUD, or replay silhouettes as opponents. Use `u` if the frame is ambiguous. Press `y` to mark an opponent visible, `n` for none visible, and `Enter` to save and continue. Use `z` to undo the latest box, `c` to clear, and `q` to stop; saved rows remain. Optional body-region points can be added inside the selected opponent box: press `1` for head, `2` for chest, `3` for lower torso, or `4` for legs, then click the region center. Use `[` and `]` to select a different opponent box. Labels append to the local, Git-ignored `data/annotations/manual_enemy_boxes.jsonl` file.
 
 After labeling, calculate offline detection metrics with:
 
@@ -96,6 +96,14 @@ python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-thre
 ```
 
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
+
+If you marked body-region points, compare the COCO pose model against them with:
+
+```powershell
+python tools/evaluate_pose_regions.py "data/input/videos/vd-1.mp4"
+```
+
+This reports pixel and frame-normalized localization errors and coverage. Missing estimates reduce coverage; they are not assigned guessed coordinates.
 
 ## Track candidates in a recorded video
 
