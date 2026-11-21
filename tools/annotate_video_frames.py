@@ -53,6 +53,38 @@ def _read_existing(output: Path) -> set[tuple[str, int]]:
     return completed
 
 
+def _read_prefill(path: Path | None, video_name: str) -> dict[int, dict]:
+    """Read provisional records as visual suggestions; never treat their labels as confirmed."""
+    if path is None:
+        return {}
+    if not path.is_file():
+        raise FileNotFoundError(f"Prefill annotation file not found: {path}")
+    suggestions: dict[int, dict] = {}
+    with path.open("r", encoding="utf-8") as source:
+        for line_number, line in enumerate(source, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON at {path}:{line_number}: {exc}") from exc
+            if not isinstance(record, dict) or record.get("video") != video_name:
+                continue
+            frame_index = record.get("frame_index")
+            if type(frame_index) is not int or frame_index < 0:
+                raise ValueError(f"Invalid frame_index at {path}:{line_number}")
+            if frame_index in suggestions:
+                raise ValueError(f"Duplicate prefill for frame {frame_index} in {path}")
+            boxes = record.get("opponent_boxes_xyxy")
+            if not isinstance(boxes, list) or any(
+                not isinstance(box, list) or len(box) != 4 or any(type(value) is not int for value in box)
+                for box in boxes
+            ):
+                raise ValueError(f"Invalid provisional boxes at {path}:{line_number}")
+            suggestions[frame_index] = record
+    return suggestions
+
+
 def _draw_box(image, box: tuple[int, int, int, int], scale_x: float, scale_y: float) -> None:
     x1, y1, x2, y2 = box
     cv2.rectangle(
@@ -64,7 +96,9 @@ def _draw_box(image, box: tuple[int, int, int, int], scale_x: float, scale_y: fl
     )
 
 
-def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> dict | None:
+def _annotate_one(
+    frame, video_name: str, max_width: int, max_height: int, suggestion: dict | None = None
+) -> dict | None:
     source_height, source_width = frame.pixels.shape[:2]
     scale = min(max_width / source_width, max_height / source_height, 1.0)
     display_width = max(1, round(source_width * scale))
@@ -73,6 +107,18 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
     scale_y = display_height / source_height
 
     boxes: list[tuple[int, int, int, int]] = []
+    if suggestion is not None:
+        suggested_size = (suggestion.get("source_width"), suggestion.get("source_height"))
+        if suggested_size != (source_width, source_height):
+            raise ValueError(
+                f"Prefill size {suggested_size[0]}x{suggested_size[1]} does not match "
+                f"video {source_width}x{source_height} at frame {frame.index}"
+            )
+        for box in suggestion["opponent_boxes_xyxy"]:
+            x1, y1, x2, y2 = box
+            if not (0 <= x1 < x2 <= source_width and 0 <= y1 < y2 <= source_height):
+                raise ValueError(f"Invalid prefill box {box} at frame {frame.index}")
+            boxes.append(tuple(box))
     region_points_by_box: dict[int, dict[str, tuple[int, int]]] = {}
     status: str | None = None
     notice: str | None = None
@@ -168,12 +214,19 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
             status_text = status or "not labeled"
             mode_text = f"box {selected_box_index + 1}" if active_region is None else f"{active_region} point for box {selected_box_index + 1}"
             notice_text = notice or "draw a box or mark optional body-region points"
+            suggestion_text = (
+                f"PROVISIONAL SUGGESTIONS: {len(boxes)} box(es); inspect and confirm status"
+                if suggestion is not None
+                else ""
+            )
             instructions = [
                 f"{video_name} | frame {frame.index} | {frame.timestamp_seconds:.3f}s | {source_width}x{source_height}",
                 f"Label: {status_text} | Opponent boxes: {len(boxes)} | Mode: {mode_text}",
                 f"Note: {notice_text}",
+                suggestion_text,
                 "Drag to add box. r: box mode | 1=head 2=chest 3=lower torso 4=legs, then click center inside selected box",
-                "[/] select opponent box | y: opponent visible | n: none | u: unsure | z: undo box | c: clear | Enter: save | q: quit",
+                "[/] select box | y: confirm visible | n: none (clear boxes first) | u: unsure | z: undo | c: clear",
+                "Enter: save only after choosing y/n/u | q: quit",
             ]
             for line_number, text in enumerate(instructions):
                 cv2.putText(
@@ -243,6 +296,8 @@ def _annotate_one(frame, video_name: str, max_width: int, max_height: int) -> di
                     "source_height": source_height,
                     "status": status,
                     "opponent_boxes_xyxy": [list(box) for box in boxes],
+                    "reviewed_manually": True,
+                    "provisional_prefill_used": suggestion is not None,
                     "opponent_body_regions_xy": [
                         {
                             "box_index": box_index,
@@ -275,6 +330,11 @@ def main() -> int:
     )
     parser.add_argument("--max-width", type=int, default=1280, help="Maximum displayed frame width")
     parser.add_argument("--max-height", type=int, default=720, help="Maximum displayed frame height")
+    parser.add_argument(
+        "--prefill",
+        type=Path,
+        help="Optional JSONL with provisional boxes to display for manual review; labels are not pre-confirmed",
+    )
     args = parser.parse_args()
 
     if args.max_width < 1 or args.max_height < 1:
@@ -284,13 +344,16 @@ def main() -> int:
     output = args.output.expanduser()
     try:
         completed = _read_existing(output)
+        suggestions = _read_prefill(args.prefill.expanduser() if args.prefill else None, video.name)
         with VideoReader(video) as reader:
             for frame_index in args.frames:
                 if (video.name, frame_index) in completed:
                     print(f"Skipping already labeled frame {frame_index}.")
                     continue
                 frame = reader.read_frame(frame_index)
-                record = _annotate_one(frame, video.name, args.max_width, args.max_height)
+                record = _annotate_one(
+                    frame, video.name, args.max_width, args.max_height, suggestions.get(frame_index)
+                )
                 if record is None:
                     print("Stopped; saved annotations are preserved.")
                     break

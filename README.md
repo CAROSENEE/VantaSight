@@ -87,6 +87,14 @@ Use the local annotation tool to create review labels for selected recorded-vide
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600
 ```
 
+To manually verify the current provisional sample, pass it with `--prefill` and save to a separate file:
+
+```powershell
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --prefill data/annotations/vd-1_provisional_review.jsonl --output data/annotations/vd-1_user_verified.jsonl
+```
+
+Provisional boxes are displayed as suggestions, but their presence/absence labels are never pre-confirmed. Inspect every frame, press `y`, `n`, or `u` yourself, adjust boxes as needed, then press `Enter` to save. If a suggestion is wrong, `c` clears all boxes so you can redraw or choose `n`. Saved records include `reviewed_manually: true` and `provisional_prefill_used`.
+
 The preview is scaled only to fit the window; saved coordinates use the original video pixels. In box mode (`r`), drag around each visible in-world opponent. Do not label the streamer inset, teammates, first-person hands/weapons, HUD, or replay silhouettes as opponents. Use `u` if the frame is ambiguous. Press `y` to mark an opponent visible, `n` for none visible, and `Enter` to save and continue. Use `z` to undo the latest box, `c` to clear, and `q` to stop; saved rows remain. Optional body-region points can be added inside the selected opponent box: press `1` for head, `2` for chest, `3` for lower torso, or `4` for legs, then click the region center. Use `[` and `]` to select a different opponent box. Labels append to the local, Git-ignored `data/annotations/manual_enemy_boxes.jsonl` file.
 
 After labeling, calculate offline detection metrics with:

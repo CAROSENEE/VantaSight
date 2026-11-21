@@ -245,6 +245,18 @@ python tools/open_dashboard.py reports/ss-1.json
 
 `ss-1.png`-এ বর্তমান local environment-এ detector ও pose estimate চালিয়ে JSON report schema loader দিয়ে যাচাই করা হয়েছে: 1917×1073 screenshot-এ 1টি COCO person candidate এসেছে। এটি detector correctness বা enemy identity-র প্রমাণ নয়। Desktop GUI-তে হাতে click করে layout review এখনো করা হয়নি। নতুন CLI-তে file picker থেকে metadata এবং image/video report reopen flow এই desktop session-এ end-to-end যাচাই বাকি।
 
+### M15: provisional box manually review করার সহায়তা
+
+Annotation tool-এ `--prefill` যোগ হয়েছে। এটি provisional JSONL-এর box-গুলো frame-এ suggestion হিসেবে দেখায়, কিন্তু label pre-select করে না। `y`, `n` বা `u` তোমাকেই চাপতে হবে; তারপর `Enter` দিলে আলাদা output-এ save হবে। ভুল/বাড়তি suggestion সরাতে `c` দিয়ে সব box clear করে সঠিক box নতুন করে আঁকো, অথবা দৃশ্যে opponent না থাকলে clear করে `n` দাও। Ambiguous হলে `u` নাও। প্রতিটি saved row-তে `reviewed_manually: true` ও prefill ব্যবহারের indicator থাকবে।
+
+`vd-1`-এর 12টি sample যাচাই করতে:
+
+```powershell
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --prefill data/annotations/vd-1_provisional_review.jsonl --output data/annotations/vd-1_user_verified.jsonl
+```
+
+একটি করে frame ভালোভাবে দেখে status ও box নিশ্চিত করে Enter দাও। `q` দিলে ইতিমধ্যে save হওয়া row-গুলো থাকবে; একই command পুনরায় চালালে সেগুলো skip হবে। Output Git-ignored। এই review window এখনো user-এর হাতে চালানো বাকি।
+
 ## M7: crosshair-to-region alignment
 
 Frame center-কে default reference ধরে estimate মাপতে:
@@ -272,7 +284,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity এবং M14 dashboard image/video input আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input এবং M15 provisional-box review flow আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
 
 ## ভাষার নিয়ম
 
