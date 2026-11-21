@@ -49,10 +49,11 @@ class EvaluationSummaryTests(unittest.TestCase):
         path = Path("reports/.test_threshold_sweep.csv")
         try:
             path.write_text(
-                "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
+                "video,confidence_threshold,scored_frames,positive_frames,negative_frames,ground_truth_boxes,"
+                "true_positives,false_positives,false_negatives,"
                 "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
-                "vd-1.mp4,0.25,8,1,1,0,0.5,1,0.6666666666666666,0.5,unreviewed_exploratory,8\n"
-                "vd-2.mp4,0.25,8,8,0,0,1,1,1,0.5,manually_reviewed,0\n",
+                "vd-1.mp4,0.25,8,4,4,4,1,1,3,0.5,0.25,0.3333333333333333,0.5,unreviewed_exploratory,8\n"
+                "vd-2.mp4,0.25,8,4,4,8,8,0,0,1,1,1,0.5,manually_reviewed,0\n",
                 encoding="utf-8",
             )
             points = load_threshold_sweep(path, "vd-1.mp4")
@@ -60,8 +61,10 @@ class EvaluationSummaryTests(unittest.TestCase):
             assert points is not None
             self.assertEqual(len(points), 1)
             self.assertEqual(points[0].scored_frames, 8)
+            self.assertEqual((points[0].positive_frames, points[0].negative_frames), (4, 4))
+            self.assertEqual(points[0].ground_truth_boxes, 4)
             self.assertEqual(points[0].label_provenance, "unreviewed_exploratory")
-            self.assertAlmostEqual(points[0].f1, 2 / 3)
+            self.assertAlmostEqual(points[0].f1, 1 / 3)
         finally:
             path.unlink(missing_ok=True)
 
@@ -69,9 +72,10 @@ class EvaluationSummaryTests(unittest.TestCase):
         path = Path("reports/.test_threshold_sweep_invalid.csv")
         try:
             path.write_text(
-                "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
+                "video,confidence_threshold,scored_frames,positive_frames,negative_frames,ground_truth_boxes,"
+                "true_positives,false_positives,false_negatives,"
                 "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
-                "vd-1.mp4,0.25,1,1,1,0,0.9,1,0.95,0.5,unreviewed_exploratory,1\n",
+                "vd-1.mp4,0.25,1,1,0,1,1,1,0,0.9,1,0.95,0.5,unreviewed_exploratory,1\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "does not match counts"):
@@ -83,10 +87,11 @@ class EvaluationSummaryTests(unittest.TestCase):
         path = Path("reports/.test_threshold_sweep_non_monotonic.csv")
         try:
             path.write_text(
-                "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
+                "video,confidence_threshold,scored_frames,positive_frames,negative_frames,ground_truth_boxes,"
+                "true_positives,false_positives,false_negatives,"
                 "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
-                "vd-1.mp4,0.25,1,1,0,1,1,0.5,0.6666666666666666,0.5,unreviewed_exploratory,1\n"
-                "vd-1.mp4,0.50,1,2,0,0,1,1,1,0.5,unreviewed_exploratory,1\n",
+                "vd-1.mp4,0.25,1,1,0,2,1,0,1,1,0.5,0.6666666666666666,0.5,unreviewed_exploratory,1\n"
+                "vd-1.mp4,0.50,1,1,0,2,2,0,0,1,1,1,0.5,unreviewed_exploratory,1\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "increase with confidence threshold"):
@@ -98,10 +103,11 @@ class EvaluationSummaryTests(unittest.TestCase):
         path = Path("reports/.test_threshold_sweep_mixed_iou.csv")
         try:
             path.write_text(
-                "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
+                "video,confidence_threshold,scored_frames,positive_frames,negative_frames,ground_truth_boxes,"
+                "true_positives,false_positives,false_negatives,"
                 "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
-                "vd-1.mp4,0.25,1,1,0,0,1,1,1,0.50,unreviewed_exploratory,1\n"
-                "vd-1.mp4,0.50,1,1,0,0,1,1,1,0.75,unreviewed_exploratory,1\n",
+                "vd-1.mp4,0.25,1,1,0,1,1,0,0,1,1,1,0.50,unreviewed_exploratory,1\n"
+                "vd-1.mp4,0.50,1,1,0,1,1,0,0,1,1,1,0.75,unreviewed_exploratory,1\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "Inconsistent threshold sweep"):

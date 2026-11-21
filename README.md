@@ -111,7 +111,7 @@ Compare multiple cutoffs from one detector pass with:
 python tools/evaluate_threshold_sweep.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output reports/vd-1_threshold_sweep.csv
 ```
 
-The default sweep covers confidence `0.25` through `0.95` in `0.05` increments. The evaluator requires manually reviewed annotations unless `--allow-unreviewed-labels` is explicitly passed for exploratory analysis. It reuses detections across cutoffs, so each labeled frame runs through the model once.
+The default sweep covers confidence `0.25` through `0.95` in `0.05` increments. The CSV includes positive/negative scored-frame counts, ground-truth box count, and annotation provenance. The evaluator requires manually reviewed annotations unless `--allow-unreviewed-labels` is explicitly passed for exploratory analysis. It reuses detections across cutoffs, so each labeled frame runs through the model once.
 
 Load a saved sweep beside the matching video report in the offline dashboard with:
 

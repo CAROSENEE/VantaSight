@@ -99,10 +99,14 @@ def main() -> int:
             raise ValueError("No scored frames remain after excluding uncertain annotations")
 
         results = evaluate_threshold_sweep(samples, args.thresholds, args.iou_threshold)
+        positive_frames = sum(bool(ground_truth) for _, ground_truth in samples)
+        negative_frames = len(samples) - positive_frames
+        ground_truth_boxes = sum(len(ground_truth) for _, ground_truth in samples)
         provenance = "unreviewed_exploratory" if unreviewed_frames else "manually_reviewed"
         output.parent.mkdir(parents=True, exist_ok=True)
         fields = [
-            "video", "confidence_threshold", "scored_frames", "true_positives", "false_positives",
+            "video", "confidence_threshold", "scored_frames", "positive_frames", "negative_frames",
+            "ground_truth_boxes", "true_positives", "false_positives",
             "false_negatives", "precision", "recall", "f1", "iou_threshold",
             "label_provenance", "unreviewed_scored_frames",
         ]
@@ -114,6 +118,9 @@ def main() -> int:
                     **result,
                     "video": video.name,
                     "scored_frames": len(samples),
+                    "positive_frames": positive_frames,
+                    "negative_frames": negative_frames,
+                    "ground_truth_boxes": ground_truth_boxes,
                     "iou_threshold": args.iou_threshold,
                     "label_provenance": provenance,
                     "unreviewed_scored_frames": unreviewed_frames,

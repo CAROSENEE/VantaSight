@@ -40,6 +40,9 @@ class ThresholdSweepPoint:
     recall: float | None
     f1: float | None
     scored_frames: int
+    positive_frames: int
+    negative_frames: int
+    ground_truth_boxes: int
     label_provenance: str
     iou_threshold: float
 
@@ -140,7 +143,8 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
         required = {
             "video", "confidence_threshold", "scored_frames", "true_positives", "false_positives",
             "false_negatives", "precision", "recall", "f1", "label_provenance",
-            "unreviewed_scored_frames", "iou_threshold",
+            "unreviewed_scored_frames", "iou_threshold", "positive_frames", "negative_frames",
+            "ground_truth_boxes",
         }
         if reader.fieldnames is None or not required.issubset(reader.fieldnames):
             raise ValueError(f"Threshold sweep CSV is missing required columns: {path}")
@@ -150,6 +154,9 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
             try:
                 threshold = float(row["confidence_threshold"])
                 scored_frames = int(row["scored_frames"])
+                positive_frames = int(row["positive_frames"])
+                negative_frames = int(row["negative_frames"])
+                ground_truth_boxes = int(row["ground_truth_boxes"])
                 counts = [int(row[key]) for key in ("true_positives", "false_positives", "false_negatives")]
                 unreviewed_frames = int(row["unreviewed_scored_frames"])
                 iou_threshold = float(row["iou_threshold"])
@@ -162,7 +169,13 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Invalid confidence threshold in {path}")
             if not math.isfinite(iou_threshold) or not 0 < iou_threshold <= 1:
                 raise ValueError(f"Invalid IoU threshold in {path}")
-            if scored_frames < 1 or any(value < 0 for value in counts):
+            if (
+                scored_frames < 1
+                or any(value < 0 for value in counts)
+                or min(positive_frames, negative_frames, ground_truth_boxes) < 0
+                or positive_frames + negative_frames != scored_frames
+                or ground_truth_boxes < positive_frames
+            ):
                 raise ValueError(f"Invalid threshold sweep counts in {path}")
             if not 0 <= unreviewed_frames <= scored_frames:
                 raise ValueError(f"Invalid unreviewed frame count in {path}")
@@ -170,7 +183,10 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Invalid label provenance in {path}")
             if provenance == "manually_reviewed" and unreviewed_frames:
                 raise ValueError(f"Manual threshold sweep cannot contain unreviewed frames in {path}")
-            contexts.add((scored_frames, provenance, unreviewed_frames, iou_threshold))
+            contexts.add((
+                scored_frames, positive_frames, negative_frames, ground_truth_boxes,
+                provenance, unreviewed_frames, iou_threshold,
+            ))
             expected_metrics = calculate_metrics(DetectionCounts(*counts))
             for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
                 if actual is None and expected is None:
@@ -189,6 +205,9 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                     recall=metrics[1],
                     f1=metrics[2],
                     scored_frames=scored_frames,
+                    positive_frames=positive_frames,
+                    negative_frames=negative_frames,
+                    ground_truth_boxes=ground_truth_boxes,
                     label_provenance=provenance,
                     iou_threshold=iou_threshold,
                 )
@@ -201,6 +220,8 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
     if len(contexts) != 1:
         raise ValueError(f"Inconsistent threshold sweep sample or provenance in {path}")
     truth_count = points[0].true_positives + points[0].false_negatives
+    if truth_count != points[0].ground_truth_boxes:
+        raise ValueError(f"Ground-truth box total does not match TP+FN in {path}")
     for previous, current in zip(points, points[1:]):
         if current.true_positives > previous.true_positives:
             raise ValueError(f"True positives increase with confidence threshold in {path}")
