@@ -188,6 +188,39 @@ def main(argv: list[str] | None = None) -> int:
     else:
         ap_text = "IoU AP: not available for this source (manual box labels required)."
     ttk.Label(header, text=ap_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
+    if iou_ap:
+        ap_chart = tk.Canvas(header, height=145, background="#f7f9fc", highlightthickness=0)
+        ap_chart.pack(fill="x", pady=(4, 0))
+
+        def draw_iou_ap_chart(event: tk.Event | None = None) -> None:
+            width = max(320, int(event.width) if event is not None else 1150)
+            height = 145
+            left, right, top, bottom = 48, width - 20, 18, height - 30
+            ap_chart.delete("all")
+            ap_chart.create_text(left, 8, anchor="w", text="Average precision by IoU threshold", fill="#263246")
+            for tick in (0.0, 0.5, 1.0):
+                y = bottom - tick * (bottom - top)
+                ap_chart.create_line(left, y, right, y, fill="#d6dde8")
+                ap_chart.create_text(left - 8, y, anchor="e", text=f"{tick:.1f}", fill="#596579")
+            thresholds = [point.iou_threshold for point in iou_ap if point.average_precision is not None]
+            values = [point.average_precision for point in iou_ap if point.average_precision is not None]
+            if not thresholds:
+                return
+            minimum, maximum = min(thresholds), max(thresholds)
+            points: list[tuple[float, float]] = []
+            for threshold, value in zip(thresholds, values):
+                fraction = 0.5 if maximum == minimum else (threshold - minimum) / (maximum - minimum)
+                x = left + fraction * (right - left)
+                y = bottom - value * (bottom - top)
+                points.append((x, y))
+                ap_chart.create_text(x, bottom + 14, text=f"{threshold:.2f}", fill="#596579")
+            if len(points) > 1:
+                ap_chart.create_line(*[coordinate for point in points for coordinate in point], fill="#087e8b", width=2)
+            for x, y in points:
+                ap_chart.create_oval(x - 3, y - 3, x + 3, y + 3, fill="#087e8b", outline="#087e8b")
+
+        ap_chart.bind("<Configure>", draw_iou_ap_chart)
+        draw_iou_ap_chart()
     if threshold_sweep:
         format_metric = lambda value: "n/a" if value is None else f"{value:.2f}"
         sweep_entries = [

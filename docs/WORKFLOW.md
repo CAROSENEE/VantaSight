@@ -428,3 +428,7 @@ Provisional `vd-1` sample-এ 8 scored frame (4 positive/4 negative), 4 ground-t
 ### M43: AP report-এর model/run metadata
 
 AP CSV-তে model architecture ও weight ID, confidence floor (`0.0`), max-side, resolved device, exclusion region-এর সংখ্যা এবং AP matching method যোগ হয়েছে। Dashboard loader হয় সম্পূর্ণ metadata group গ্রহণ করে, নয়তো partial metadata reject করে; এক report-এর সব IoU row-তে configuration একই থাকতে হবে। Dashboard AP summary-তেও এই run context দেখা যায়। আগের metadata-বিহীন AP CSV compatibility-র জন্য load করা যাবে। নতুন 10-row local report loader-এ mean `0.143`, COCO_V1, `cuda:0`, max-side `1920`, 4 exclusion region এবং matching method-সহ load হয়েছে; metric আগের run-এর সঙ্গে মিলে।
+
+### M44: dashboard-এ IoU/AP curve
+
+AP report dashboard-এ load হলে AP@IoU point-গুলো একটি responsive Tkinter chart-এ আঁকা হয়। IoU threshold x-axis-এ, AP 0–1 y-axis-এ; provenance, sample size, mean এবং model/run metadata chart-এর উপরের text summary-তে থাকে। Compile ও dashboard CLI help check pass করেছে; window-তে graph-এর visual review বাকি।

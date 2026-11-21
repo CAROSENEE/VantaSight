@@ -123,7 +123,7 @@ python tools/evaluate_iou_ap.py "data/input/videos/vd-1.mp4" data/annotations/vd
 
 The report uses 101-point interpolated AP, matching each prediction to at most one ground-truth box in its own frame. It records model/weights, confidence floor, resize limit, device, exclusion-region count, and AP method. It is a small-sample research metric, not the full COCO evaluation protocol (which also defines max-detection and area rules). Unreviewed annotations require `--allow-unreviewed-labels` and remain marked exploratory.
 
-Load the confidence sweep and IoU AP report beside the matching video report in the offline dashboard with:
+Load the confidence sweep and IoU AP report beside the matching video report in the offline dashboard; the AP curve is graphed by IoU threshold:
 
 ```powershell
 python tools/open_dashboard.py reports/tracks.json --threshold-sweep reports/vd-1_threshold_sweep.csv --iou-ap reports/vd-1_iou_ap.csv
