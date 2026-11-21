@@ -2,7 +2,7 @@
 
 এটি VantaSight তৈরির ধাপে ধাপে কাজের তালিকা। প্রতিটি ধাপ শুরুর আগে কী করতে যাচ্ছি তা জানাব। ধাপ শেষ হলে কী বদলেছে, কেন দরকার, কীভাবে ব্যবহার করতে হবে এবং কোনো সীমাবদ্ধতা আছে কি না—সহজ ভাষায় বুঝিয়ে দেব। কোনো কাজ যাচাই করা না গেলে সেটিও পরিষ্কার করে বলব।
 
-**Annotation status (2026-11-21):** User annotation window দেখেননি এবং কোনো video label confirm করেননি। তাই কোনো verified video ground truth বা detector/pose accuracy metric নেই। আগের unverified provisional label ও তার derived local reports মুছে ফেলা হয়েছে; এগুলো থেকে আসা সংখ্যা/threshold recommendation ব্যবহার করা যাবে না। `vd-1_user_verified.jsonl` নেই। User পরে annotation করবেন বলেছেন—ততদিন annotation এবং label-নির্ভর evaluation স্থগিত।
+**Annotation status (2026-11-21):** আগের annotation attempt-এ window user দেখেননি, তাই সেটি annotation ছিল না। এখন actual OpenCV WIN32 annotation process চলছে এবং frame 540-এর window title process list-এ দেখা গেছে; Computer Use screenshot bridge অনুপলব্ধ থাকায় user-এর screen-এ foreground visibility নিশ্চিত করা যায়নি। `vd-1_user_verified.jsonl` এখনো নেই এবং কোনো video label save/confirm হয়নি। তাই verified video ground truth বা detector/pose accuracy metric নেই; annotation user review ও label-নির্ভর evaluation pending। আগের unverified provisional label ও derived local reports মুছে ফেলা হয়েছে।
 
 ## প্রকল্পের লক্ষ্য
 
@@ -38,7 +38,7 @@
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে। এই pilot CSV ও `source_regions.json` tracked; পরবর্তী video annotation ও generated report Git ignore থাকে।
 - M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা, তবে fresh clone fetch verification pending।
 
-Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে metric হিসাবের evaluator আছে। Annotation window user-এর কাছে দৃশ্যমান হয়নি এবং কোনো video label user confirm করেননি। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। User পরে annotation করবেন বলেছেন। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
+Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে metric হিসাবের evaluator আছে। Annotation process frame 540-এ চলছে, তবে user-এর screen-এ window দৃশ্যমান কি না নিশ্চিত করা যায়নি; কোনো video label user confirm করেননি। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -47,7 +47,7 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | Annotation window user-এর কাছে খোলেনি; verified video label বা ব্যবহারযোগ্য video metric নেই |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | Annotation process frame 540-এ চলছে; screen visibility user-confirmed নয়, verified video label বা metric নেই |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN inference frame 3000-এ দেখা হয়েছে; overlay false candidate-ও region পেয়েছে, label দিয়ে যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; 59-frame coarse sample-এ 127 candidate track-এর 96টি এক observation-এ শেষ হয়েছে; continuity review বাকি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | `ss-1` ও `vd-1` frame 3000-এ runtime check হয়েছে; geometry-only, region label দিয়ে যাচাই বাকি |
@@ -293,7 +293,7 @@ GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot p
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M85)
+## বর্তমান অবস্থান (M86)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -306,8 +306,8 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M70-এ annotation batch launcher চালুর আগে blank review ও প্রত্যাশিত window title prefix console-এ জানায়; ভুল হলে console খোলা রেখে error পড়তে বলে। এতে পরে annotation শুরু করলে কী window খুঁজতে হবে বোঝা যাবে। Annotation tool চালানো হয়নি।
 - M71-এ dashboard title-এ source video এবং report filename দুটোই থাকবে; একই footage-এর পুরোনো ও dense analysis window আলাদা করে চেনা যাবে।
 - M72-এ নতুন title-সহ dense dashboard সরাসরি launch করে দেখা হয়েছে। Python process চললেও CUA inventory-তে শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window ছিল; নতুন window/screenshot বা error পাওয়া যায়নি। শুধু এই attempt-এর process বন্ধ করেছি। তাই report-specific title code আছে, কিন্তু নতুন window visible/targetable হওয়া নিশ্চিত নয়।
-- Video manual annotation এখনো হয়নি। User বলেছেন এটি পরে করবেন। কোনো `vd-1_user_verified.jsonl` নেই; আগের provisional labels ও derived metrics মুছে ফেলা হয়েছে.
-- পরবর্তী gate: desktop-এ dense dashboard launch ও playback দৃশ্যমানভাবে যাচাই করা। User annotation করতে প্রস্তুত হলে তবেই blank review window খুলে তাঁর নিশ্চিত করা label save হবে; তারপর evaluator আলাদা ধাপে চলবে।
+- Video manual annotation এখনো হয়নি। M86-এ blank annotation window frame 540-এ চালু হয়েছে, কিন্তু screen visibility user-confirmed নয় এবং কোনো label save হয়নি। `vd-1_user_verified.jsonl` নেই; আগের provisional labels ও derived metrics মুছে ফেলা হয়েছে.
+- পরবর্তী gate: user annotation window দেখতে পাচ্ছেন কি না নিশ্চিত করে ১২টি sampled frame নিজে review করে label save করা। তারপর evaluator আলাদা ধাপে চলবে। Dashboard dense-report playback-এর visual QA-ও এখনো বাকি।
 
 ## আমরা যেভাবে কাজ করব
 
