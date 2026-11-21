@@ -218,6 +218,18 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,60
 python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
 ```
 
+### M13: confidence-threshold sensitivity
+
+একই 8টি provisional scored frame-এ শুধু confidence cutoff বদলে evaluation করা হয়েছে:
+
+| Confidence | TP | FP | FN | Precision | Recall | F1 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.25 | 3 | 24 | 1 | 0.111 | 0.750 | 0.194 |
+| 0.50 | 2 | 16 | 2 | 0.111 | 0.500 | 0.182 |
+| 0.75 | 2 | 10 | 2 | 0.167 | 0.500 | 0.250 |
+
+Cutoff `0.75`-এ false positive কমলেও recall অর্ধেকে নেমেছে; frame 5400-এর ছোট/distant target `0.50` ও `0.75`-এ বাদ পড়েছে। Frame 2400-এর oversized box higher confidence-এ থেকেও IoU `0.50`-এ match হয়নি—শুধু threshold বাড়িয়ে localization সমস্যা মেটে না। এই অতি ছোট provisional sample দেখে default `0.25` বদলানো হয়নি। CSV-গুলো `reports/vd-1_provisional_eval_conf_0_50.csv` ও `_conf_0_75.csv` নামে local, Git-ignored output।
+
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
 ## M7: crosshair-to-region alignment
@@ -247,7 +259,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow এবং M12 provisional evaluation আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation ও M13 threshold sensitivity আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
 
 ## ভাষার নিয়ম
 
