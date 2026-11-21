@@ -97,7 +97,13 @@ def _draw_box(image, box: tuple[int, int, int, int], scale_x: float, scale_y: fl
 
 
 def _annotate_one(
-    frame, video_name: str, max_width: int, max_height: int, suggestion: dict | None = None
+    frame,
+    video_name: str,
+    max_width: int,
+    max_height: int,
+    suggestion: dict | None = None,
+    review_position: int = 1,
+    review_total: int = 1,
 ) -> dict | None:
     source_height, source_width = frame.pixels.shape[:2]
     scale = min(max_width / source_width, max_height / source_height, 1.0)
@@ -220,7 +226,8 @@ def _annotate_one(
                 else ""
             )
             instructions = [
-                f"{video_name} | frame {frame.index} | {frame.timestamp_seconds:.3f}s | {source_width}x{source_height}",
+                f"Review {review_position}/{review_total} | {video_name} | frame {frame.index} | "
+                f"{frame.timestamp_seconds:.3f}s | {source_width}x{source_height}",
                 f"Label: {status_text} | Opponent boxes: {len(boxes)} | Mode: {mode_text}",
                 f"Note: {notice_text}",
                 suggestion_text,
@@ -346,13 +353,19 @@ def main() -> int:
         completed = _read_existing(output)
         suggestions = _read_prefill(args.prefill.expanduser() if args.prefill else None, video.name)
         with VideoReader(video) as reader:
-            for frame_index in args.frames:
+            for review_position, frame_index in enumerate(args.frames, start=1):
                 if (video.name, frame_index) in completed:
-                    print(f"Skipping already labeled frame {frame_index}.")
+                    print(f"Review {review_position}/{len(args.frames)}: skipping saved frame {frame_index}.")
                     continue
                 frame = reader.read_frame(frame_index)
                 record = _annotate_one(
-                    frame, video.name, args.max_width, args.max_height, suggestions.get(frame_index)
+                    frame,
+                    video.name,
+                    args.max_width,
+                    args.max_height,
+                    suggestions.get(frame_index),
+                    review_position,
+                    len(args.frames),
                 )
                 if record is None:
                     print("Stopped; saved annotations are preserved.")
@@ -362,7 +375,10 @@ def main() -> int:
                     destination.write(json.dumps(record, ensure_ascii=False) + "\n")
                     destination.flush()
                 completed.add((video.name, frame_index))
-                print(f"Saved frame {frame_index}: {record['status']} ({len(record['opponent_boxes_xyxy'])} boxes)")
+                print(
+                    f"Review {review_position}/{len(args.frames)}: saved frame {frame_index}: "
+                    f"{record['status']} ({len(record['opponent_boxes_xyxy'])} boxes)"
+                )
         print(f"Annotations: {output.resolve()}")
         return 0
     except (FileNotFoundError, IndexError, OSError, ValueError, RuntimeError, cv2.error) as exc:

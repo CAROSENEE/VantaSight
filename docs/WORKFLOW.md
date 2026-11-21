@@ -327,7 +327,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping, M26 offline-boundary audit এবং M27 planned annotation coverage check আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping, M26 offline-boundary audit এবং M27 planned annotation coverage check এবং M28 annotation review progress indicator আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 
@@ -360,3 +360,7 @@ Dashboard-এর এক লাইনের summary-তে M22/M23 যোগ হ�
 ### M27: planned annotation coverage check
 
 `evaluate_detector.py`-তে ঐচ্ছিক `--expected-frames` যুক্ত হয়েছে। Comma-separated source frame index-এর set ঠিক মিলতে হবে; কোনো planned frame missing বা বাড়তি frame থাকলে detector inference-এর আগেই evaluator স্পষ্ট error দেবে। এটি user-এর label status বা box সঠিক কি না যাচাই করে না; কেবল dataset coverage gate। `vd-1`-এর 12-frame review-এর জন্য exact list-সহ command উপরের M12 workflow-তে দেওয়া আছে। Test-এ parse validation, missing ও unexpected index যাচাই করা হয়েছে।
+
+### M28: annotation review progress indicator
+
+Interactive annotation window ও terminal-এ planned sample-এর `বর্তমান/মোট` progress দেখায়; আগে save করা frame skip হলেও তার sample position অক্ষুণ্ণ থাকে। এতে 12-frame review-তে কতদূর হয়েছে বোঝা সহজ হয়, কিন্তু কোনো label নিজে থেকে নির্বাচন বা পরিবর্তন হয় না। নতুন behavior window restart করে visual check করা বাকি।
