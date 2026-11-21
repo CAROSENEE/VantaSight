@@ -170,7 +170,8 @@ def main(argv: list[str] | None = None) -> int:
         ]
         sweep_lines = [
             "Confidence sweep "
-            f"({threshold_sweep[0].label_provenance}, {threshold_sweep[0].scored_frames} scored frames):"
+            f"({threshold_sweep[0].label_provenance}, {threshold_sweep[0].scored_frames} scored frames, "
+            f"IoU {threshold_sweep[0].iou_threshold:.2f}):"
         ]
         sweep_lines.extend(
             "  |  ".join(sweep_entries[index:index + 5])

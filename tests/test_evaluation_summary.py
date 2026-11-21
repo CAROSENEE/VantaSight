@@ -70,11 +70,41 @@ class EvaluationSummaryTests(unittest.TestCase):
         try:
             path.write_text(
                 "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
-                "precision,recall,f1,label_provenance,unreviewed_scored_frames\n"
-                "vd-1.mp4,0.25,1,1,1,0,0.9,1,0.95,unreviewed_exploratory,1\n",
+                "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
+                "vd-1.mp4,0.25,1,1,1,0,0.9,1,0.95,0.5,unreviewed_exploratory,1\n",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "does not match counts"):
+                load_threshold_sweep(path, "vd-1.mp4")
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_threshold_sweep_rejects_non_monotonic_detection_counts(self) -> None:
+        path = Path("reports/.test_threshold_sweep_non_monotonic.csv")
+        try:
+            path.write_text(
+                "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
+                "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
+                "vd-1.mp4,0.25,1,1,0,1,1,0.5,0.6666666666666666,0.5,unreviewed_exploratory,1\n"
+                "vd-1.mp4,0.50,1,2,0,0,1,1,1,0.5,unreviewed_exploratory,1\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "increase with confidence threshold"):
+                load_threshold_sweep(path, "vd-1.mp4")
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_threshold_sweep_rejects_mixed_iou_settings(self) -> None:
+        path = Path("reports/.test_threshold_sweep_mixed_iou.csv")
+        try:
+            path.write_text(
+                "video,confidence_threshold,scored_frames,true_positives,false_positives,false_negatives,"
+                "precision,recall,f1,iou_threshold,label_provenance,unreviewed_scored_frames\n"
+                "vd-1.mp4,0.25,1,1,0,0,1,1,1,0.50,unreviewed_exploratory,1\n"
+                "vd-1.mp4,0.50,1,1,0,0,1,1,1,0.75,unreviewed_exploratory,1\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "Inconsistent threshold sweep"):
                 load_threshold_sweep(path, "vd-1.mp4")
         finally:
             path.unlink(missing_ok=True)

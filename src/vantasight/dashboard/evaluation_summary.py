@@ -41,6 +41,7 @@ class ThresholdSweepPoint:
     f1: float | None
     scored_frames: int
     label_provenance: str
+    iou_threshold: float
 
 
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
@@ -133,12 +134,13 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
     if not path.is_file():
         return None
     points: list[ThresholdSweepPoint] = []
+    contexts: set[tuple[int, str, int, float]] = set()
     with path.open("r", encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
         required = {
             "video", "confidence_threshold", "scored_frames", "true_positives", "false_positives",
             "false_negatives", "precision", "recall", "f1", "label_provenance",
-            "unreviewed_scored_frames",
+            "unreviewed_scored_frames", "iou_threshold",
         }
         if reader.fieldnames is None or not required.issubset(reader.fieldnames):
             raise ValueError(f"Threshold sweep CSV is missing required columns: {path}")
@@ -150,6 +152,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 scored_frames = int(row["scored_frames"])
                 counts = [int(row[key]) for key in ("true_positives", "false_positives", "false_negatives")]
                 unreviewed_frames = int(row["unreviewed_scored_frames"])
+                iou_threshold = float(row["iou_threshold"])
                 raw_metrics = [row[name].strip() for name in ("precision", "recall", "f1")]
                 metrics = [float(value) if value else None for value in raw_metrics]
             except (KeyError, TypeError, ValueError) as exc:
@@ -157,6 +160,8 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
             provenance = row.get("label_provenance", "")
             if not math.isfinite(threshold) or not 0 <= threshold <= 1:
                 raise ValueError(f"Invalid confidence threshold in {path}")
+            if not math.isfinite(iou_threshold) or not 0 < iou_threshold <= 1:
+                raise ValueError(f"Invalid IoU threshold in {path}")
             if scored_frames < 1 or any(value < 0 for value in counts):
                 raise ValueError(f"Invalid threshold sweep counts in {path}")
             if not 0 <= unreviewed_frames <= scored_frames:
@@ -165,6 +170,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Invalid label provenance in {path}")
             if provenance == "manually_reviewed" and unreviewed_frames:
                 raise ValueError(f"Manual threshold sweep cannot contain unreviewed frames in {path}")
+            contexts.add((scored_frames, provenance, unreviewed_frames, iou_threshold))
             expected_metrics = calculate_metrics(DetectionCounts(*counts))
             for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
                 if actual is None and expected is None:
@@ -184,6 +190,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                     f1=metrics[2],
                     scored_frames=scored_frames,
                     label_provenance=provenance,
+                    iou_threshold=iou_threshold,
                 )
             )
     if not points:
@@ -191,6 +198,16 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
     points.sort(key=lambda point: point.confidence_threshold)
     if len({point.confidence_threshold for point in points}) != len(points):
         raise ValueError(f"Duplicate confidence threshold in {path}")
-    if len({point.scored_frames for point in points}) != 1 or len({point.label_provenance for point in points}) != 1:
+    if len(contexts) != 1:
         raise ValueError(f"Inconsistent threshold sweep sample or provenance in {path}")
+    truth_count = points[0].true_positives + points[0].false_negatives
+    for previous, current in zip(points, points[1:]):
+        if current.true_positives > previous.true_positives:
+            raise ValueError(f"True positives increase with confidence threshold in {path}")
+        if current.false_positives > previous.false_positives:
+            raise ValueError(f"False positives increase with confidence threshold in {path}")
+        if current.false_negatives < previous.false_negatives:
+            raise ValueError(f"False negatives decrease with confidence threshold in {path}")
+        if current.true_positives + current.false_negatives != truth_count:
+            raise ValueError(f"Ground-truth count changes across thresholds in {path}")
     return points
