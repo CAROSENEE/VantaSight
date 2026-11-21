@@ -125,6 +125,7 @@ def _annotate_one(
     suggestion: dict | None = None,
     review_position: int = 1,
     review_total: int = 1,
+    keep_on_top: bool = False,
 ) -> dict | None:
     source_height, source_width = frame.pixels.shape[:2]
     scale = min(max_width / source_width, max_height / source_height, 1.0)
@@ -258,6 +259,11 @@ def _annotate_one(
     try:
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(window_name, display_width, display_height + 180)
+        if keep_on_top:
+            try:
+                cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+            except cv2.error as exc:
+                print(f"Could not keep annotation window on top; continuing normally: {exc}")
         cv2.setMouseCallback(window_name, mouse_callback)
     except cv2.error as exc:
         raise RuntimeError(
@@ -418,6 +424,11 @@ def main() -> int:
         type=Path,
         help="Optional JSONL with provisional boxes to display for manual review; labels are not pre-confirmed",
     )
+    parser.add_argument(
+        "--keep-on-top",
+        action="store_true",
+        help="Keep the annotation window above other windows so it is easy to find",
+    )
     args = parser.parse_args()
 
     if args.max_width < 1 or args.max_height < 1:
@@ -442,6 +453,7 @@ def main() -> int:
                     suggestions.get(frame_index),
                     review_position,
                     len(args.frames),
+                    args.keep_on_top,
                 )
                 if record is None:
                     print("Stopped; saved annotations are preserved.")
