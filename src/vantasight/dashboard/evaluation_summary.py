@@ -209,6 +209,10 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 or timing[1] != scored_frames
                 or timing[3] <= 0
                 or timing[4] <= 0
+                or not math.isclose(
+                    timing[4], scored_frames / timing[3], rel_tol=1e-5, abs_tol=1e-6
+                )
+                or timing[1] * timing[2] / 1000 > timing[3] + 0.001
             ):
                 raise ValueError(f"Invalid threshold sweep timing metadata in {path}")
             contexts.add((

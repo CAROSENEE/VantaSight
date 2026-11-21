@@ -402,3 +402,7 @@ Threshold sweep CSV-তে model initialization-এর সময়, detector infer
 ### M37: ছোট target review-এর জন্য annotation zoom ও pan
 
 Annotation window-তে `+`/`-` দিয়ে সর্বোচ্চ `8×` zoom, right mouse drag দিয়ে pan এবং `0` দিয়ে পুরো frame-এ reset যোগ হয়েছে; Windows-এ mouse wheel cursor-এর জায়গায় zoom করে। Existing box/region overlay-ও zoomed view-তে একই source location-এ আঁকা হয়; নতুন box ও body-point আগের মতো source video pixel coordinate-এ save হওয়ার জন্য view crop থেকে coordinate mapping করা হয়েছে। Window-এর নির্দেশনা panel-ও বড় করা হয়েছে, যাতে zoom control-সহ save/quit key দেখা যায়। README-তে নতুন control লেখা হয়েছে। এটি দূরের/ছোট opponent frame খুঁটিয়ে দেখার সুবিধা; auto-enemy classification নয়। Python compile ও CLI help check pass করেছে; live window-তে zoom/pan/box mapping-এর visual check এখনো বাকি।
+
+### M38: runtime হিসাবের গাণিতিক consistency
+
+Threshold-sweep dashboard loader এখন CSV-তে থাকা sampled throughput-কে `scored_frames / sampled_analysis_elapsed_seconds`-এর সঙ্গে মেলায়। পাশাপাশি সব inference call-এর mean latency যোগফল analysis elapsed-এর চেয়ে বেশি হলে CSV reject করে। এতে কেবল valid number থাকা নয়, timing field-গুলোর পারস্পরিক সামঞ্জস্যও যাচাই হয়। বর্তমান local provisional report-এর metadata এই নিয়মে load হয়েছে। এটি timing metadata যাচাই, model performance বা accuracy benchmark নয়।
