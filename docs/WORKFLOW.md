@@ -46,7 +46,7 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 |---|---|---|---|
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
-| 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
+| 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | User-labeled 2-screenshot pilot-এ default 0.25 cutoff-এ TP=1, FP=1; video/general performance এখনো অপ্রমাণিত |
 | 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | Annotation process frame 540-এ চলছে; screen visibility user-confirmed নয়, verified video label বা metric নেই |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN inference frame 3000-এ দেখা হয়েছে; overlay false candidate-ও region পেয়েছে, label দিয়ে যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; 59-frame coarse sample-এ 127 candidate track-এর 96টি এক observation-এ শেষ হয়েছে; continuity review বাকি |
@@ -293,7 +293,7 @@ GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot p
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M86)
+## বর্তমান অবস্থান (M87)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -595,3 +595,15 @@ Dashboard-এ কোনো sampled frame-এ detection না থাকলে de
 ### M86: manual annotation window খোলা
 
 User annotation window দেখতে পাননি বলে আগের `--dry-run`-কে annotation হিসেবে ধরা হয়নি; এটি শুধু frame preflight ছিল। এবার project `.venv`-এর OpenCV WIN32 GUI দিয়ে `tools/annotate_video_frames.py` চালিয়ে actual window খুলেছি। Window title `VantaSight annotation - vd-1.mp4 frame 540`; ১২-frame shortlist-এর প্রথম frame দেখানো হচ্ছে। Annotation output file এখনো তৈরি হয়নি, কোনো frame label/box-ও save হয়নি। User frame নিজে দেখে `y` (opponent দেখা যায়), `n` (দেখা যায় না), অথবা `u` (অনিশ্চিত) বেছে নেবেন; `Enter` দিয়ে save/পরের frame, `q` দিয়ে বাকি review থামানো যায়। Box আঁকতে frame-এর ওপর left-drag করতে হয়। User review শেষ হওয়ার আগে কোনো video benchmark নেই।
+
+### M87: screenshot presence pilot পুনরায় চালানো
+
+User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি source mode তুলনা করেছি (`cuda:0`, দুইটি image, resolution 1917×1073 ও 1917×1070)। Default resize mode-এ threshold 0.25-এ TP=1, FP=1, TN=0, FN=0; `ss-1` doorway character score 0.286, `ss-2` first-person arm/weapon false candidate score 0.256। `--preserve-source-resolution`-এ একই threshold-এ TP=0, FP=1, TN=0, FN=1; `ss-1`-এর একই box score 0.193-এ নেমেছে, তাই cutoff-এর নিচে গেছে। Source-resolution mode সবসময় detection উন্নত করবে—এমন নিশ্চয়তা নেই। ওই mode-এর threshold sweep-এ `ss-1` max score 0.1934 এবং `ss-2` false candidate score 0.3650; 0.05–0.15-এ positive screenshot ধরা পড়লেও false positive-টিও থাকে। দুইটি screenshot দিয়ে general detector accuracy বা bounding-box localization প্রমাণ হয় না; এগুলো small-target/false-positive ঝুঁকির pilot উদাহরণ। Local CSV `reports/screenshot_presence_eval_default_latest.csv`, `reports/screenshot_presence_eval_latest.csv` ও `reports/screenshot_presence_threshold_sweep_latest.csv`; এগুলো generated report হওয়ায় Git-ignored।
+
+পুনরায় চালাতে:
+
+```powershell
+.venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --confidence-threshold 0.25 --preserve-source-resolution --output reports\screenshot_presence_eval_latest.csv
+.venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --confidence-threshold 0.25 --output reports\screenshot_presence_eval_default_latest.csv
+.venv\Scripts\python.exe tools\evaluate_screenshot_presence.py --thresholds 0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.50,0.60,0.70,0.80,0.90,0.95 --preserve-source-resolution --output reports\screenshot_presence_threshold_sweep_latest.csv
+```
