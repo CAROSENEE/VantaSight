@@ -137,9 +137,10 @@ Evaluate screenshot-level candidate presence against the manually labeled screen
 
 ```powershell
 python tools/evaluate_screenshot_presence.py --confidence-threshold 0.25
+python tools/evaluate_screenshot_presence.py --thresholds 0.25,0.26,0.28,0.30,0.35,0.40 --output reports/screenshot_presence_threshold_sweep.csv
 ```
 
-This compares whether any person candidate was returned with the user-labeled enemy-visible yes/no value; it does not evaluate box overlap, enemy identity, tracking, or aim accuracy. The current two-screenshot result is only an exploratory pilot and must not be generalized to gameplay footage.
+This compares whether any person candidate was returned with the user-labeled enemy-visible yes/no value; it does not evaluate box overlap, enemy identity, tracking, or aim accuracy. `--thresholds` evaluates several cutoffs from one inference pass and writes one row per screenshot and threshold, including the source image SHA-256. The current two-screenshot result is only an exploratory pilot and must not be generalized to gameplay footage.
 
 If you marked body-region points, compare the COCO pose model against them with:
 

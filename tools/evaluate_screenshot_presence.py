@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 from pathlib import Path
 
 from vantasight.analytics import PresenceCounts, calculate_presence_metrics
 from vantasight.cli import IMAGE_SUFFIXES, _load_excluded_regions
-from vantasight.input import load_image
+from vantasight.input import file_sha256, load_image
 from vantasight.vision import TorchvisionPersonDetector
 
 
@@ -21,6 +22,18 @@ def _parse_bool(value: str, line_number: int) -> bool:
     raise ValueError(f"Invalid visible_in_game_enemy value on labels CSV line {line_number}: {value!r}")
 
 
+def _parse_thresholds(value: str) -> list[float]:
+    try:
+        thresholds = [float(token.strip()) for token in value.split(",")]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("thresholds must be comma-separated numbers") from exc
+    if not thresholds or any(not math.isfinite(item) or not 0.0 <= item <= 1.0 for item in thresholds):
+        raise argparse.ArgumentTypeError("each threshold must be a finite number between 0 and 1")
+    if len(set(thresholds)) != len(thresholds):
+        raise argparse.ArgumentTypeError("thresholds must not contain duplicates")
+    return thresholds
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Measure screenshot-level person-candidate presence against manual labels."
@@ -28,15 +41,22 @@ def main() -> int:
     parser.add_argument("--labels", type=Path, default=Path("data/annotations/screenshot_presence.csv"))
     parser.add_argument("--input-dir", type=Path, default=Path("data/input/screenshots"))
     parser.add_argument("--regions-file", type=Path, default=Path("data/annotations/source_regions.json"))
-    parser.add_argument("--confidence-threshold", type=float, default=0.25)
+    threshold_group = parser.add_mutually_exclusive_group()
+    threshold_group.add_argument("--confidence-threshold", type=float, default=0.25)
+    threshold_group.add_argument(
+        "--thresholds",
+        type=_parse_thresholds,
+        help="Evaluate comma-separated confidence cutoffs from one inference pass, e.g. 0.25,0.30,0.35",
+    )
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument("--max-side", type=int, default=1920)
     parser.add_argument("--preserve-source-resolution", action="store_true", help="Run image inference at original pixel dimensions (higher memory use)")
     parser.add_argument("--output", type=Path, default=Path("reports/screenshot_presence_eval.csv"))
     args = parser.parse_args()
 
-    if not 0.0 <= args.confidence_threshold <= 1.0:
-        parser.error("--confidence-threshold must be between 0 and 1")
+    thresholds = args.thresholds or [args.confidence_threshold]
+    if any(not math.isfinite(item) or not 0.0 <= item <= 1.0 for item in thresholds):
+        parser.error("confidence thresholds must be finite and between 0 and 1")
     if args.max_side < 1:
         parser.error("--max-side must be positive")
 
@@ -55,14 +75,14 @@ def main() -> int:
             raise ValueError("Labels CSV contains no screenshot rows")
 
         detector = TorchvisionPersonDetector(
-            confidence_threshold=args.confidence_threshold,
+            confidence_threshold=min(thresholds),
             device=args.device,
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
             preserve_source_resolution=args.preserve_source_resolution,
         )
         rows: list[dict] = []
-        tp = fp = tn = fn = 0
+        counts_by_threshold = {threshold: [0, 0, 0, 0] for threshold in thresholds}
         seen_ids: set[str] = set()
         for line_number, record in enumerate(records, start=2):
             asset_id = (record.get("asset_id") or "").strip()
@@ -82,38 +102,43 @@ def main() -> int:
                     f"found {len(candidates)}"
                 )
             image_path = candidates[0]
+            source_sha256 = file_sha256(image_path)
             image = load_image(image_path)
             height, width = image.pixels.shape[:2]
             exclusions = _load_excluded_regions(regions_path, image_path.name)
             detector.excluded_regions = tuple(exclusions)
             detections = detector.detect(image.pixels)
-            predicted = bool(detections)
-            if predicted and visible:
-                tp += 1
-            elif predicted and not visible:
-                fp += 1
-            elif not predicted and visible:
-                fn += 1
-            else:
-                tn += 1
-            rows.append(
-                {
-                    "asset_id": asset_id,
-                    "width": width,
-                    "height": height,
-                    "ground_truth_enemy_visible": str(visible).lower(),
-                    "predicted_person_candidate_present": str(predicted).lower(),
-                    "candidate_count": len(detections),
-                    "max_candidate_confidence": max((item.confidence for item in detections), default=""),
-                    "confidence_threshold": args.confidence_threshold,
-                    "device": str(detector.device),
-                    "max_side": args.max_side,
-                    "preserve_source_resolution": args.preserve_source_resolution,
-                }
-            )
+            if file_sha256(image_path) != source_sha256:
+                raise ValueError(f"Screenshot changed during inference: {image_path}")
+            for threshold in thresholds:
+                accepted = [item for item in detections if item.confidence >= threshold]
+                predicted = bool(accepted)
+                threshold_counts = counts_by_threshold[threshold]
+                if predicted and visible:
+                    threshold_counts[0] += 1
+                elif predicted and not visible:
+                    threshold_counts[1] += 1
+                elif not predicted and visible:
+                    threshold_counts[3] += 1
+                else:
+                    threshold_counts[2] += 1
+                rows.append(
+                    {
+                        "asset_id": asset_id,
+                        "source_sha256": source_sha256,
+                        "width": width,
+                        "height": height,
+                        "ground_truth_enemy_visible": str(visible).lower(),
+                        "predicted_person_candidate_present": str(predicted).lower(),
+                        "candidate_count": len(accepted),
+                        "max_candidate_confidence": max((item.confidence for item in accepted), default=""),
+                        "confidence_threshold": threshold,
+                        "device": str(detector.device),
+                        "max_side": args.max_side,
+                        "preserve_source_resolution": args.preserve_source_resolution,
+                    }
+                )
 
-        counts = PresenceCounts(tp, fp, tn, fn)
-        metrics = calculate_presence_metrics(counts)
         output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("w", newline="", encoding="utf-8") as destination:
             fieldnames = list(rows[0])
@@ -121,18 +146,21 @@ def main() -> int:
             writer.writeheader()
             writer.writerows(rows)
         print(f"Device: {detector.device}")
-        print(f"User-labeled screenshots: {counts.total}")
-        print(f"TP={tp} FP={fp} TN={tn} FN={fn}")
-        for name, value in (
-            ("Accuracy", metrics.accuracy),
-            ("Precision", metrics.precision),
-            ("Recall", metrics.recall),
-            ("Specificity", metrics.specificity),
-            ("F1", metrics.f1),
-        ):
-            print(f"{name}: {value:.3f}" if value is not None else f"{name}: n/a")
+        print(f"User-labeled screenshots: {len(seen_ids)}")
+        for threshold, (tp, fp, tn, fn) in counts_by_threshold.items():
+            counts = PresenceCounts(tp, fp, tn, fn)
+            metrics = calculate_presence_metrics(counts)
+            print(f"Confidence {threshold:.3f}: TP={tp} FP={fp} TN={tn} FN={fn}")
+            for name, value in (
+                ("  Accuracy", metrics.accuracy),
+                ("  Precision", metrics.precision),
+                ("  Recall", metrics.recall),
+                ("  Specificity", metrics.specificity),
+                ("  F1", metrics.f1),
+            ):
+                print(f"{name}: {value:.3f}" if value is not None else f"{name}: n/a")
         print(f"Per-screenshot results: {output.resolve()}")
-        print("These exploratory presence metrics are limited to the supplied labels and threshold.")
+        print("These exploratory presence metrics are limited to the supplied labels and thresholds.")
         print("Person-candidate presence is not enemy identity, box localization, or gameplay accuracy.")
         return 0
     except (FileNotFoundError, OSError, ValueError, RuntimeError) as exc:
