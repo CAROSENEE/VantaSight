@@ -2,7 +2,7 @@
 
 এটি VantaSight তৈরির ধাপে ধাপে কাজের তালিকা। প্রতিটি ধাপ শুরুর আগে কী করতে যাচ্ছি তা জানাব। ধাপ শেষ হলে কী বদলেছে, কেন দরকার, কীভাবে ব্যবহার করতে হবে এবং কোনো সীমাবদ্ধতা আছে কি না—সহজ ভাষায় বুঝিয়ে দেব। কোনো কাজ যাচাই করা না গেলে সেটিও পরিষ্কার করে বলব।
 
-**Annotation status correction (2026-11-21):** `vd-1`-এর interactive annotation window user দেখেননি বা label confirm করেননি। তাই `vd-1_provisional_review.jsonl` এবং তা থেকে তৈরি precision/recall/F1, threshold-sweep ও IoU/AP ফলকে নির্ভরযোগ্য review বা evaluation result হিসেবে প্রত্যাহার করা হলো। এগুলো provisional/unverified; কোনো validated video ground truth নেই। `vd-1_user_verified.jsonl` তৈরি হয়নি। User পরে annotation করবেন বলেছেন—ততদিন annotation ও তার ওপর নির্ভরশীল evaluation স্থগিত। Dashboard launcher-ও এই পুরোনো evaluation CSV আর লোড করবে না।
+**Annotation status (2026-11-21):** User annotation window দেখেননি এবং কোনো video label confirm করেননি। তাই কোনো verified video ground truth বা detector/pose accuracy metric নেই। আগের unverified provisional label ও তার derived local reports মুছে ফেলা হয়েছে; এগুলো থেকে আসা সংখ্যা/threshold recommendation ব্যবহার করা যাবে না। `vd-1_user_verified.jsonl` নেই। User পরে annotation করবেন বলেছেন—ততদিন annotation এবং label-নির্ভর evaluation স্থগিত।
 
 ## প্রকল্পের লক্ষ্য
 
@@ -13,16 +13,9 @@
 - **M1 — Input foundation:** image loader, video metadata reader ও CLI লেখা এবং `vd-1.mp4` দিয়ে runtime-এ যাচাই করা হয়েছে।
 - **M2 — Frame preview:** নির্দিষ্ট video frame পড়া ও preview image save করা হয়েছে। Frame index 3540 (29.5 সেকেন্ড) সফলভাবে বের হয়েছে: `data/previews/vd-1_frame_003540.png`। ছয়টি অতিরিক্ত সময়ে frame দেখে contact sheet বানানো হয়েছে: `data/previews/vd-1_contact-sheet.jpg`।
 - **M3 — Baseline detection:** TorchVision COCO `person candidate` detector যোগ করে `ss-1`, `ss-2` এবং `vd-1`-এর frame 3000-এ runtime inference করা হয়েছে।
-- প্রথম inference-এ `ss-1`-এর doorway character candidate confidence 0.286-এ ধরা পড়ে; HUD-তেও false positive ছিল। `ss-2`-এর in-world negative sample-এ 3টি HUD/weapon false positive আসে। `vd-1` frame 3000-এ character candidate confidence 0.963-এ ধরা পড়ে, তবে webcam/HUD/weapon-ও candidate হয়েছিল।
-- এরপর প্রতিটি source-এর জন্য আলাদা exclusion rectangle `data/annotations/source_regions.json`-এ যোগ করা হয়েছে। Mask candidate বাদ দেয়, source frame crop বা resize করে না; detection box মূল resolution-এই ফেরত আসে।
-- Mask-এর পর `ss-1`-এ doorway candidate (0.286) রয়ে গেছে। `ss-2`-এ একটি arm/weapon false positive (0.256) এখনো আছে। `vd-1` frame 3000-এ gameplay candidate (0.963) রয়ে গেছে, সঙ্গে first-person arm/weapon-এর 2টি false positive আছে।
-- Mask কিছু HUD ও webcam false positive কমিয়েছে, কিন্তু baseline model এখনো Valorant enemy চিনতে পারে না। এগুলো হাতে দেখা sample; accuracy metric নয়।
-- `vd-1`-এর আরও পাঁচটি frame—5s, 25s, 35s, 45s ও 55s—GPU-তে বিশ্লেষণ করা হয়েছে। 25s ও 45s-এ দূরের opponent candidate ধরা পড়েছে; 5s, 35s ও 55s-এ দৃশ্যমান opponent না থাকলেও হাতে/অস্ত্রে, overlay বা artwork-এ ভুল candidate এসেছে। 35s-এর stream inset আগের mask-এর জায়গায় ছিল না—ভিডিওতে overlay-এর অবস্থান বদলাতে পারে।
-- পাঁচটি frame-এর হাতে দেখা ফল `data/annotations/vd-1_frame_review.csv`-এ রাখা হয়েছে: মোট 2টি সঠিক candidate এবং 9টি false candidate। এটি পাঁচটি নির্বাচিত frame-এর review মাত্র; পুরো video-র accuracy নয়।
-- Annotated frame-গুলো `data/previews/vd-1_frame_000600_detections.png` থেকে `vd-1_frame_006600_detections.png` পর্যন্ত আছে; একসঙ্গে দেখার sheet `data/previews/vd-1_detection_review_sheet.jpg`। এগুলো local ignored output।
-- একই পাঁচটি frame-এ confidence threshold `0.25`, `0.50` ও `0.75` তুলনা করা হয়েছে। Candidate count যথাক্রমে 11, 8 ও 5; হাতে চিহ্নিত সঠিক candidate 2, 1 ও 1; false candidate 9, 7 ও 4। `0.50` এবং `0.75`-এ 45s-এর ছোট opponent (confidence `0.322`) বাদ পড়ে, কিন্তু কিছু ভুল hand/weapon candidate উচ্চ confidence-এ টিকে যায়।
-- Threshold-ভিত্তিক candidate ও box-এর ফল `data/annotations/vd-1_threshold_comparison.csv`-এ আছে; পাশাপাশি তুলনার preview `data/previews/vd-1_threshold_comparison.jpg`। Threshold বাড়ালে false positive কিছু কমে, তবে ছোট opponent miss হয়—তাই default `0.25` আপাতত বদলানো হয়নি।
-- **M5 — Body-region experiment:** TorchVision Keypoint R-CNN-এর COCO_V1 দিয়ে `ss-1`, `vd-1` frame 3000 (25s) ও frame 5400 (45s)-এ GPU inference হয়েছে। `ss-1`-এ 1টি character candidate, 25s-এ 2টি candidate (gameplay opponent ও first-person object), 45s-এ 0 candidate এসেছে। 45s-এ detector opponent পেয়েছিল, pose model পায়নি—দূরের ছোট target-এর জন্য এটি স্পষ্ট miss।
+- `ss-1`, `ss-2` ও `vd-1`-এ baseline detector/region model চালিয়ে candidate preview তৈরি হয়েছিল। এগুলো model output; enemy identity বা user-verified detection label নয়.
+- আগে সংরক্ষিত “সঠিক/ভুল candidate” hand-review CSV এবং threshold comparison-কে verified ground truth হিসেবে ধরা যাবে না; সংশ্লিষ্ট local label CSV মুছে ফেলা হয়েছে।
+- **M5 — Body-region experiment:** TorchVision Keypoint R-CNN-এর COCO_V1 দিয়ে `ss-1`, `vd-1` frame 3000 (25s) ও frame 5400 (45s)-এ GPU inference হয়েছে। `ss-1`-এ 1টি, `vd-1` frame 3000-এ 2টি এবং frame 5400-এ 0টি person candidate-এ pose estimate এসেছে। এগুলো model output; কোন candidate enemy বা body-region estimate সঠিক—তা label দিয়ে যাচাই হয়নি.
 - Pose preview-তে magenta dot হলো model keypoint, রঙিন cross হলো keypoint থেকে গাণিতিকভাবে নেওয়া coarse region center। এগুলো অঙ্গ শনাক্তকরণের validated label নয়। Preview: `ss-1_body_regions.png`, `vd-1_frame_003000_body_regions.png`, `vd-1_frame_005400_body_regions.png` (`data/previews/`-এ)।
 - TorchVision-এর keypoint heatmap score raw response, probability নয়। Code ও display-তে তাই `heatmap score` বলা হয়; এগুলোকে calibrated confidence হিসেবে দেখানো হয় না। Model COCO photo-তে প্রশিক্ষিত, Valorant-এর জন্য নয় এবং region accuracy এখনো মাপা হয়নি।
 - **M6 — Temporary tracking:** `src/vantasight/tracking/iou_tracker.py` IoU overlap দিয়ে box-গুলোর short-term ID দেয়; matched box center-এর displacement ও video timestamp থেকে pixel/second velocity হিসাব করে। Missing detection পেলে সীমিত update পর্যন্ত অপেক্ষা করে; পরে track শেষ করে।
@@ -44,7 +37,7 @@
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` আছে। Annotation tool user-এর desktop-এ খোলা ও user দিয়ে frame label নিশ্চিত করা—দুটিই এখনো হয়নি। Local `vd-1_provisional_review.jsonl` এবং এটি থেকে আগে হিসাব করা `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194` ফল প্রত্যাহার করা হয়েছে; এগুলো verified ground truth বা নির্ভরযোগ্য metric নয়। কোনো `vd-1_user_verified.jsonl` নেই। User annotation করতে প্রস্তুত হলে window চালিয়ে label যাচাইয়ের পরেই evaluator চালানো হবে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
+Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে metric হিসাবের evaluator আছে। Annotation window user-এর কাছে দৃশ্যমান হয়নি এবং কোনো video label user confirm করেননি। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। User পরে annotation করবেন বলেছেন। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -211,33 +204,18 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 
 ### M12: video annotation — এখনো সম্পন্ন হয়নি
 
-আগে `vd-1`-এর 12 frame-এর জন্য provisional row এবং সেগুলো ব্যবহার করে একটি detector metric নথিভুক্ত করা হয়েছিল। User annotation window দেখেননি এবং কোনো label confirm করেননি—তাই ওই row ও derived metric প্রত্যাহার করা হলো; detector performance বোঝাতে এগুলো ব্যবহার করা যাবে না। Interactive annotation tool-এর অস্তিত্ব/CLI নির্দেশনা যাচাই করা মানে annotation করা নয়। User পরে করবেন বলেছেন, তাই আপাতত কোনো annotation window চালানো বা video evaluator চালানো হবে না। পরে user প্রস্তুত হলে provisional prefill ছাড়াই frameগুলো নতুন করে annotate করতে হবে; user নিজে save করা verified file ছাড়া evaluation চলবে না.
+কোনো annotation window user-এর কাছে দেখা যায়নি; কোনো video frame-এর label-ও user confirm করেননি। আগের provisional rows এবং সেগুলো থেকে বানানো detector metric তাই ভুয়া ground truth হিসেবে প্রত্যাহার; unverified label ও derived report local folder থেকে মুছে ফেলা হয়েছে। Annotation tool-এর code বা command থাকা মানে annotation হওয়া নয়। User পরে করবেন বলেছেন, তাই এখন annotation tool launch বা evaluator চালানো হচ্ছে না।
 
-User পরে প্রস্তুত হলে scratch থেকে নতুন annotation শুরু করতে:
+User প্রস্তুত হয়ে annotation window নিজে দেখতে পারলে তখন blank review থেকে শুরু করবেন:
 
 ```powershell
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
-python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
 ```
 
-Evaluator default-এ শুধু interactive annotation tool-এর manually reviewed row গ্রহণ করে। পুরোনো/প্রাথমিক provisional file দিয়ে কেবল exploratory comparison করতে চাইলে স্পষ্টভাবে `--allow-unreviewed-labels` দাও; output CSV-তে `unreviewed_exploratory` provenance ও terminal-এ warning থাকবে। উদাহরণ:
+Frame ধরে দেখে user নিজে visible opponent-এর box/status নিশ্চিত করে save করবেন। Window দেখা যাচ্ছে কি না নিশ্চিত না হওয়া পর্যন্ত এই ধাপ শুরু হয়েছে বলা যাবে না; verified output user-পর্যবেক্ষণ ও save ছাড়া তৈরি হয়েছে বলে ধরা যাবে না। Evaluator কেবল user review শেষ হওয়ার পর আলাদা ধাপে চালানো হবে।
+### M13: confidence-threshold sensitivity — বাতিল
 
-```powershell
-python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_provisional_review.jsonl --allow-unreviewed-labels --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_provisional_eval.csv
-```
-
-### M13: confidence-threshold sensitivity
-
-একই 8টি provisional scored frame-এ শুধু confidence cutoff বদলে evaluation করা হয়েছে:
-
-| Confidence | TP | FP | FN | Precision | Recall | F1 |
-|---:|---:|---:|---:|---:|---:|---:|
-| 0.25 | 3 | 24 | 1 | 0.111 | 0.750 | 0.194 |
-| 0.50 | 2 | 16 | 2 | 0.111 | 0.500 | 0.182 |
-| 0.75 | 2 | 10 | 2 | 0.167 | 0.500 | 0.250 |
-
-Cutoff `0.75`-এ false positive কমলেও recall অর্ধেকে নেমেছে; frame 5400-এর ছোট/distant target `0.50` ও `0.75`-এ বাদ পড়েছে। Frame 2400-এর oversized box higher confidence-এ থেকেও IoU `0.50`-এ match হয়নি—শুধু threshold বাড়িয়ে localization সমস্যা মেটে না। এই অতি ছোট provisional sample দেখে default `0.25` বদলানো হয়নি। CSV-গুলো `reports/vd-1_provisional_eval_conf_0_50.csv` ও `_conf_0_75.csv` নামে local, Git-ignored output।
-
+আগের provisional annotation দিয়ে তৈরি threshold table ও সংশ্লিষ্ট detector metric বাতিল। Annotation window user দেখেননি এবং label নিশ্চিত করেননি; তাই ওই সংখ্যাগুলো ground truth-এর সঙ্গে তুলনা নয় এবং detector performance-এর প্রমাণ নয়। সংশ্লিষ্ট local provisional label ও derived report মুছে ফেলা হয়েছে। Verified label তৈরি না হওয়া পর্যন্ত এই ধাপ অসম্পূর্ণ থাকবে; কোনো cutoff recommendation এই ফলের ওপর নির্ভর করবে না।
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
 ### M14: dashboard থেকে screenshot ও video input
@@ -253,18 +231,9 @@ python tools/open_dashboard.py reports/ss-1.json
 
 `ss-1.png`-এ বর্তমান local environment-এ detector ও pose estimate চালিয়ে JSON report schema loader দিয়ে যাচাই করা হয়েছে: 1917×1073 screenshot-এ 1টি COCO person candidate এসেছে। এটি detector correctness বা enemy identity-র প্রমাণ নয়। Desktop GUI-তে হাতে click করে layout review এখনো করা হয়নি। নতুন CLI-তে file picker থেকে metadata এবং image/video report reopen flow এই desktop session-এ end-to-end যাচাই বাকি।
 
-### M15: provisional box manually review করার সহায়তা
+### M15: annotation prefill — প্রত্যাহার করা হয়েছে
 
-Annotation tool-এ `--prefill` যোগ হয়েছে। এটি provisional JSONL-এর box-গুলো frame-এ suggestion হিসেবে দেখায়, কিন্তু label pre-select করে না। `y`, `n` বা `u` তোমাকেই চাপতে হবে; তারপর `Enter` দিলে আলাদা output-এ save হবে। ভুল/বাড়তি suggestion সরাতে `c` দিয়ে সব box clear করে সঠিক box নতুন করে আঁকো, অথবা দৃশ্যে opponent না থাকলে clear করে `n` দাও। Ambiguous হলে `u` নাও। প্রতিটি saved row-তে `reviewed_manually: true` ও prefill ব্যবহারের indicator থাকবে।
-
-`vd-1`-এর 12টি sample যাচাই করতে:
-
-```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
-```
-
-একটি করে frame ভালোভাবে দেখে status ও box নিশ্চিত করে Enter দাও। `q` দিলে ইতিমধ্যে save হওয়া row-গুলো থাকবে; একই command পুনরায় চালালে সেগুলো skip হবে। Output Git-ignored। এই review window এখনো user-এর হাতে চালানো বাকি।
-
+একসময় provisional box-কে annotation window-তে suggestion হিসেবে দেখানোর `--prefill` সুবিধা ছিল। এতে unverified computer-generated box user-এর বিচারকে প্রভাবিত করতে পারত। তাই launcher ও README command থেকে prefill বাদ দিয়ে blank review রাখা হয়েছে। এই সুবিধা ব্যবহার করে user annotation সম্পন্ন হয়েছে—এমন কোনো দাবি নেই।
 ### M16: চলমান video analysis pause/resume
 
 Dashboard-এ video analysis চলাকালে `Pause video analysis` চাপলে থামবে, `Resume video analysis` চাপলে আবার চলবে, আর `Cancel analysis` পুরো run বন্ধ করবে। Pauseটি video-এর sampled-frame boundary-তে কার্যকর; paused সময়ে model inference চলে না। JSON report-এর `analysis_paused_seconds`-এ user-এর pause time থাকে; `analysis_elapsed_seconds` ও analysis throughput হিসাব থেকে ওই অপেক্ষার সময় বাদ যায়। Screenshot analysis এক-frame atomic inference হওয়ায় pause button সক্রিয় হয় না। GUI হাতে চালিয়ে button যাচাই করা এখনো বাকি।
@@ -286,7 +255,7 @@ Screenshot ও video analysis JSON report-এ সব returned person-candidate-�
 
 ### M19: evaluation-এর আগে annotation provenance gate
 
-Detector ও pose evaluator এখন default-এ কেবল interactive annotation tool দিয়ে হাতে review করে save করা row গ্রহণ করে (`reviewed_manually: true`, provisional note ছাড়া)। Assistant-এর provisional label বা marker-বিহীন পুরোনো JSONL default-এ ground truth হিসেবে চলবে না। কেবল exploratory comparison-এর জন্য `--allow-unreviewed-labels` দিতে হবে; output-এ `unreviewed_exploratory` provenance লেখা হবে এবং warning দেখাবে। এতে পুরোনো `vd-1_provisional_review.jsonl` হারায় না, কিন্তু সেটি user-verified বলে ভুল উপস্থাপন হয় না। যাচাইয়ে default run provisional file reject করেছে এবং কোনো CSV লেখেনি; explicit exploratory run 8 scored row লিখেছে, প্রত্যেকটিতে `unreviewed_exploratory`, metric আগের provisional ফলের সঙ্গে মিলে `TP=3, FP=24, FN=1` হয়েছে। 39 unit test pass, compileall ও diff check clean।
+Detector ও pose evaluator default-এ কেবল interactive annotation tool দিয়ে হাতে review করে save করা row গ্রহণ করে (`reviewed_manually: true`)। Unreviewed row default-এ ground truth হিসেবে গ্রহণ করা হয় না। পুরোনো provisional file থেকে করা exploratory run থাকলেও তার labels/metrics user-verified নয়; সংশ্লিষ্ট `vd-1` artifacts এখন মুছে ফেলা হয়েছে। তাই `vd-1`-এর জন্য কোনো ব্যবহারযোগ্য detector/pose accuracy metric নেই।
 
 ### M20: পুরো `vd-1` clip-এ 1-second sampled tracking
 
@@ -320,7 +289,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M72)
+## বর্তমান অবস্থান (M73)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -333,8 +302,8 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M70-এ annotation batch launcher চালুর আগে blank review ও প্রত্যাশিত window title prefix console-এ জানায়; ভুল হলে console খোলা রেখে error পড়তে বলে। এতে পরে annotation শুরু করলে কী window খুঁজতে হবে বোঝা যাবে। Annotation tool চালানো হয়নি।
 - M71-এ dashboard title-এ source video এবং report filename দুটোই থাকবে; একই footage-এর পুরোনো ও dense analysis window আলাদা করে চেনা যাবে।
 - M72-এ নতুন title-সহ dense dashboard সরাসরি launch করে দেখা হয়েছে। Python process চললেও CUA inventory-তে শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window ছিল; নতুন window/screenshot বা error পাওয়া যায়নি। শুধু এই attempt-এর process বন্ধ করেছি। তাই report-specific title code আছে, কিন্তু নতুন window visible/targetable হওয়া নিশ্চিত নয়।
-- Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
-- পরবর্তী gate: corrected launcher দিয়ে dense report-এর visible window নিশ্চিত করা এবং playback interaction যাচাই করা; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
+- Video manual annotation এখনো হয়নি। User বলেছেন এটি পরে করবেন। কোনো `vd-1_user_verified.jsonl` নেই; আগের provisional labels ও derived metrics মুছে ফেলা হয়েছে.
+- পরবর্তী gate: desktop-এ dense dashboard launch ও playback দৃশ্যমানভাবে যাচাই করা। User annotation করতে প্রস্তুত হলে তবেই blank review window খুলে তাঁর নিশ্চিত করা label save হবে; তারপর evaluator আলাদা ধাপে চলবে।
 
 ## আমরা যেভাবে কাজ করব
 
@@ -345,7 +314,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## M35-এর সময়কার পুরোনো পরিকল্পনা
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping, M26 offline-boundary audit এবং M27 planned annotation coverage check, M28 annotation review progress indicator এবং M29 source-frame fingerprint, M30 annotation record serialization test, M31 confidence threshold sweep এবং M32 dashboard threshold-sweep view এবং M33 cross-row consistency gate এবং M34 package/input CLI smoke check এবং M35 threshold-sweep sample composition আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 video annotation pending, M13 withdrawn provisional evaluation, M14 dashboard image/video input, M15 withdrawn annotation prefill, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping, M26 offline-boundary audit এবং M27 planned annotation coverage check, M28 annotation review progress indicator এবং M29 source-frame fingerprint, M30 annotation record serialization test, M31 confidence threshold sweep এবং M32 dashboard threshold-sweep view এবং M33 cross-row consistency gate এবং M34 package/input CLI smoke check এবং M35 threshold-sweep sample composition আছে। পরের কাজ হলো annotation window user-এর desktop-এ সত্যিই দেখা যাচ্ছে কি না নিশ্চিত করা; user প্রস্তুত হলে তবেই তাঁর হাতে নির্বাচিত frame label করা। Verified labels না হওয়া পর্যন্ত video evaluator চালানো হবে না। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 
@@ -391,39 +360,37 @@ Interactive annotation window ও terminal-এ planned sample-এর `বর্�
 
 GUI থেকে আলাদা `_build_annotation_record` helper manually chosen status, opponent box, optional body-region point, provenance ও source-frame hash JSONL row-তে ঠিকভাবে সাজায় কি না test করা হয়েছে। Synthetic `VideoFrame`-এ frame index/timestamp ও 192×108 dimensions, SHA-256, box এবং head/chest point যাচাই হয়েছে। এটি GUI interaction বা disk-এ JSONL append-এর visual test নয়। Unit suite `51/51`, compileall ও diff check pass করেছে।
 
-### M31: এক inference pass-এ confidence threshold sweep
+### M31: confidence threshold sweep-এর evaluator — কোড আছে, video benchmark নেই
 
-`evaluate_threshold_sweep.py` প্রতিটি scored frame-এ detector একবার চালিয়ে confidence score ও box reuse করে `.25`–`.95` cutoff-এ TP/FP/FN, precision/recall/F1 হিসাব করে CSV লেখে। একই 12টি provisional frame দিয়ে exact coverage gate এবং `--allow-unreviewed-labels`সহ run হয়েছে; 4 uncertain বাদে 8 scored frame, 15 cutoff পাওয়া গেছে। Provenance `unreviewed_exploratory` লেখা হয়েছে।
+`evaluate_threshold_sweep.py` এক inference pass থেকে বিভিন্ন confidence cutoff-এর metrics গণনার code path দেয়। এর আগের `vd-1` sweep unverified provisional annotation দিয়ে চালানো হয়েছিল; সেই output ও metrics বাতিল এবং মুছে ফেলা হয়েছে। তাই VantaSight-এর `vd-1`-এর threshold comparison এখনো অজানা।
 
-এই ছোট provisional sample-এ `.25`-এ `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194`; `.95`-এ `TP=2, FP=4, FN=2`, precision `0.333`, recall `0.500`, F1 `0.400`। উচ্চ cutoff-এ false positive কমেছে, কিন্তু recall কমেছে; `.95`-এর F1-কে tuning recommendation ধরা যাবে না। User-verified labels এলে sweep পুনরায় করতে হবে। Threshold parser ও cached-prediction metric-এর unit testসহ suite `54/54`, compileall, CLI help ও diff check pass করেছে।
+### M32: dashboard-এ threshold sweep দেখানো — UI/loader code আছে
 
-### M32: dashboard-এ threshold sweep দেখা
+Dashboard threshold-sweep CSV পড়তে ও provenance রাখতে পারে। আগের provisional CSV user-verified ছিল না এবং মুছে ফেলা হয়েছে। কোনো video threshold metric dashboard-এ validated result হিসেবে দেখানো যাবে না যতক্ষণ না user-reviewed labels দিয়ে নতুন report তৈরি হয়।
 
-Threshold-sweep CSV-তে source video ID যোগ হয়েছে। Dashboard-এর `--threshold-sweep` option দিয়ে একই video report-এর পাশে CSV load করলে cutoff অনুযায়ী P/R/F1 ও TP/FP/FN দেখায়। Loader source video মেলায়, counts থেকে metric পুনরায় হিসাব করে CSV-এর সঙ্গে মেলায়, এবং `unreviewed_exploratory` provenance অক্ষত রাখে। Local 15-row provisional sweep `vd-1.mp4`-এর জন্য load হয়েছে; 8 scored frame ও unreviewed provenance শনাক্ত হয়েছে। Unit suite `56/56`, dashboard CLI help, compileall ও diff check pass করেছে। Dashboard window-তে visual review এখনো বাকি।
+### M33: threshold-sweep cross-row consistency gate — code behavior
 
-### M33: threshold sweep-এর cross-row consistency gate
-
-Dashboard loader এখন একই sweep-এর scored-frame count, label provenance ও IoU threshold প্রতিটি row-তে এক আছে কি না যাচাই করে। Confidence cutoff বাড়লে TP/FP বাড়া, FN কমা, বা total ground-truth count বদলালে CSV reject হবে। বর্তমান 15-row `vd-1` sweep এই invariant pass করেছে; invalid metric, non-monotonic count ও mixed-IoU test reject করেছে। Unit suite `58/58`, compileall ও diff check pass করেছে।
+Dashboard loader sweep row-গুলোর scored-frame count, label provenance, IoU threshold ও metric consistency যাচাই করে। এটি report-format validation; detector accuracy বা annotation-এর প্রমাণ নয়।
 
 ### M34: package ও input CLI smoke check
 
 Current `.venv`-এ `python -m vantasight` দিয়ে `ss-1.png` load করে `1917×1073` resolution পাওয়া গেছে। একই entry point `vd-1.mp4`-এর জন্য `2560×1440`, `120 FPS`, `7080` frame ও `59s` duration পড়েছে। `python -m pip check`-এ broken dependency পাওয়া যায়নি। এটি metadata/input runtime smoke check; detector accuracy বা dashboard UI test নয়।
 
-### M35: sweep report-এ sample composition
+### M35: sweep report-এ sample composition — code behavior
 
-Threshold sweep CSV-তে positive frame, negative frame এবং ground-truth box-এর count যোগ হয়েছে। Dashboard loader যাচাই করে positive+negative frame = scored frame, ground-truth box >= positive frame, এবং TP+FN = ground-truth box; সব threshold row-তে composition একই থাকতে হবে। Re-run করা `vd-1` provisional sample-এ 8 scored frame, 4 positive, 4 negative ও 4 box আছে; 15 cutoff-এর dashboard data load pass করেছে। `58/58` unit test, compileall ও diff check pass করেছে। ফল এখনো unreviewed exploratory।
+Threshold sweep report positive/negative frame ও ground-truth box count বহন করে; dashboard loader row-গুলোর composition consistency পরীক্ষা করে। আগের `vd-1` provisional sample-এর composition ও derived result প্রত্যাহার করা হয়েছে; user-verified sample না হওয়া পর্যন্ত কোনো composition/accuracy ফল রিপোর্ট করা হবে না।
 
-### M36: threshold sweep-এর runtime ও inference হিসাব
+### M36: threshold sweep-এর runtime হিসাব — code behavior
 
-Threshold sweep CSV-তে model initialization-এর সময়, detector inference call-এর সংখ্যা, inference latency-এর গড়, sampled-frame analysis-এর elapsed time এবং sampled-frame throughput যোগ হয়েছে। Model initialization আলাদাভাবে মাপা হয়; analysis elapsed-এ video frame decode ও detector inference থাকে, কিন্তু model initialization, threshold metric aggregation এবং CSV লেখা থাকে না। Mean detector latency কেবল `detect()` call-এর সময়; throughput হলো analysis চলাকালে scored frame/second। Loader timing metadata থাকলে finite/nonnegative value, positive analysis duration/throughput এবং inference call = scored frame যাচাই করে; পাঁচটি timing column একসাথে না থাকলে report reject করে। পুরোনো timing-বিহীন sweep CSV compatibility-র জন্য চলবে। Dashboard threshold summary-তে timing দেখায়। এটি offline detector runtime-এর বর্ণনা, live-game performance বা accuracy দাবি নয়। Provisional 8-frame sample-এ এক run-এর model initialization `3.95 s`, mean detector latency `186.8 ms`, analysis elapsed `4.43 s` এবং throughput `1.81 frame/s`; 8 inference call-ও loader-এ মিলে গেছে। এই ফল hardware/run-dependent এবং annotation এখনো user-reviewed নয়। `git diff --check`, Python compileall এবং সরাসরি CLI sweep ও dashboard CSV load pass করেছে; full test suite চালানো হয়নি।
+Threshold-sweep CSV-তে model initialization, detector latency, analysis elapsed time ও sampled-frame throughput-এর field আছে; dashboard loader timing metadata-র consistency যাচাই করে। আগের provisional-label run-এর timing record accuracy evidence নয় এবং বর্তমান workflow-তে তা ব্যবহার করা হবে না।
 
 ### M37: ছোট target review-এর জন্য annotation zoom ও pan
 
 Annotation window-তে `+`/`-` দিয়ে সর্বোচ্চ `8×` zoom, right mouse drag দিয়ে pan এবং `0` দিয়ে পুরো frame-এ reset যোগ হয়েছে; Windows-এ mouse wheel cursor-এর জায়গায় zoom করে। Existing box/region overlay-ও zoomed view-তে একই source location-এ আঁকা হয়; নতুন box ও body-point আগের মতো source video pixel coordinate-এ save হওয়ার জন্য view crop থেকে coordinate mapping করা হয়েছে। Window-এর নির্দেশনা panel-ও বড় করা হয়েছে, যাতে zoom control-সহ save/quit key দেখা যায়। README-তে নতুন control লেখা হয়েছে। এটি দূরের/ছোট opponent frame খুঁটিয়ে দেখার সুবিধা; auto-enemy classification নয়। Python compile ও CLI help check pass করেছে; live window-তে zoom/pan/box mapping-এর visual check এখনো বাকি।
 
-### M38: runtime হিসাবের গাণিতিক consistency
+### M38: runtime metadata consistency — code behavior
 
-Threshold-sweep dashboard loader এখন CSV-তে থাকা sampled throughput-কে `scored_frames / sampled_analysis_elapsed_seconds`-এর সঙ্গে মেলায়। পাশাপাশি সব inference call-এর mean latency যোগফল analysis elapsed-এর চেয়ে বেশি হলে CSV reject করে। এতে কেবল valid number থাকা নয়, timing field-গুলোর পারস্পরিক সামঞ্জস্যও যাচাই হয়। বর্তমান local provisional report-এর metadata এই নিয়মে load হয়েছে। এটি timing metadata যাচাই, model performance বা accuracy benchmark নয়।
+Threshold-sweep dashboard loader sampled frame-এর সংখ্যা, analysis time ও inference timing-এর সামঞ্জস্য যাচাই করে। আগের `vd-1` provisional report-এ এই validator চালানো হয়েছিল, কিন্তু user label unverified থাকায় report/result মুছে ফেলা হয়েছে। Validator-এর উপস্থিতি accuracy benchmark নয়.
 
 ### M39: annotation window-এর idle CPU ব্যবহার কমানো
 
@@ -437,15 +404,13 @@ Annotation viewer প্রথমে frame render করে; zoom/pan, mouse dra
 
 `tools/start_vd1_annotation.bat` repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে `vd-1_user_verified.jsonl`-এ চালায়। আগের সংস্করণে unverified provisional box prefill হতো; M66-এ সেটি বাদ দেওয়া হয়েছে। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। Launcher-এর process check কখনোই annotation window user দেখেছেন—এমন প্রমাণ ছিল না; user নিশ্চিত করেছেন window দেখা যায়নি। GUI window user-এর desktop-এ দৃশ্যমান কি না এখনো verify করা হয়নি।
 
-### M42: IoU-ভিত্তিক 101-point AP
+### M42: IoU-ভিত্তিক 101-point AP — evaluator code আছে, valid video score নেই
 
-`evaluate_iou_ap.py` confidence score অনুযায়ী detections rank করে, frame-এর ভেতরে প্রতিটি prediction-কে সর্বোচ্চ একটি unmatched ground-truth box-এর সঙ্গে মেলায় এবং 101 recall point-এ interpolated AP হিসাব করে। Default-এ একই এক-pass inference data দিয়ে IoU `0.50` থেকে `0.95` পর্যন্ত 10টি threshold report হয়। Dashboard-এর `--iou-ap` option source video-র AP row ও mean দেখায়; loader sample composition, provenance, threshold uniqueness ও AP mean-এর consistency যাচাই করে।
+`evaluate_iou_ap.py` confidence-ranked prediction ও ground-truth box থেকে IoU `0.50`–`0.95`-এ interpolated AP হিসাব করতে পারে। আগের `vd-1` AP report unverified provisional label-এর ওপর নির্ভর করেছিল; সেসব সংখ্যাকে প্রত্যাহার করে report মুছে ফেলা হয়েছে। তাই `vd-1`-এর AP বর্তমানে অজানা।
 
-Provisional `vd-1` sample-এ 8 scored frame (4 positive/4 negative), 4 ground-truth box ও 88 candidate নিয়ে AP@0.50 `0.255`, AP@0.75 `0.051`, AP@0.90 `0.000`; 10 threshold-এ mean AP `0.143` হয়েছে। বেশি IoU-তে কম score box overlap দুর্বল হওয়ার ইঙ্গিত দেয়; তবে সব label provisional, তাই এটিকে detector accuracy বা model selection result বলা যাবে না। README-তে command ও metric limitation যোগ হয়েছে। Compile, CLI help, প্রকৃত video inference/CSV তৈরি এবং dashboard loader-এ 10-row report load pass করেছে; full unit suite চালানো হয়নি।
+### M43: AP report-এর model/run metadata — code behavior
 
-### M43: AP report-এর model/run metadata
-
-AP CSV-তে model architecture ও weight ID, confidence floor (`0.0`), max-side, resolved device, exclusion region-এর সংখ্যা এবং AP matching method যোগ হয়েছে। Dashboard loader হয় সম্পূর্ণ metadata group গ্রহণ করে, নয়তো partial metadata reject করে; এক report-এর সব IoU row-তে configuration একই থাকতে হবে। Dashboard AP summary-তেও এই run context দেখা যায়। আগের metadata-বিহীন AP CSV compatibility-র জন্য load করা যাবে। নতুন 10-row local report loader-এ mean `0.143`, COCO_V1, `cuda:0`, max-side `1920`, 4 exclusion region এবং matching method-সহ load হয়েছে; metric আগের run-এর সঙ্গে মিলে।
+AP CSV model architecture/weights, confidence floor, resize mode, device ও matching method-এর metadata রাখতে পারে; dashboard loader metadata completeness ও consistency যাচাই করে। পুরোনো `vd-1` provisional AP score মুছে ফেলা হয়েছে; metadata validation-কে accuracy evidence হিসেবে ধরা যাবে না.
 
 ### M44: dashboard-এ IoU/AP curve
 
@@ -453,21 +418,19 @@ AP report dashboard-এ load হলে AP@IoU point-গুলো একটি re
 
 ### M45: annotation completion status পুনরায় যাচাই
 
-User নিশ্চিত করেছেন যে annotation window দেখা যায়নি; তাই annotation সম্পন্ন হয়েছে বলে আগের কোনো ইঙ্গিত সঠিক নয়। Local `data/annotations/`-এ `vd-1_provisional_review.jsonl` আছে, কিন্তু `vd-1_user_verified.jsonl` নেই। Provisional label-গুলো unreviewed; এগুলো user-verified ground truth নয়। একটি responsive Python process বা window title থাকলেই user GUI দেখেছেন বা label দিয়েছেন—এটা নিশ্চিত হয় না। 12টি frame user নিজে review করে save না করা পর্যন্ত annotation ও তার ওপর নির্ভরশীল benchmark pending থাকবে। User annotation পরে করবেন বলেছেন।
+User নিশ্চিত করেছেন annotation window তিনি দেখেননি। কোনো video frame-এর label user confirm করেননি; তাই annotation সম্পন্ন হয়নি। আগের provisional JSONL এবং তার derived reports মুছে ফেলা হয়েছে। Responsive process বা window title থাকলেই user GUI দেখেছেন বা label দিয়েছেন—এটি প্রমাণ হয় না। User পরে annotation করবেন বলেছেন; manual annotation ও video benchmark pending।
 
 ### M46: ছোট target-এর জন্য source-resolution inference
 
-`vd-1.mp4`-এর source frame `2560×1440`, কিন্তু TorchVision model-এর আগের `min_size=1080` configuration inference-এর সময় frame-কে `1920×1080`-এ নামাত। এতে preview-এর source pixels ও output coordinate ঠিক থাকলেও model-এর input-এ দূরের ছোট opponent-এর detail কমে যেতে পারত। এখন detector ও experimental pose estimator-এ `preserve_source_resolution` option যোগ হয়েছে; চালু থাকলে প্রতি input-এর আসল width/height দিয়ে TorchVision transform সেট হয় এবং `--max-side` ওই run-এ আর প্রযোজ্য থাকে না। CLI, screenshot/video analysis, tracking এবং detector/pose evaluator-এ `--preserve-source-resolution` flag আছে; dashboard-এর local-media analysis panel-এও checkbox আছে। AP ও threshold-sweep CSV, single-image/video report এবং manual-evaluation CSV-তে mode record হয়; AP curve/threshold summary-তে mode দেখা যায়। Default resize mode আগের মতোই আছে। Source-resolution inference বেশি VRAM নেয়, ধীর হতে পারে বা memory exhaustion ঘটাতে পারে। এতে detection accuracy বাড়বেই—এমন নিশ্চয়তা নেই; দুই mode-এর report তুলতে একই configuration এবং user-reviewed label দরকার।
-
-`compileall`, সংশ্লিষ্ট CLI `--help`, আগের AP/threshold report compatibility এবং নতুন mode-সহ AP/threshold report dashboard loader-এ load করা যাচাই হয়েছে। `vd-1` frame 3000 source size `2560×1440` রেখে CUDA inference-এ 3 candidate পাওয়া গেছে; preview `data/previews/vd-1_frame_003000_native_detections.png` local ignored output। Provisional 12-frame sample-এ 8টি scored frame, 4টি provisional opponent box ও 94 candidate দিয়ে AP@0.50 `0.220`, AP@0.75 `0.201`, mean AP `0.133`; threshold `0.25`-এ TP=3, FP=27, FN=1। আগের resized exploratory report-এ AP mean `0.143`, candidate 88 এবং threshold `0.25`-এ FP=24 ছিল। Label user-reviewed নয়, তাই এই তুলনা accuracy improvement/regression প্রমাণ করে না। Native mode-এর এই 8-frame run-এ mean detector latency `202.3 ms`, throughput `1.78 frame/s`; অন্য run-এর timing-এর সঙ্গে সরাসরি benchmark তুলনা নয়। Dashboard checkbox-এর visual QA এবং user-verified annotation এখনও বাকি।
+`vd-1.mp4` source frame `2560×1440`; আগের default model transform input resize করতে পারত। এখন detector ও experimental pose estimator-এ `--preserve-source-resolution` option আছে; CLI, screenshot/video analysis, tracking, evaluators এবং dashboard local-media panel-এ এটি নির্বাচন করা যায়। Source-resolution mode VRAM বেশি নেয় ও ধীর হতে পারে; accuracy বাড়ার নিশ্চয়তা নেই. Frame 3000-এ candidate inference preview তৈরি হয়েছিল, কিন্তু detections manually annotated/verified নয়। Provisional label-ভিত্তিক AP/threshold তুলনা প্রত্যাহার ও মুছে ফেলা হয়েছে; দুই inference mode-এর accuracy অজানা।
 
 ### M47: source-resolution mode-এ user-labeled screenshot pilot
 
 `ss-1` (enemy দৃশ্যমান) ও `ss-2` (enemy দৃশ্যমান নয়)—দুই user-labeled screenshot-এ confidence `0.25`-এ default resize ও source-resolution mode আলাদা করে চালানো হয়েছে। Default resized run: `TP=1, FP=1, TN=0, FN=0`; source-resolution run: `TP=0, FP=1, TN=0, FN=1`। তাই এই run-এ source-resolution mode missed positive screenshot-টি ফেরত আনেনি; negative screenshot-এর false candidate-ও যায়নি। Screenshot `1917×1073`; default transform সামান্য upsample করে প্রায় `1920×1075`, native mode আসল dimension-এই চলে—resize বদলালে confidence cutoff-এর আশেপাশের ফল বদলাতে পারে। মাত্র 2টি screenshot দিয়ে video বা Valorant gameplay accuracy বোঝা যায় না; এই সংখ্যাগুলো mode বেছে নেওয়ার recommendation নয়। দুই run-এর CSV local ignored report; test suite চালানো হয়নি।
 
-### M48: target height অনুযায়ী recall
+### M48: target height অনুযায়ী recall — code আছে, কোনো মাপা ফল নেই
 
-Threshold sweep-এ প্রতিটি হাতে চিহ্নিত opponent box-কে source frame-এর উচ্চতার তুলনায় `tiny (<2%)`, `small (2–6%)`, `medium (6–16%)` ও `large (≥16%)` ভাগে রাখা হয়। প্রতিটি confidence cutoff-এ প্রতি ভাগের মিলে যাওয়া box, miss এবং recall দেখানো হয়। False positive-এর জন্য এই ভাগ প্রযোজ্য নয়, কারণ তার ground-truth opponent box নেই; সেগুলো overall FP হিসাবে গণনা হয়। CLI-তে সবচেয়ে কম confidence cutoff-এর ফল ছাপে; CSV-তে সব cutoff থাকে; dashboard-এও প্রথম cutoff-এর summary দেখা যায়। পুরোনো sweep CSV-তে নতুন column না থাকলেও চলে, কিন্তু আংশিক size-metric column থাকলে report reject হয়। `vd-1`-এর provisional ও unreviewed sample-এ 4টি box-এর 3টি medium, 1টি large; tiny/small box নেই। Confidence `0.25`-এ medium recall `2/3`, large `1/1`; confidence `0.95`-এ medium `1/3`, large `1/1`। তাই এই sample দিয়ে ছোট বা দূরের enemy recall এখনো মাপা যাচ্ছে না; তার জন্য ছোট target-সহ user-reviewed frame দরকার। Compile, source-resolution provisional threshold sweep ও 15-row dashboard loader check pass করেছে; full test suite চালানো হয়নি।
+Threshold evaluator ground-truth box height অনুযায়ী tiny/small/medium/large group-এ recall হিসাব করতে পারে। আগের `vd-1`-এর size-specific result unverified provisional box থেকে এসেছিল; সেগুলো বাতিল ও মুছে ফেলা হয়েছে। User-reviewed box ছাড়া target-size recall দাবি করা যাবে না.
 
 ### M49: annotation window সামনে ও দৃশ্যমান রাখা
 
@@ -479,7 +442,7 @@ Windows annotation launcher এখন `--keep-on-top` পাঠায়; OpenCV re
 
 ### M51: evaluation CSV-তেও source fingerprint
 
-Threshold-sweep ও IoU/AP evaluator-ও source video hash করে, analysis শেষে আবার মেলায়, এবং CSV row-তে `source_sha256` লেখে। Dashboard-এ এই CSV tracking JSON report-এর পাশে load হলে দুই hash মিলিয়ে দেখে; আলাদা video থেকে বানানো same-named evaluation report reject হয়। আগের CSV-তে fingerprint column না থাকলেও compatibility-র জন্য load করা যায়। নতুন fingerprint-সহ provisional native-resolution sweep 15 row এবং AP report 10 row লিখেছে; dashboard loader দুইটিই current `vd-1` hash-এ নিয়েছে, আর screenshot-এর hash দিলে দুটিই mismatch error দিয়ে reject করেছে। ফল এখনো exploratory—8টি scored frame label user-reviewed নয়। Compile/help check pass; Windows dashboard window-তে mismatch text visual review বাকি।
+Threshold-sweep ও IoU/AP evaluator source video fingerprint CSV-তে লেখে; dashboard tracking report-тай fingerprint মেলাতে পারে. আগের provisional sweep/AP report-গুলো unverified ছিল এবং local data থেকে সরানো হয়েছে। Fingerprint কেবল source file matching নিশ্চিত করে—label correctness বা accuracy নয়.
 
 ### M52: সাধারণ video frame preview-এর output option ঠিক করা
 
@@ -568,3 +531,7 @@ Ignored `reports/VantaSight Dashboard Review.lnk` COM properties পড়ে দ�
 ### M72: নতুন dashboard launch attempt-এর ফল
 
 সর্বশেষ source ও matching dense report দিয়ে `.venv\Scripts\python.exe tools\open_dashboard.py reports\vd-1_dashboard_tracks_dense.json` চালানো হয়েছিল। Process চলমান ছিল, কিন্তু CUA window inventory-তে নতুন report-specific title আসেনি এবং screenshot তোলা যায়নি; terminal-এও error text আসেনি। কেবল ওই launch attempt-এর console session বন্ধ করেছি। এটি সফল visible launch নয়। পরের UI verification-এ user-এর desktop-এ shortcut double-click করে দেখা বা visible console-এর error/output সংগ্রহ করা দরকার।
+
+### M73: unverified annotation ও metric পরিষ্কার
+
+User নিশ্চিত করেছেন যে annotation window তিনি দেখেননি। তাই `vd-1`-এর provisional JSONL-কে annotation হিসেবে গণ্য করা ভুল; user-confirmed label বা metric নেই। Git-ignored `data/annotations/vd-1_provisional_review.jsonl` এবং তার সঙ্গে মিলে থাকা 10টি provisional/recheck CSV report local machine থেকে সরানো হয়েছে। `vd-1_frame_review.csv` ও `vd-1_threshold_comparison.csv`-এর unverified classification-ও মুছে ফেলা হয়েছে। Workflow-র পুরোনো threshold table, provisional score এবং hand-review classification দাবিগুলো প্রত্যাহার করে বর্তমান অবস্থাকে পরিষ্কার করা হয়েছে। এই পরিবর্তন কেবল unverified artifact/দাবি মুছে; কোনো নতুন annotation, detector evaluation বা accuracy result তৈরি করেনি। `git diff --check` দিয়ে whitespace যাচাই করে তারপর docs-only change commit/push করা হবে.
