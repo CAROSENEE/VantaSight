@@ -36,7 +36,7 @@
 - `README.md`-তে setup ও ব্যবহারের নির্দেশনা আছে। `.gitignore` সাধারণ input media ও generated preview বাদ রাখে; নির্বাচিত reproducibility sample আলাদা করে track করা।
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে। এই pilot CSV ও `source_regions.json` tracked; পরবর্তী video annotation ও generated report Git ignore থাকে।
-- M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা, তবে fresh clone fetch verification pending।
+- M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা; local object valid এবং push command সফল, কিন্তু fresh clone থেকে object download এখনো verify হয়নি।
 
 Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে metric হিসাবের evaluator আছে। Annotation process frame 540-এ চলছে, তবে user-এর screen-এ window দৃশ্যমান কি না নিশ্চিত করা যায়নি; কোনো video label user confirm করেননি। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
@@ -293,7 +293,7 @@ GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot p
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M88)
+## বর্তমান অবস্থান (M89)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -610,7 +610,7 @@ User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি sou
 
 ### M88: screenshot pair-এ pose association probe
 
-`ss-1` ও `ss-2`-তে detector-এর পর একই COCO Keypoint R-CNN settings দিয়ে exploratory pose analysis চালিয়েছি। `ss-1`-এর 29×49 px doorway candidate pose box-এ match হয়েছে (`pose_person_score=0.966`), চারটি coarse body-region estimate ও source-pixel preview marker-ও তৈরি হয়েছে. `ss-2`-এর 185×340 px first-person arm/weapon candidate `pose_status=unmatched`; কোনো pose box তার সঙ্গে match হয়নি। এই দুই উদাহরণে pose association ছোট target রেখে arm false positive আলাদা করেছে বলে দেখায়, কিন্তু নমুনা অত্যন্ত ছোট এবং pose/person score বা raw heatmap response calibrated confidence নয়। তাই detector-কে pose দিয়ে auto-filter করা হয়নি; video frames-এ manual label দিয়ে পরীক্ষা বাকি। Local output `reports/ss-1_pose_alignment_latest.json`, `reports/ss-2_pose_alignment_latest.json` ও `data/previews/ss-1_body_regions.png`।
+`ss-1` ও `ss-2`-তে detector-এর পর একই COCO Keypoint R-CNN settings দিয়ে exploratory pose analysis চালিয়েছি। `ss-1`-এর 29×49 px doorway candidate pose box-এ match হয়েছে (`pose_person_score=0.966`), চারটি coarse body-region estimate ও source-pixel preview marker-ও তৈরি হয়েছে। `ss-2`-এর 185×340 px first-person arm/weapon candidate `pose_status=unmatched`; কোনো pose box তার সঙ্গে match হয়নি। এই দুই উদাহরণে pose association ছোট target রেখে arm false positive আলাদা করেছে বলে দেখায়, কিন্তু নমুনা অত্যন্ত ছোট এবং pose/person score বা raw heatmap response calibrated confidence নয়। তাই detector-কে pose দিয়ে auto-filter করা হয়নি; video frames-এ manual label দিয়ে পরীক্ষা বাকি। Local output `reports/ss-1_pose_alignment_latest.json`, `reports/ss-2_pose_alignment_latest.json` ও `data/previews/ss-1_body_regions.png`।
 
 পুনরায় চালাতে:
 
@@ -618,3 +618,7 @@ User-labeled `ss-1`/`ss-2` দিয়ে current detector-এ দুইটি sou
 .venv\Scripts\python.exe tools\analyze_image.py "data\input\screenshots\ss-1.png" --estimate-body-regions --measure-alignment --output reports\ss-1_pose_alignment_latest.csv --json-output reports\ss-1_pose_alignment_latest.json
 .venv\Scripts\python.exe tools\analyze_image.py "data\input\screenshots\ss-2.png" --estimate-body-regions --measure-alignment --output reports\ss-2_pose_alignment_latest.csv --json-output reports\ss-2_pose_alignment_latest.json
 ```
+
+### M89: Git LFS remote fetch পুনরায় যাচাই
+
+`git lfs fsck --objects` local `vd-1.mp4` object-কে valid জানিয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। কিন্তু fresh shallow clone-এ checkout আটকে যায়; `.git/lfs/incomplete`-এর video object 0 byte-এই ছিল, owning downloader process-এর কোনো remote TCP connection দেখা যায়নি। Clone process বন্ধ করে তৈরি করা isolated temp clone সরিয়েছি। তাই GitHub commit-এ LFS pointer ও local object আছে, push command সফল—কিন্তু নতুন clone থেকে remote video download প্রমাণিত নয়। Screenshot dataset GitHub-এ ordinary Git file হিসেবে আছে।
