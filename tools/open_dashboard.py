@@ -82,6 +82,8 @@ def main(argv: list[str] | None = None) -> int:
         f"Analysis throughput: {summary.get('sampled_frames_per_second', 0):.2f} sampled frames/s    •    "
         f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms"
     )
+    if summary.get("analysis_paused_seconds", 0) > 0:
+        summary_text += f"    •    User-paused: {summary['analysis_paused_seconds']:.1f}s (excluded from throughput)"
     if summary.get("pose_latency_mean_ms") is not None:
         summary_text += f"    •    Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms"
     ttk.Label(header, text=summary_text).pack(anchor="w", pady=(5, 0))
@@ -162,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     analysis_process: dict[str, subprocess.Popen[str] | None] = {"process": None}
     analysis_cancel = threading.Event()
     reopen_dashboard: tuple[Path, Path, bool] | None = None
+    active_pause_file: dict[str, Path | None] = {"path": None}
 
     def show_frame(index: int) -> None:
         nonlocal current_index, displayed_photo
@@ -283,6 +286,8 @@ def main(argv: list[str] | None = None) -> int:
     def close_dashboard() -> None:
         stop_playback()
         analysis_cancel.set()
+        if active_pause_file["path"] is not None:
+            active_pause_file["path"].unlink(missing_ok=True)
         if analysis_process["process"] is not None and analysis_process["process"].poll() is None:
             try:
                 analysis_process["process"].terminate()
@@ -302,6 +307,10 @@ def main(argv: list[str] | None = None) -> int:
         analysis_process["process"] = None
         analyze_button.configure(state="normal")
         cancel_button.configure(state="disabled")
+        pause_button.configure(state="disabled", text="Pause video analysis")
+        if active_pause_file["path"] is not None:
+            active_pause_file["path"].unlink(missing_ok=True)
+            active_pause_file["path"] = None
         if return_code == 0 and new_report.is_file():
             analysis_status.set(f"Analysis complete. Opening {new_report.name}…")
             reopen_dashboard = (new_report, selected_media, selected_is_image)
@@ -357,6 +366,7 @@ def main(argv: list[str] | None = None) -> int:
         report_output = (Path("reports") / f"{media_to_analyze.stem}_{stamp}_{'image' if is_image else 'tracks'}.json").resolve()
         csv_output = report_output.with_suffix(".csv")
         if is_image:
+            active_pause_file["path"] = None
             runner = Path(__file__).resolve().parent / "analyze_image.py"
             command = [sys.executable, str(runner), str(media_to_analyze), "--output", str(csv_output), "--json-output", str(report_output)]
         else:
@@ -369,7 +379,10 @@ def main(argv: list[str] | None = None) -> int:
                 messagebox.showerror("Invalid sampling interval", "Frame step must be a positive whole number.", parent=root)
                 return
             runner = Path(__file__).resolve().parent / "track_video.py"
-            command = [sys.executable, str(runner), str(media_to_analyze), "--frame-step", str(frame_step), "--output", str(csv_output), "--json-output", str(report_output)]
+            pause_file = report_output.with_suffix(".pause")
+            pause_file.unlink(missing_ok=True)
+            active_pause_file["path"] = pause_file
+            command = [sys.executable, str(runner), str(media_to_analyze), "--frame-step", str(frame_step), "--output", str(csv_output), "--json-output", str(report_output), "--pause-file", str(pause_file)]
         if pose_enabled.get():
             command.append("--estimate-body-regions")
         if alignment_enabled.get():
@@ -378,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
         analysis_cancel.clear()
         analyze_button.configure(state="disabled")
         cancel_button.configure(state="normal")
+        pause_button.configure(state="normal" if not is_image else "disabled", text="Pause video analysis")
         analysis_status.set(f"Analyzing {media_to_analyze.name} offline…")
 
         def run_worker() -> None:
@@ -416,8 +430,25 @@ def main(argv: list[str] | None = None) -> int:
 
     def cancel_analysis() -> None:
         analysis_cancel.set()
+        if active_pause_file["path"] is not None:
+            active_pause_file["path"].unlink(missing_ok=True)
         cancel_button.configure(state="disabled")
+        pause_button.configure(state="disabled", text="Pause video analysis")
         analysis_status.set("Stopping offline analysis…")
+
+    def toggle_analysis_pause() -> None:
+        pause_file = active_pause_file["path"]
+        if pause_file is None:
+            return
+        if pause_file.exists():
+            pause_file.unlink(missing_ok=True)
+            pause_button.configure(text="Pause video analysis")
+            analysis_status.set("Video analysis resumed.")
+        else:
+            pause_file.parent.mkdir(parents=True, exist_ok=True)
+            pause_file.touch()
+            pause_button.configure(text="Resume video analysis")
+            analysis_status.set("Video analysis paused; resume to continue.")
 
     media_details = tk.StringVar(value="Choose a local screenshot or video to inspect its metadata.")
     ttk.Label(analysis_controls, textvariable=media_details, wraplength=250).pack(anchor="w", pady=(0, 5))
@@ -433,7 +464,14 @@ def main(argv: list[str] | None = None) -> int:
     analyze_button.pack(fill="x", pady=(6, 2))
     cancel_button = ttk.Button(analysis_controls, text="Cancel analysis", command=cancel_analysis, state="disabled")
     cancel_button.pack(fill="x")
-    analysis_status = tk.StringVar(value="Analysis reads only the selected local recording.")
+    pause_button = ttk.Button(
+        analysis_controls,
+        text="Pause video analysis",
+        command=toggle_analysis_pause,
+        state="disabled",
+    )
+    pause_button.pack(fill="x", pady=(4, 0))
+    analysis_status = tk.StringVar(value="Analysis reads only the selected local media.")
     ttk.Label(analysis_controls, textvariable=analysis_status, wraplength=250).pack(anchor="w", pady=(5, 0))
 
     frame_list.bind("<<ListboxSelect>>", on_select)

@@ -50,6 +50,11 @@ def main() -> int:
         default=Path("data/annotations/source_regions.json"),
     )
     parser.add_argument("--preview-frame", type=int, help="Save a tracking preview for this sampled frame")
+    parser.add_argument(
+        "--pause-file",
+        type=Path,
+        help="Wait while this local sentinel file exists (used by the offline dashboard)",
+    )
     parser.add_argument("--output", type=Path, default=Path("reports/tracks.csv"))
     parser.add_argument("--json-output", type=Path, default=Path("reports/tracks.json"))
     args = parser.parse_args()
@@ -115,6 +120,8 @@ def main() -> int:
         sampled_frames = 0
         total_detections = 0
         preview_saved = False
+        paused_seconds = 0.0
+        pause_file = args.pause_file.expanduser() if args.pause_file else None
         started_at = time.perf_counter()
 
         with VideoReader(video) as reader:
@@ -135,6 +142,14 @@ def main() -> int:
                     break
                 if (frame.index - args.start_frame) % args.frame_step:
                     continue
+
+                pause_started: float | None = None
+                while pause_file is not None and pause_file.exists():
+                    if pause_started is None:
+                        pause_started = time.perf_counter()
+                    time.sleep(0.1)
+                if pause_started is not None:
+                    paused_seconds += time.perf_counter() - pause_started
 
                 inference_started = time.perf_counter()
                 detections = detector.detect(frame.pixels)
@@ -260,7 +275,7 @@ def main() -> int:
             writer.writeheader()
             writer.writerows(rows)
 
-        elapsed = time.perf_counter() - started_at
+        elapsed = max(0.0, time.perf_counter() - started_at - paused_seconds)
         throughput = sampled_frames / elapsed if elapsed > 0 else 0.0
         mean_latency = statistics.mean(latencies_ms) if latencies_ms else 0.0
         p95_latency = sorted(latencies_ms)[math.ceil(0.95 * len(latencies_ms)) - 1] if latencies_ms else 0.0
@@ -306,6 +321,7 @@ def main() -> int:
                 "sampled_frames": sampled_frames,
                 "candidate_detections": total_detections,
                 "analysis_elapsed_seconds": elapsed,
+                "analysis_paused_seconds": paused_seconds,
                 "sampled_frames_per_second": throughput,
                 "detector_latency_mean_ms": mean_latency,
                 "detector_latency_p95_ms": p95_latency,
@@ -319,6 +335,8 @@ def main() -> int:
         print(f"Source FPS: {reader.info.fps:.3f}")
         print(f"Sampled frames: {sampled_frames}; detections: {total_detections}")
         print(f"Analysis throughput: {throughput:.3f} sampled frames/s")
+        if paused_seconds:
+            print(f"User-paused time (excluded from throughput): {paused_seconds:.1f}s")
         print(f"Detector latency: mean={mean_latency:.1f} ms p95={p95_latency:.1f} ms")
         if pose_latencies_ms:
             print(f"Pose latency: mean={mean_pose_latency:.1f} ms p95={p95_pose_latency:.1f} ms")

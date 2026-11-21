@@ -257,6 +257,10 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,60
 
 একটি করে frame ভালোভাবে দেখে status ও box নিশ্চিত করে Enter দাও। `q` দিলে ইতিমধ্যে save হওয়া row-গুলো থাকবে; একই command পুনরায় চালালে সেগুলো skip হবে। Output Git-ignored। এই review window এখনো user-এর হাতে চালানো বাকি।
 
+### M16: চলমান video analysis pause/resume
+
+Dashboard-এ video analysis চলাকালে `Pause video analysis` চাপলে থামবে, `Resume video analysis` চাপলে আবার চলবে, আর `Cancel analysis` পুরো run বন্ধ করবে। Pauseটি video-এর sampled-frame boundary-তে কার্যকর; paused সময়ে model inference চলে না। JSON report-এর `analysis_paused_seconds`-এ user-এর pause time থাকে; `analysis_elapsed_seconds` ও analysis throughput হিসাব থেকে ওই অপেক্ষার সময় বাদ যায়। Screenshot analysis এক-frame atomic inference হওয়ায় pause button সক্রিয় হয় না। GUI হাতে চালিয়ে button যাচাই করা এখনো বাকি।
+
 ## M7: crosshair-to-region alignment
 
 Frame center-কে default reference ধরে estimate মাপতে:
@@ -284,7 +288,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input এবং M15 provisional-box review flow আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow এবং M16 video analysis pause/resume আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
 
 ## ভাষার নিয়ম
 
