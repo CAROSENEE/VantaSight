@@ -11,6 +11,7 @@ from vantasight.analytics import (
     associate_pose_observations,
     center_crosshair,
     measure_alignment,
+    summarize_distribution,
     write_tracking_report,
 )
 from vantasight.cli import IMAGE_SUFFIXES, _load_excluded_regions
@@ -96,6 +97,7 @@ def main() -> int:
 
         reference_xy = center_crosshair(width, height) if args.measure_alignment else None
         detection_records: list[dict] = []
+        detector_scores = [item.confidence for item in detections]
         rows: list[dict] = []
         for index, detection in enumerate(detections):
             x1, y1, x2, y2 = detection.box_xyxy
@@ -200,6 +202,7 @@ def main() -> int:
                 "sampled_frames_per_second": 1 / elapsed if elapsed > 0 else 0.0,
                 "detector_latency_mean_ms": detector_latency_ms,
                 "detector_latency_p95_ms": detector_latency_ms,
+                "detector_confidence": summarize_distribution(detector_scores),
                 "pose_latency_mean_ms": pose_latency_ms,
                 "pose_latency_p95_ms": pose_latency_ms,
             },
@@ -227,6 +230,15 @@ def main() -> int:
         print(f"Source image: {width}x{height}")
         print(f"Candidates: {len(detections)}")
         print(f"Detector latency: {detector_latency_ms:.1f} ms")
+        score_summary = summarize_distribution(detector_scores)
+        if score_summary["count"]:
+            print(
+                "Detector confidence: "
+                f"median={score_summary['median']:.3f} p95={score_summary['p95']:.3f} "
+                f"min={score_summary['min']:.3f} max={score_summary['max']:.3f}"
+            )
+        else:
+            print("Detector confidence: no candidates")
         print(f"CSV: {csv_path.resolve()}")
         print(f"JSON report: {json_path.resolve()}")
         return 0

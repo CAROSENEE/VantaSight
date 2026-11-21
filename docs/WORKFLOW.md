@@ -272,6 +272,10 @@ python tools/evaluate_screenshot_presence.py --confidence-threshold 0.25
 
 Tool প্রতি screenshot-এর candidate count ও সর্বোচ্চ score-সহ ignored `reports/screenshot_presence_eval.csv` লেখে এবং TP/FP/TN/FN, accuracy, precision, recall, specificity, F1 দেখায়। বর্তমান দুই screenshot-এ local CUDA run-এ `ss-1`-এ candidate পাওয়া গেছে এবং `ss-2`-এও একটি false candidate পাওয়া গেছে: `TP=1, FP=1, TN=0, FN=0`; accuracy `0.500`, precision `0.500`, recall `1.000`, specificity `0.000`, F1 `0.667`। `n=2`-এর pilot। এটি box localization বা সাধারণ gameplay accuracy যাচাই করে না। `ss-2`-এর false positive detector-এর বর্তমান দুর্বলতা দেখায়। আরও screenshot label এবং user-verified video sample দরকার।
 
+### M18: detector confidence distribution
+
+Screenshot ও video analysis JSON report-এ সব returned person-candidate-এর detector score-এর count, min, mean, median, p95 ও max যোগ হয়েছে। কোনো candidate না থাকলে count `0`, অন্য সব পরিসংখ্যান `null` থাকে। Dashboard header median/p95 score দেখায়; report loader distribution-এর মান ও total candidate count সামঞ্জস্যপূর্ণ কি না যাচাই করে। এগুলো threshold-পেরোনো candidate score-এর বর্ণনামূলক পরিসংখ্যান—enemy identity, calibrated probability, hit probability বা detection accuracy নয়। Local CUDA smoke run-এ `vd-1`-এর 3 sampled frame-এ 17 candidate-এর median score `0.431`, p95 `0.978`, min `0.250`, max `0.978` পাওয়া গেছে; analysis throughput ছিল `0.890` sampled frame/s। `ss-1`-এ 1 candidate-এর score `0.286`। দুই report-ই schema loader-এ যাচাই হয়েছে। অতি ছোট run-এর throughput hardware benchmark নয়। 32 unit test pass, compileall ও diff check clean।
+
 
 ## M7: crosshair-to-region alignment
 

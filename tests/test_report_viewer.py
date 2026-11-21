@@ -37,6 +37,32 @@ class ReportViewerTests(unittest.TestCase):
         finally:
             path.unlink(missing_ok=True)
 
+    def test_rejects_confidence_summary_with_wrong_count(self) -> None:
+        path = Path("reports/.test_dashboard_report.json")
+        report = {
+            "schema_version": 1,
+            "source": {"file_name": "ss-1.png", "width": 10, "height": 10, "fps": 0.0},
+            "summary": {
+                "sampled_frames": 1,
+                "candidate_detections": 1,
+                "sampled_frames_per_second": 1.0,
+                "detector_latency_mean_ms": 1.0,
+                "detector_latency_p95_ms": 1.0,
+                "detector_confidence": {
+                    "count": 0, "min": None, "mean": None, "median": None, "p95": None, "max": None
+                },
+            },
+            "frames": [{"frame_index": 0, "timestamp_seconds": 0.0, "detection_count": 1, "detections": [
+                {"track_id": 1, "detector_score": 0.5, "box_xyxy": [1, 1, 2, 2]}
+            ]}],
+        }
+        try:
+            path.write_text(json.dumps(report), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "must match candidate_detections"):
+                load_tracking_report(path)
+        finally:
+            path.unlink(missing_ok=True)
+
     def test_rejects_source_path_traversal(self) -> None:
         path = Path("reports/.test_dashboard_report.json")
         report = {

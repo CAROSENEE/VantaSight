@@ -61,6 +61,22 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
     elapsed = summary.get("analysis_elapsed_seconds")
     if elapsed is not None and (not _finite_number(elapsed) or elapsed < 0):
         raise ValueError("Summary analysis_elapsed_seconds must be null or finite and nonnegative")
+    confidence_distribution = summary.get("detector_confidence")
+    if confidence_distribution is not None:
+        if not isinstance(confidence_distribution, dict):
+            raise ValueError("Summary detector_confidence must be an object")
+        count = confidence_distribution.get("count")
+        if type(count) is not int or count < 0:
+            raise ValueError("Detector confidence count must be a nonnegative integer")
+        for field in ("min", "mean", "median", "p95", "max"):
+            value = confidence_distribution.get(field)
+            if count == 0:
+                if value is not None:
+                    raise ValueError("Empty detector confidence distribution values must be null")
+            elif not _finite_number(value) or not 0 <= value <= 1:
+                raise ValueError(f"Detector confidence {field} must be between 0 and 1")
+        if count != summary["candidate_detections"]:
+            raise ValueError("Detector confidence count must match candidate_detections")
 
     previous_frame_index = -1
     for frame in frames:

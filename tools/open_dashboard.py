@@ -84,6 +84,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     if summary.get("analysis_paused_seconds", 0) > 0:
         summary_text += f"    •    User-paused: {summary['analysis_paused_seconds']:.1f}s (excluded from throughput)"
+    confidence_summary = summary.get("detector_confidence")
+    if confidence_summary and confidence_summary.get("count", 0):
+        summary_text += (
+            f"    •    Candidate confidence median/p95: "
+            f"{confidence_summary['median']:.3f}/{confidence_summary['p95']:.3f}"
+        )
     if summary.get("pose_latency_mean_ms") is not None:
         summary_text += f"    •    Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms"
     ttk.Label(header, text=summary_text).pack(anchor="w", pady=(5, 0))

@@ -14,6 +14,7 @@ from vantasight.analytics import (
     associate_pose_observations,
     center_crosshair,
     measure_alignment,
+    summarize_distribution,
     write_tracking_report,
 )
 from vantasight.input import VideoReader
@@ -117,6 +118,7 @@ def main() -> int:
         frame_records: list[dict] = []
         latencies_ms: list[float] = []
         pose_latencies_ms: list[float] = []
+        detector_scores: list[float] = []
         sampled_frames = 0
         total_detections = 0
         preview_saved = False
@@ -154,6 +156,7 @@ def main() -> int:
                 inference_started = time.perf_counter()
                 detections = detector.detect(frame.pixels)
                 latencies_ms.append((time.perf_counter() - inference_started) * 1000)
+                detector_scores.extend(item.confidence for item in detections)
                 tracked = tracker.update(detections, frame.index, frame.timestamp_seconds)
                 if pose_estimator:
                     pose_started = time.perf_counter()
@@ -325,6 +328,7 @@ def main() -> int:
                 "sampled_frames_per_second": throughput,
                 "detector_latency_mean_ms": mean_latency,
                 "detector_latency_p95_ms": p95_latency,
+                "detector_confidence": summarize_distribution(detector_scores),
                 "pose_latency_mean_ms": mean_pose_latency,
                 "pose_latency_p95_ms": p95_pose_latency,
             },
@@ -338,6 +342,15 @@ def main() -> int:
         if paused_seconds:
             print(f"User-paused time (excluded from throughput): {paused_seconds:.1f}s")
         print(f"Detector latency: mean={mean_latency:.1f} ms p95={p95_latency:.1f} ms")
+        score_summary = summarize_distribution(detector_scores)
+        if score_summary["count"]:
+            print(
+                "Detector confidence: "
+                f"median={score_summary['median']:.3f} p95={score_summary['p95']:.3f} "
+                f"min={score_summary['min']:.3f} max={score_summary['max']:.3f}"
+            )
+        else:
+            print("Detector confidence: no candidates")
         if pose_latencies_ms:
             print(f"Pose latency: mean={mean_pose_latency:.1f} ms p95={p95_pose_latency:.1f} ms")
         print(f"Track rows: {output.resolve()}")
