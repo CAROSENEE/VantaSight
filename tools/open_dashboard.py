@@ -90,6 +90,12 @@ def main(argv: list[str] | None = None) -> int:
             f"    •    Candidate confidence median/p95: "
             f"{confidence_summary['median']:.3f}/{confidence_summary['p95']:.3f}"
         )
+    for region_name, values in summary.get("body_region_heatmap_response", {}).items():
+        if values.get("count", 0):
+            summary_text += (
+                f"    •    {region_name} raw heatmap median/p95: "
+                f"{values['median']:.3f}/{values['p95']:.3f}"
+            )
     if summary.get("pose_latency_mean_ms") is not None:
         summary_text += f"    •    Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms"
     ttk.Label(header, text=summary_text).pack(anchor="w", pady=(5, 0))

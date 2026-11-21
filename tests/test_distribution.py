@@ -1,6 +1,6 @@
 import unittest
 
-from vantasight.analytics import summarize_distribution
+from vantasight.analytics import summarize_body_region_responses, summarize_distribution
 
 
 class DistributionSummaryTests(unittest.TestCase):
@@ -22,6 +22,18 @@ class DistributionSummaryTests(unittest.TestCase):
     def test_rejects_non_finite_values(self):
         with self.assertRaises(ValueError):
             summarize_distribution([float("nan")])
+
+    def test_body_region_responses_are_grouped_by_region(self):
+        summary = summarize_body_region_responses([{"detections": [
+            {"body_regions": [
+                {"name": "head", "mean_keypoint_score": 0.4},
+                {"name": "chest", "mean_keypoint_score": 0.8},
+            ]},
+            {"body_regions": [{"name": "head", "mean_keypoint_score": 0.6}]},
+        ]}])
+        self.assertEqual(summary["head"]["count"], 2)
+        self.assertEqual(summary["head"]["median"], 0.5)
+        self.assertEqual(summary["chest"]["count"], 1)
 
 
 if __name__ == "__main__":

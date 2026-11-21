@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import math
 import statistics
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 
 def summarize_distribution(values: Sequence[float]) -> dict[str, int | float | None]:
@@ -23,3 +24,13 @@ def summarize_distribution(values: Sequence[float]) -> dict[str, int | float | N
         "p95": ordered[max(0, math.ceil(0.95 * len(ordered)) - 1)],
         "max": ordered[-1],
     }
+
+
+def summarize_body_region_responses(frames: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, int | float | None]]:
+    """Summarize raw pose heatmap responses by estimated body region."""
+    values: dict[str, list[float]] = {}
+    for frame in frames:
+        for detection in frame.get("detections", []):
+            for region in detection.get("body_regions", []):
+                values.setdefault(region["name"], []).append(float(region["mean_keypoint_score"]))
+    return {name: summarize_distribution(scores) for name, scores in sorted(values.items())}

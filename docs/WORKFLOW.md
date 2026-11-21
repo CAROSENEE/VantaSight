@@ -327,8 +327,14 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking এবং M21 indexed sampling আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling এবং M22 body-region heatmap response summary আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 
 এই workflow নথিটি Bangla-তে থাকবে, যাতে ধাপগুলো অনুসরণ করা সহজ হয়। Code, variable, command ও মূল project documentation আপাতত English-এ থাকবে। Project শেষ হলে প্রয়োজন অনুযায়ী পুরো project-কে consistent international English-এ নেওয়া হবে।
+
+### M22: body-region raw heatmap response summary
+
+প্রতিটি estimated head/chest/lower-torso/legs region-এর `mean_keypoint_score` report-এ region অনুযায়ী count, min, mean, median, p95 ও max হিসেবে যুক্ত হয়েছে। Dashboard header median/p95 দেখায়। এটি pose model-এর raw heatmap response মাত্র; calibrated confidence বা সঠিক body point পাওয়ার probability নয়, এবং মান 1-এর বেশি হতে পারে। ফলে detector candidate confidence-এর সাথে এক করে পড়া যাবে না।
+
+`ss-1.png`-এ একটি person candidate থেকে চারটি region estimate পাওয়া গেছে; observed raw response head `2.055`, chest `0.319`, lower torso `3.099`, legs `3.544`। `vd-1`-এর frame 0–120-এ প্রতি 60 frame-এ 3টি sampled frame চালিয়ে 26 candidate পাওয়া গেছে; response summary chest/head-এ 9টি করে, lower torso-তে 7টি, legs-এ 6টি available estimate দেখিয়েছে। দুই report-ই dashboard report loader-এ valid হয়েছে। এটি ছোট sample এবং কোনো ground-truth accuracy পরীক্ষা নয়। Unit test suite `42/42` pass করেছে।

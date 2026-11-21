@@ -11,6 +11,7 @@ from vantasight.analytics import (
     associate_pose_observations,
     center_crosshair,
     measure_alignment,
+    summarize_body_region_responses,
     summarize_distribution,
     write_tracking_report,
 )
@@ -203,6 +204,9 @@ def main() -> int:
                 "detector_latency_mean_ms": detector_latency_ms,
                 "detector_latency_p95_ms": detector_latency_ms,
                 "detector_confidence": summarize_distribution(detector_scores),
+                "body_region_heatmap_response": summarize_body_region_responses([
+                    {"detections": detection_records}
+                ]),
                 "pose_latency_mean_ms": pose_latency_ms,
                 "pose_latency_p95_ms": pose_latency_ms,
             },
