@@ -475,6 +475,11 @@ def main() -> int:
         action="store_true",
         help="Keep the annotation window above other windows so it is easy to find",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate the selected video frames without opening a window or writing annotations",
+    )
     args = parser.parse_args()
 
     if args.max_width < 1 or args.max_height < 1:
@@ -484,6 +489,17 @@ def main() -> int:
     output = args.output.expanduser()
     try:
         frames = args.frames or _read_shortlist(args.shortlist_csv.expanduser(), video)
+        if args.dry_run:
+            with VideoReader(video) as reader:
+                assert reader.info is not None
+                print(f"Video: {reader.info.path} ({reader.info.width}x{reader.info.height})")
+                print(f"Review frames: {len(frames)}")
+                for frame_index in frames:
+                    frame = reader.read_frame(frame_index)
+                    print(f"  frame {frame.index} at {frame.timestamp_seconds:.3f}s: decodable")
+            print("Dry run complete; no annotation window was opened and no labels were written.")
+            return 0
+
         completed = _read_existing(output)
         suggestions = _read_prefill(args.prefill.expanduser() if args.prefill else None, video.name)
         with VideoReader(video) as reader:

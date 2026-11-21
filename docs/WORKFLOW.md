@@ -130,6 +130,7 @@ Ground-truth box তৈরি করতে local desktop-এ চালাও:
 
 ```powershell
 python tools/create_review_shortlist.py reports/vd-1_dashboard_tracks_dense.json --output reports/vd-1_manual_review_shortlist.csv
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --dry-run
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv
 ```
 
@@ -210,6 +211,7 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 User প্রস্তুত হয়ে annotation window নিজে দেখতে পারলে তখন blank review থেকে শুরু করবেন:
 
 ```powershell
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --dry-run
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --output data/annotations/vd-1_user_verified.jsonl
 ```
 
@@ -572,3 +574,7 @@ Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py repo
 ### M81: annotation launcher-এ shortlist auto-generation
 
 Windows launcher আগে CSV না পেলে শুধু তৈরির নির্দেশ দিত। এখন dense tracking report পাওয়া গেলে launch-এর সময় `create_review_shortlist.py` চালিয়ে স্থানীয় CSV তৈরি করে; dense report না থাকলে প্রয়োজনীয় tracking command console-এ দেখিয়ে থামে। এরপর annotation tool CSV-এর source fingerprint validate করে। README-তে নতুন আচরণ লেখা হয়েছে। Batch launcher run বা GUI open করা হয়নি; test suite চালানো হয়নি।
+
+### M82: annotation-এর আগে frame preflight
+
+Annotation tool-এ `--dry-run` যোগ হয়েছে: shortlist fingerprint যাচাই করে নির্বাচিত frame-গুলো video থেকে decode করে, কিন্তু GUI খোলে না এবং annotation file লেখে না। Windows launcher-ও GUI খোলার আগে এই preflight চালায়। `vd-1.mp4` (2560×1440)-এর বর্তমান shortlist-এ 12/12 frame decode হয়েছে: 540, 1080, 1650, 1800, 3030, 3210, 3840, 4650, 4890, 4980, 6090, 6480। Command শেষে স্পষ্ট জানিয়েছে window খোলা বা label লেখা হয়নি; output file-ও নেই। `git diff --check` পরিষ্কার; test suite চালানো হয়নি।
