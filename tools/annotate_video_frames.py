@@ -8,7 +8,7 @@ from pathlib import Path
 
 import cv2
 
-from vantasight.input import VideoReader
+from vantasight.input import VideoReader, frame_sha256
 
 
 LABELS = {
@@ -301,6 +301,7 @@ def _annotate_one(
                     "timestamp_seconds": round(frame.timestamp_seconds, 6),
                     "source_width": source_width,
                     "source_height": source_height,
+                    "source_frame_sha256": frame_sha256(frame.pixels),
                     "status": status,
                     "opponent_boxes_xyxy": [list(box) for box in boxes],
                     "reviewed_manually": True,

@@ -16,7 +16,7 @@ from vantasight.analytics import (
     validate_annotation_coverage,
 )
 from vantasight.cli import _load_excluded_regions
-from vantasight.input import VideoReader
+from vantasight.input import VideoReader, verify_frame_fingerprint
 from vantasight.vision import TorchvisionPersonDetector
 
 
@@ -159,6 +159,7 @@ def main() -> int:
             for record in records:
                 frame_index = record["frame_index"]
                 frame = reader.read_frame(frame_index)
+                verify_frame_fingerprint(record, frame.pixels, frame_index)
                 ground_truth = _validated_boxes(record, reader.info.width, reader.info.height)
                 if record["status"] == "uncertain":
                     continue

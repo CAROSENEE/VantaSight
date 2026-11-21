@@ -14,7 +14,7 @@ from vantasight.analytics import (
     summarize_region_localizations,
 )
 from vantasight.cli import _load_excluded_regions
-from vantasight.input import VideoReader
+from vantasight.input import VideoReader, verify_frame_fingerprint
 from vantasight.vision.body_region_estimator import TorchvisionBodyRegionEstimator
 
 _REGIONS = {"head", "chest", "lower_torso", "legs"}
@@ -138,6 +138,7 @@ def main() -> int:
                 if record.get("source_width") != width or record.get("source_height") != height:
                     raise ValueError(f"Annotation dimensions do not match frame {record['frame_index']}")
                 frame = reader.read_frame(record["frame_index"])
+                verify_frame_fingerprint(record, frame.pixels, record["frame_index"])
                 boxes: list[tuple[int, int, int, int]] = []
                 for box in record["opponent_boxes_xyxy"]:
                     if not isinstance(box, list) or len(box) != 4 or not all(type(v) is int for v in box):
