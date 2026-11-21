@@ -39,6 +39,20 @@ def box_iou(first: Box, second: Box) -> float:
 def match_boxes(predictions: list[Box], ground_truth: list[Box], iou_threshold: float) -> DetectionCounts:
     """Find a maximum-cardinality one-to-one match above the IoU threshold."""
 
+    matched_ground_truth = _matched_ground_truth_indexes(predictions, ground_truth, iou_threshold)
+    true_positives = len(matched_ground_truth)
+    return DetectionCounts(
+        true_positives=true_positives,
+        false_positives=len(predictions) - true_positives,
+        false_negatives=len(ground_truth) - true_positives,
+    )
+
+
+def _matched_ground_truth_indexes(
+    predictions: list[Box], ground_truth: list[Box], iou_threshold: float
+) -> set[int]:
+    """Return truth-box indexes selected by maximum-cardinality IoU matching."""
+
     if not 0.0 <= iou_threshold <= 1.0:
         raise ValueError("iou_threshold must be between 0 and 1")
     adjacency: list[list[int]] = []
@@ -67,12 +81,7 @@ def match_boxes(predictions: list[Box], ground_truth: list[Box], iou_threshold: 
     for prediction_index in range(len(predictions)):
         assign(prediction_index, set())
 
-    true_positives = len(truth_to_prediction)
-    return DetectionCounts(
-        true_positives=true_positives,
-        false_positives=len(predictions) - true_positives,
-        false_negatives=len(ground_truth) - true_positives,
-    )
+    return set(truth_to_prediction)
 
 
 def calculate_metrics(counts: DetectionCounts) -> DetectionMetrics:
@@ -122,6 +131,62 @@ def evaluate_threshold_sweep(
                 "f1": metrics.f1,
             }
         )
+    return results
+
+
+def evaluate_size_stratified_recall(
+    samples: Sequence[tuple[Sequence[tuple[float, Box]], Sequence[Box]]],
+    thresholds: Sequence[float],
+    iou_threshold: float,
+    frame_height: int,
+) -> list[dict[str, Any]]:
+    """Measure recall by ground-truth box height relative to source-frame height.
+
+    Height bands are tiny (<2%), small (2–6%), medium (6–16%), and large
+    (>=16%). False positives are not assigned to a size band because they have
+    no ground-truth target size.
+    """
+    if frame_height < 1:
+        raise ValueError("frame_height must be positive")
+    if not thresholds or any(not 0.0 <= threshold <= 1.0 for threshold in thresholds):
+        raise ValueError("thresholds must be a nonempty sequence between 0 and 1")
+    if len(set(thresholds)) != len(thresholds):
+        raise ValueError("thresholds must not repeat")
+    if not 0.0 <= iou_threshold <= 1.0:
+        raise ValueError("iou_threshold must be between 0 and 1")
+
+    group_names = ("tiny", "small", "medium", "large")
+    results: list[dict[str, Any]] = []
+    for threshold in thresholds:
+        counts = {name: [0, 0] for name in group_names}
+        for scored_predictions, ground_truth in samples:
+            predictions = [box for score, box in scored_predictions if score >= threshold]
+            matched = _matched_ground_truth_indexes(predictions, list(ground_truth), iou_threshold)
+            for truth_index, box in enumerate(ground_truth):
+                relative_height = (box[3] - box[1]) / frame_height
+                if relative_height < 0.02:
+                    group = "tiny"
+                elif relative_height < 0.06:
+                    group = "small"
+                elif relative_height < 0.16:
+                    group = "medium"
+                else:
+                    group = "large"
+                counts[group][0] += 1
+                if truth_index in matched:
+                    counts[group][1] += 1
+        results.append({
+            "confidence_threshold": threshold,
+            "groups": {
+                name: {
+                    "ground_truth_boxes": group_counts[0],
+                    "matched_boxes": group_counts[1],
+                    "missed_boxes": group_counts[0] - group_counts[1],
+                    "recall": group_counts[1] / group_counts[0] if group_counts[0] else None,
+                }
+                for name, group_counts in counts.items()
+            },
+        })
     return results
 
 

@@ -14,6 +14,7 @@ from vantasight.analytics.detection_evaluation import (
     box_iou,
     calculate_metrics,
     evaluate_average_precision,
+    evaluate_size_stratified_recall,
     evaluate_threshold_sweep,
     match_boxes,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "associate_pose_observations",
     "calculate_metrics",
     "evaluate_average_precision",
+    "evaluate_size_stratified_recall",
     "evaluate_threshold_sweep",
     "calculate_presence_metrics",
     "center_crosshair",

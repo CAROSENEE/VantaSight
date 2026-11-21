@@ -255,6 +255,20 @@ def main(argv: list[str] | None = None) -> int:
                 + ("source resolution preserved" if threshold_sweep[0].preserve_source_resolution else "model-side resize enabled")
             )
         sweep_lines[0] += "):"
+        size_groups = threshold_sweep[0].target_height_groups
+        if size_groups is not None:
+            size_recall_text = []
+            for group_name, group_metrics in size_groups.items():
+                recall = group_metrics["recall"]
+                value = "n/a" if recall is None else f"{recall:.3f}"
+                size_recall_text.append(
+                    f"{group_name}={value} ({group_metrics['matched_boxes']}/{group_metrics['ground_truth_boxes']})"
+                )
+            sweep_lines.append(
+                f"Target-height recall at confidence {threshold_sweep[0].confidence_threshold:.2f} "
+                "(tiny <2%, small 2–6%, medium 6–16%, large ≥16% of frame height): "
+                + ", ".join(size_recall_text)
+            )
         sweep_lines.extend(
             "  |  ".join(sweep_entries[index:index + 5])
             for index in range(0, len(sweep_entries), 5)

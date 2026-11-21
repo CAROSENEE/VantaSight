@@ -9,6 +9,7 @@ import time
 
 from vantasight.analytics import (
     evaluate_threshold_sweep,
+    evaluate_size_stratified_recall,
     parse_frame_indexes,
     read_video_annotations,
     validate_annotation_coverage,
@@ -82,12 +83,14 @@ def main() -> int:
         model_initialization_seconds = time.perf_counter() - initialization_started
 
         samples = []
+        frame_height = 0
         unreviewed_frames = 0
         inference_seconds = []
         analysis_started = time.perf_counter()
         with VideoReader(video) as reader:
             if reader.info is None:
                 raise RuntimeError("Could not read video metadata")
+            frame_height = reader.info.height
             for record in records:
                 frame_index = record["frame_index"]
                 frame = reader.read_frame(frame_index)
@@ -111,6 +114,9 @@ def main() -> int:
         sampled_analysis_frames_per_second = len(samples) / sampled_analysis_elapsed_seconds
 
         results = evaluate_threshold_sweep(samples, args.thresholds, args.iou_threshold)
+        size_results = evaluate_size_stratified_recall(
+            samples, args.thresholds, args.iou_threshold, frame_height
+        )
         positive_frames = sum(bool(ground_truth) for _, ground_truth in samples)
         negative_frames = len(samples) - positive_frames
         ground_truth_boxes = sum(len(ground_truth) for _, ground_truth in samples)
@@ -124,13 +130,26 @@ def main() -> int:
             "model_initialization_seconds", "inference_calls", "detector_latency_mean_ms",
             "sampled_analysis_elapsed_seconds", "sampled_analysis_frames_per_second",
             "device", "max_side", "preserve_source_resolution",
+            "target_height_group_basis",
+            *[
+                f"{group}_{metric}"
+                for group in ("tiny", "small", "medium", "large")
+                for metric in ("ground_truth_boxes", "matched_boxes", "missed_boxes", "recall")
+            ],
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)
             writer.writeheader()
-            for result in results:
+            for result, size_result in zip(results, size_results):
+                size_columns = {
+                    "target_height_group_basis": "tiny:<2%;small:2-6%;medium:6-16%;large:>=16% of source frame height"
+                }
+                for group, group_result in size_result["groups"].items():
+                    for metric, value in group_result.items():
+                        size_columns[f"{group}_{metric}"] = "" if value is None else value
                 writer.writerow({
                     **result,
+                    **size_columns,
                     "video": video.name,
                     "scored_frames": len(samples),
                     "positive_frames": positive_frames,
@@ -151,6 +170,18 @@ def main() -> int:
 
         print(f"Device: {detector.device}")
         print(f"Scored frames: {len(samples)}; threshold values: {len(results)}")
+        first_size_result = size_results[0]
+        print(
+            f"Target-height recall at confidence {args.thresholds[0]:.2f} "
+            "(tiny <2%, small 2-6%, medium 6-16%, large >=16% of source-frame height):"
+        )
+        for group, metrics in first_size_result["groups"].items():
+            recall = "n/a" if metrics["recall"] is None else f"{metrics['recall']:.3f}"
+            print(
+                f"  {group}: recall={recall} "
+                f"({metrics['matched_boxes']}/{metrics['ground_truth_boxes']}; "
+                f"missed={metrics['missed_boxes']})"
+            )
         print(f"Detector inference calls: {len(inference_seconds)}; mean latency: {detector_latency_mean_ms:.1f} ms")
         print(
             f"Model initialization: {model_initialization_seconds:.2f} s; "

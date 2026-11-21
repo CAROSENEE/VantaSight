@@ -53,6 +53,7 @@ class ThresholdSweepPoint:
     device: str | None = None
     max_side: int | None = None
     preserve_source_resolution: bool | None = None
+    target_height_groups: dict[str, dict[str, int | float | None]] | None = None
 
 
 @dataclass(frozen=True)
@@ -188,6 +189,14 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
         has_resize_metadata = resize_columns.issubset(reader.fieldnames)
         if bool(resize_columns.intersection(reader.fieldnames)) and not has_resize_metadata:
             raise ValueError(f"Threshold sweep CSV has incomplete inference resize metadata: {path}")
+        group_names = ("tiny", "small", "medium", "large")
+        group_metrics = ("ground_truth_boxes", "matched_boxes", "missed_boxes", "recall")
+        size_columns = {"target_height_group_basis"} | {
+            f"{group}_{metric}" for group in group_names for metric in group_metrics
+        }
+        has_size_metrics = size_columns.issubset(reader.fieldnames)
+        if bool(size_columns.intersection(reader.fieldnames)) and not has_size_metrics:
+            raise ValueError(f"Threshold sweep CSV has incomplete target-height metrics: {path}")
         for row in reader:
             if row.get("video") != video_name:
                 continue
@@ -219,6 +228,43 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                         raise ValueError("preserve_source_resolution must be true or false")
                     preserve_source_resolution = raw_resolution_mode == "true"
                     resize_metadata = (row["device"].strip(), int(row["max_side"]), preserve_source_resolution)
+                target_height_groups = None
+                if has_size_metrics:
+                    expected_basis = "tiny:<2%;small:2-6%;medium:6-16%;large:>=16% of source frame height"
+                    if row["target_height_group_basis"].strip() != expected_basis:
+                        raise ValueError("Unsupported target-height group basis")
+                    target_height_groups = {}
+                    for group in group_names:
+                        group_counts = {
+                            metric: int(row[f"{group}_{metric}"])
+                            for metric in group_metrics[:3]
+                        }
+                        raw_recall = row[f"{group}_recall"].strip()
+                        group_recall = float(raw_recall) if raw_recall else None
+                        if (
+                            min(group_counts.values()) < 0
+                            or group_counts["ground_truth_boxes"]
+                            != group_counts["matched_boxes"] + group_counts["missed_boxes"]
+                            or (
+                                group_recall is None
+                                and group_counts["ground_truth_boxes"] != 0
+                            )
+                            or (
+                                group_recall is not None
+                                and (
+                                    group_counts["ground_truth_boxes"] == 0
+                                    or not math.isfinite(group_recall)
+                                    or not 0 <= group_recall <= 1
+                                    or not math.isclose(
+                                        group_recall,
+                                        group_counts["matched_boxes"] / group_counts["ground_truth_boxes"],
+                                        abs_tol=1e-9,
+                                    )
+                                )
+                            )
+                        ):
+                            raise ValueError(f"Invalid {group} target-height metrics")
+                        target_height_groups[group] = {**group_counts, "recall": group_recall}
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid threshold sweep values in {path}") from exc
             provenance = row.get("label_provenance", "")
@@ -242,6 +288,12 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Manual threshold sweep cannot contain unreviewed frames in {path}")
             if resize_metadata is not None and (not resize_metadata[0] or resize_metadata[1] < 1):
                 raise ValueError(f"Invalid threshold sweep inference resize metadata in {path}")
+            if target_height_groups is not None and (
+                sum(group["ground_truth_boxes"] for group in target_height_groups.values()) != ground_truth_boxes
+                or sum(group["matched_boxes"] for group in target_height_groups.values()) != counts[0]
+                or sum(group["missed_boxes"] for group in target_height_groups.values()) != counts[2]
+            ):
+                raise ValueError(f"Target-height metrics do not match total counts in {path}")
             if timing is not None and (
                 any(not math.isfinite(value) or value < 0 for value in (timing[0], timing[2], timing[3], timing[4]))
                 or timing[1] != scored_frames
@@ -256,6 +308,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
             contexts.add((
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
                 provenance, unreviewed_frames, iou_threshold, timing, resize_metadata,
+                row.get("target_height_group_basis") if has_size_metrics else None,
             ))
             expected_metrics = calculate_metrics(DetectionCounts(*counts))
             for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
@@ -288,6 +341,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                     device=resize_metadata[0] if resize_metadata else None,
                     max_side=resize_metadata[1] if resize_metadata else None,
                     preserve_source_resolution=preserve_source_resolution,
+                    target_height_groups=target_height_groups,
                 )
             )
     if not points:
