@@ -56,7 +56,7 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
 | 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export ও local report dashboard যোগ হয়েছে; Windows-এ UI visual review বাকি |
-| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector box evaluator আছে; representative frame হাতে label ও pose-region evaluation বাকি |
+| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Maximum one-to-one detector matching ও metric module আছে; representative frame label ও pose-region evaluation বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
 
@@ -147,7 +147,7 @@ Label করার পর metric চালাও:
 python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-threshold 0.25 --iou-threshold 0.50
 ```
 
-Evaluator এক frame-এর detector box ও hand-labeled opponent box-কে one-to-one IoU overlap দিয়ে মেলায়। Uncertain frame বাদ পড়ে; CSV `reports/detector_evaluation.csv`-এ যায়। Label file তৈরি না হওয়া পর্যন্ত metric বানানো হবে না, আর threshold comparison-কে ground-truth evaluation বলা যাবে না।
+Evaluator এক frame-এর detector box ও hand-labeled opponent box-কে IoU threshold দিয়ে one-to-one মেলায়। এখন matching algorithm threshold পেরোনো সব সম্ভাব্য pair থেকে maximum number of matches খোঁজে; শুধু সবচেয়ে বড় IoU pair আগে নেওয়ার কারণে বৈধ match বাদ পড়ে না। Uncertain frame বাদ পড়ে; CSV `reports/detector_evaluation.csv`-এ যায়। মোট TP/FP/FN থেকে precision, recall ও F1 বের হয়। Label file তৈরি না হওয়া পর্যন্ত metric বানানো হবে না, আর threshold comparison-কে ground-truth evaluation বলা যাবে না।
 
 ## M5: experimental body-region estimate
 
@@ -212,7 +212,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। পরের বড় ধাপ M9 evaluation: GUI-তে representative gameplay frame-এর opponent box হাতে label করে detector evaluator চালানো। Pose-region estimate যাচাইয়ের label format ও metric-ও যোগ করতে হবে। Label ছাড়া detector, pose বা tracking accuracy দাবি করা যাবে না।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। M9 detector evaluator-এ one-to-one maximum matching যোগ হয়েছে; এখন representative gameplay frame label ছাড়া বাস্তব metric বাকি। পরের কাজ local annotation window-তে frame 600, 3000, 4200, 5400 ও 6600-এর opponent box label করে evaluator চালানো। Pose-region estimate যাচাইয়ের label format ও metric-ও যোগ করতে হবে। Label ছাড়া detector, pose বা tracking accuracy দাবি করা যাবে না।
 
 ## ভাষার নিয়ম
 

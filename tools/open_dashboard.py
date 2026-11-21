@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
@@ -108,9 +107,10 @@ def main() -> int:
         display_width = max(1, round(image.shape[1] * scale))
         display_height = max(1, round(image.shape[0] * scale))
         resized = cv2.resize(image, (display_width, display_height), interpolation=cv2.INTER_AREA)
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-        ppm = f"P6\n{display_width} {display_height}\n255\n".encode("ascii") + rgb.tobytes()
-        displayed_photo = tk.PhotoImage(data=base64.b64encode(ppm).decode("ascii"), format="PPM")
+        encoded_ok, png = cv2.imencode(".png", resized)
+        if not encoded_ok:
+            raise RuntimeError("Could not encode the sampled video frame for dashboard display")
+        displayed_photo = tk.PhotoImage(data=png.tobytes(), format="png")
         canvas.delete("all")
         canvas.create_image(available_width // 2, available_height // 2, image=displayed_photo, anchor="center")
         frame_list.selection_clear(0, "end")

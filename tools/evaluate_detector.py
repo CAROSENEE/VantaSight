@@ -7,6 +7,7 @@ import csv
 import json
 from pathlib import Path
 
+from vantasight.analytics import DetectionCounts, calculate_metrics, match_boxes
 from vantasight.cli import _load_excluded_regions
 from vantasight.input import VideoReader
 from vantasight.vision import TorchvisionPersonDetector
@@ -78,45 +79,6 @@ def _validated_boxes(record: dict, width: int, height: int) -> list[tuple[int, i
     return boxes
 
 
-def _iou(first: tuple[int, int, int, int], second: tuple[int, int, int, int]) -> float:
-    x1, y1 = max(first[0], second[0]), max(first[1], second[1])
-    x2, y2 = min(first[2], second[2]), min(first[3], second[3])
-    intersection = max(0, x2 - x1) * max(0, y2 - y1)
-    first_area = (first[2] - first[0]) * (first[3] - first[1])
-    second_area = (second[2] - second[0]) * (second[3] - second[1])
-    union = first_area + second_area - intersection
-    return intersection / union if union else 0.0
-
-
-def _match_boxes(
-    predictions: list[tuple[int, int, int, int]],
-    ground_truth: list[tuple[int, int, int, int]],
-    iou_threshold: float,
-) -> tuple[int, int, int]:
-    possible = sorted(
-        (
-            (_iou(prediction, truth), prediction_index, truth_index)
-            for prediction_index, prediction in enumerate(predictions)
-            for truth_index, truth in enumerate(ground_truth)
-        ),
-        reverse=True,
-    )
-    matched_predictions: set[int] = set()
-    matched_truth: set[int] = set()
-    for overlap, prediction_index, truth_index in possible:
-        if overlap < iou_threshold:
-            break
-        if prediction_index in matched_predictions or truth_index in matched_truth:
-            continue
-        matched_predictions.add(prediction_index)
-        matched_truth.add(truth_index)
-
-    true_positives = len(matched_predictions)
-    false_positives = len(predictions) - true_positives
-    false_negatives = len(ground_truth) - len(matched_truth)
-    return true_positives, false_positives, false_negatives
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Measure offline person-candidate boxes against manual opponent annotations."
@@ -180,10 +142,10 @@ def main() -> int:
 
                 detections = detector.detect(frame.pixels)
                 predictions = [item.box_xyxy for item in detections]
-                tp, fp, fn = _match_boxes(predictions, ground_truth, args.iou_threshold)
-                total_tp += tp
-                total_fp += fp
-                total_fn += fn
+                counts = match_boxes(predictions, ground_truth, args.iou_threshold)
+                total_tp += counts.true_positives
+                total_fp += counts.false_positives
+                total_fn += counts.false_negatives
                 rows.append(
                     {
                         "video": video.name,
@@ -192,9 +154,9 @@ def main() -> int:
                         "label": record["status"],
                         "ground_truth_boxes": len(ground_truth),
                         "predicted_boxes": len(predictions),
-                        "true_positives": tp,
-                        "false_positives": fp,
-                        "false_negatives": fn,
+                        "true_positives": counts.true_positives,
+                        "false_positives": counts.false_positives,
+                        "false_negatives": counts.false_negatives,
                         "confidence_threshold": args.confidence_threshold,
                         "iou_threshold": args.iou_threshold,
                     }
@@ -211,19 +173,8 @@ def main() -> int:
             writer.writeheader()
             writer.writerows(rows)
 
-        precision_denominator = total_tp + total_fp
-        recall_denominator = total_tp + total_fn
-        precision = (
-            total_tp / precision_denominator
-            if precision_denominator
-            else (0.0 if total_fn else None)
-        )
-        recall = total_tp / recall_denominator if recall_denominator else None
-        f1 = (
-            2 * precision * recall / (precision + recall)
-            if precision is not None and recall is not None and precision + recall > 0
-            else None
-        )
+        metrics = calculate_metrics(DetectionCounts(total_tp, total_fp, total_fn))
+        precision, recall, f1 = metrics.precision, metrics.recall, metrics.f1
         print(f"Device: {detector.device}")
         print(f"Scored frames: {len(rows)} (uncertain frames excluded)")
         print(f"TP={total_tp} FP={total_fp} FN={total_fn}")
