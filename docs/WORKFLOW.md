@@ -289,7 +289,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M77)
+## বর্তমান অবস্থান (M78)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -553,3 +553,7 @@ Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py repo
 ### M77: dashboard verification-এর বর্তমান machine state
 
 এই ধাপের শুরুতে PowerShell process inventory-তে কোনো `python`/`pythonw` process পাওয়া যায়নি, তাই M75-এ চালানো dense-report window/process এখন আর live নয়। Computer Use-এর `list_windows` native pipe connection error দিয়ে ব্যর্থ হয়েছে; একবার retry এবং kernel reset করে পুনরায় চালানোর পরও একই error এসেছে। UI-তে click/input বা নতুন launch করা হয়নি। আগের stale dashboard screenshot-এ unverified AP/threshold ফল ছিল; সেগুলো ব্যবহারযোগ্য নয়। পরের dashboard attempt-এর আগে Computer Use pipe সচল হতে হবে, তারপর `tools/start_vd1_dashboard.bat` দিয়ে নতুন dense-report window খুলে তার title/report label, no-evaluation panel, sampled-frame controls ও Next/Play আচরণ চোখে দেখে যাচাই করতে হবে। বর্তমান machine-এ dashboard UI QA pending; video annotation-ও user পরে করবেন বলেছেন।
+
+### M78: user review-এর জন্য deterministic frame shortlist
+
+`tools/create_review_shortlist.py` validated tracking report-এর sampled frame-গুলো ছয়টি chronological bin-এ ভাগ করে। প্রতি bin-এ সবচেয়ে ছোট person-candidate box থাকা একটি frame এবং থাকলে শূন্য person-candidate-সহ একটি frame বেছে নেয়। `vd-1_dashboard_tracks_dense.json`-এ চালিয়ে 12টি frame পেয়েছি: 6টি ছোট candidate-সহ ও 6টি zero-candidate। Output `reports/vd-1_manual_review_shortlist.csv`-এ frame index, timestamp, candidate count, source fingerprint ও selection reason আছে; এটি Git-ignored local review aid। Small box মানে enemy নয়, আর zero-candidate মানে enemy নেই—এমন নয়। কোনো label তৈরি বা evaluator চালানো হয়নি। README-তে command যোগ হয়েছে। Report-এ actual run দিয়ে যাচাই করেছি; test suite চালানো হয়নি। পরের review-তে CSV-এর frame index user নিজে দেখে annotation window দৃশ্যমান হলে তবেই label করবেন।

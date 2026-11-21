@@ -210,6 +210,14 @@ python tools/summarize_candidate_sizes.py reports/vd-1_dashboard_tracks_dense.js
 
 The CSV has one row per sampled frame, including frames with no candidate. It groups predicted box heights as tiny `<2%`, small `2–6%`, medium `6–16%`, and large `>=16%` of source-frame height. These are model candidate sizes only; they do not identify enemies or measure small-enemy recall. The report and CSV remain local and are ignored by Git.
 
+To prepare a time-spread manual-review shortlist from a tracking report, select the smallest model candidate in each time bin and one frame with zero model candidates where available:
+
+```powershell
+python tools/create_review_shortlist.py reports/vd-1_dashboard_tracks_dense.json --bins 6 --output reports/vd-1_manual_review_shortlist.csv
+```
+
+The CSV records source frame indexes, timestamps, candidate counts, and why each frame was selected. A zero-candidate frame does not prove that no enemy is visible, and a small candidate does not prove an enemy was detected. Use the frame indexes only as places to inspect manually; this tool creates no labels and performs no evaluation.
+
 Analyze one screenshot directly if needed:
 
 ```powershell
