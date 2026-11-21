@@ -68,13 +68,20 @@ class VideoReader:
             self._capture.release()
             self._capture = None
 
-    def frames(self) -> Iterator[VideoFrame]:
-        """Yield decoded frames. Timestamps come from decoder position in milliseconds."""
+    def frames(self, start_frame: int = 0) -> Iterator[VideoFrame]:
+        """Yield decoded frames from a zero-based start index with decoder timestamps."""
 
         if self._capture is None:
             raise RuntimeError("Use VideoReader inside a 'with' block before reading frames")
+        if start_frame < 0:
+            raise ValueError("Start frame must be zero or greater")
+        if self.info is not None and self.info.frame_count > 0 and start_frame >= self.info.frame_count:
+            raise IndexError(
+                f"Start frame {start_frame} is outside the video ({self.info.frame_count} frames)"
+            )
 
-        index = 0
+        self._capture.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+        index = start_frame
         while True:
             success, pixels = self._capture.read()
             if not success:

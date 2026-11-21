@@ -28,7 +28,8 @@ Sources:
 - **Reported benchmark:** TorchVision lists 65.0 keypoint mAP on COCO val2017. This is not a VantaSight or game-footage result.
 - **Model size:** 59,137,258 parameters, 137.42 GFLOPS, and a 226.1 MB checkpoint according to TorchVision.
 - **Code license and weight caveat:** TorchVision is BSD-3-Clause. COCO-derived weights may carry additional dataset terms; see the COCO note above before redistributing the checkpoint. VantaSight does not commit weights.
-- **Known limitations:** COCO pose examples are ordinary photographs. Small or stylized game characters, animation, occlusion, and effects may produce missing or incorrect keypoints. Low-confidence and absent points must remain uncertain; never fill them with guessed coordinates.
+- **Score interpretation:** TorchVision returns the heatmap value at each selected keypoint location. It is a raw response, not a calibrated probability. VantaSight labels it `heatmap_score` and does not display it as confidence.
+- **Known limitations:** COCO pose examples are ordinary photographs. Small or stylized game characters, animation, occlusion, and effects may produce missing or incorrect keypoints. Low-scoring and absent points must remain uncertain; never fill them with guessed coordinates.
 
 Sources:
 

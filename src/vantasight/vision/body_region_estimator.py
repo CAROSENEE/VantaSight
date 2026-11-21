@@ -11,12 +11,12 @@ import numpy as np
 
 @dataclass(frozen=True)
 class KeypointEstimate:
-    """One COCO keypoint mapped to source-image pixels."""
+    """One COCO keypoint and its raw heatmap response in source-image pixels."""
 
     name: str
     x: int
     y: int
-    confidence: float
+    heatmap_score: float
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class BodyRegionEstimate:
 
     name: str
     center_xy: tuple[int, int]
-    confidence: float
+    mean_keypoint_score: float
     supporting_keypoints: tuple[str, ...]
 
 
@@ -53,7 +53,7 @@ class TorchvisionBodyRegionEstimator:
     def __init__(
         self,
         person_confidence_threshold: float = 0.25,
-        keypoint_confidence_threshold: float = 0.50,
+        keypoint_score_threshold: float = 0.0,
         device: str = "auto",
         min_size: int = 1080,
         max_size: int = 1920,
@@ -61,8 +61,8 @@ class TorchvisionBodyRegionEstimator:
     ) -> None:
         if not 0.0 <= person_confidence_threshold <= 1.0:
             raise ValueError("person_confidence_threshold must be between 0 and 1")
-        if not 0.0 <= keypoint_confidence_threshold <= 1.0:
-            raise ValueError("keypoint_confidence_threshold must be between 0 and 1")
+        if keypoint_score_threshold < 0.0:
+            raise ValueError("keypoint_score_threshold must be zero or greater")
         if min_size < 1 or max_size < min_size:
             raise ValueError("Expected 1 <= min_size <= max_size")
 
@@ -90,7 +90,7 @@ class TorchvisionBodyRegionEstimator:
         self._torch = torch
         self.device = torch.device(resolved_device)
         self.person_confidence_threshold = person_confidence_threshold
-        self.keypoint_confidence_threshold = keypoint_confidence_threshold
+        self.keypoint_score_threshold = keypoint_score_threshold
         self.excluded_regions = tuple(excluded_regions)
         self._weights = KeypointRCNN_ResNet50_FPN_Weights.COCO_V1
         self.keypoint_names = tuple(self._weights.meta["keypoint_names"])
@@ -133,10 +133,12 @@ class TorchvisionBodyRegionEstimator:
         labels = prediction["labels"].detach().cpu().numpy()
         keypoints = prediction["keypoints"].detach().cpu().numpy()
         keypoint_scores_tensor = prediction.get("keypoints_scores")
-        if keypoint_scores_tensor is not None:
-            keypoint_scores = keypoint_scores_tensor.detach().cpu().numpy()
-        else:
-            keypoint_scores = keypoints[:, :, 2]
+        if keypoint_scores_tensor is None:
+            raise RuntimeError(
+                "This TorchVision build did not return raw keypoint heatmap scores; "
+                "refusing to treat the keypoint visibility flag as confidence."
+            )
+        keypoint_scores = keypoint_scores_tensor.detach().cpu().numpy()
 
         observations: list[PoseObservation] = []
         for box, person_score, label, points, point_scores in zip(
@@ -160,11 +162,11 @@ class TorchvisionBodyRegionEstimator:
             estimates: list[KeypointEstimate] = []
             for name, point, confidence in zip(self.keypoint_names, points, point_scores):
                 score = float(confidence)
-                if score < self.keypoint_confidence_threshold:
+                if score < self.keypoint_score_threshold:
                     continue
                 px = max(0, min(width, int(round(float(point[0])))))
                 py = max(0, min(height, int(round(float(point[1])))))
-                estimates.append(KeypointEstimate(name=name, x=px, y=py, confidence=score))
+                estimates.append(KeypointEstimate(name=name, x=px, y=py, heatmap_score=score))
 
             by_name = {point.name: point for point in estimates}
             regions: list[BodyRegionEstimate] = []
@@ -180,7 +182,7 @@ class TorchvisionBodyRegionEstimator:
                     BodyRegionEstimate(
                         name=region_name,
                         center_xy=center,
-                        confidence=sum(point.confidence for point in available) / len(available),
+                        mean_keypoint_score=sum(point.heatmap_score for point in available) / len(available),
                         supporting_keypoints=tuple(point.name for point in available),
                     )
                 )

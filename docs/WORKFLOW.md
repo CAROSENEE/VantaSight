@@ -20,6 +20,13 @@
 - Annotated frame-গুলো `data/previews/vd-1_frame_000600_detections.png` থেকে `vd-1_frame_006600_detections.png` পর্যন্ত আছে; একসঙ্গে দেখার sheet `data/previews/vd-1_detection_review_sheet.jpg`। এগুলো local ignored output।
 - একই পাঁচটি frame-এ confidence threshold `0.25`, `0.50` ও `0.75` তুলনা করা হয়েছে। Candidate count যথাক্রমে 11, 8 ও 5; হাতে চিহ্নিত সঠিক candidate 2, 1 ও 1; false candidate 9, 7 ও 4। `0.50` এবং `0.75`-এ 45s-এর ছোট opponent (confidence `0.322`) বাদ পড়ে, কিন্তু কিছু ভুল hand/weapon candidate উচ্চ confidence-এ টিকে যায়।
 - Threshold-ভিত্তিক candidate ও box-এর ফল `data/annotations/vd-1_threshold_comparison.csv`-এ আছে; পাশাপাশি তুলনার preview `data/previews/vd-1_threshold_comparison.jpg`। Threshold বাড়ালে false positive কিছু কমে, তবে ছোট opponent miss হয়—তাই default `0.25` আপাতত বদলানো হয়নি।
+- **M5 — Body-region experiment:** TorchVision Keypoint R-CNN-এর COCO_V1 দিয়ে `ss-1`, `vd-1` frame 3000 (25s) ও frame 5400 (45s)-এ GPU inference হয়েছে। `ss-1`-এ 1টি character candidate, 25s-এ 2টি candidate (gameplay opponent ও first-person object), 45s-এ 0 candidate এসেছে। 45s-এ detector opponent পেয়েছিল, pose model পায়নি—দূরের ছোট target-এর জন্য এটি স্পষ্ট miss।
+- Pose preview-তে magenta dot হলো model keypoint, রঙিন cross হলো keypoint থেকে গাণিতিকভাবে নেওয়া coarse region center। এগুলো অঙ্গ শনাক্তকরণের validated label নয়। Preview: `ss-1_body_regions.png`, `vd-1_frame_003000_body_regions.png`, `vd-1_frame_005400_body_regions.png` (`data/previews/`-এ)।
+- TorchVision-এর keypoint heatmap score raw response, probability নয়। Code ও display-তে তাই `heatmap score` বলা হয়; এগুলোকে calibrated confidence হিসেবে দেখানো হয় না। Model COCO photo-তে প্রশিক্ষিত, Valorant-এর জন্য নয় এবং region accuracy এখনো মাপা হয়নি।
+- **M6 — Temporary tracking:** `src/vantasight/tracking/iou_tracker.py` IoU overlap দিয়ে box-গুলোর short-term ID দেয়; matched box center-এর displacement ও video timestamp থেকে pixel/second velocity হিসাব করে। Missing detection পেলে সীমিত update পর্যন্ত অপেক্ষা করে; পরে track শেষ করে।
+- `vd-1`-এর 25.0–25.5s segment-এ 10-frame interval-এ 7টি frame চালানো হয়েছে: 28টি person candidate, 15টি temporary ID তৈরি হয়েছে। দৃশ্যমান opponent ID 2-এ শুধু 25.000s ও 25.083s sample-এ ছিল; পরের frame-গুলোতে detector তাকে miss করে। Webcam/arm/weapon false candidate-ও আলাদা ID পেয়েছে। তাই tracking output-কে player identity বা valid target track বলা যাবে না।
+- ওই smoke run-এর measured analysis throughput 3.423 sampled frame/s; detector latency mean 178.2ms, p95 487.9ms। মাত্র 7 sample ও একটি ছোট segment—এই speed-কে পুরো video বা সব hardware-এর performance হিসেবে ধরা যাবে না। CSV `reports/vd-1_tracking_10frame.csv`; preview `data/previews/vd-1_frame_003010_tracks.png`।
+- **M7 — Alignment geometry:** crosshair reference থেকে available estimated region center পর্যন্ত pixel distance ও frame diagonal দিয়ে normalized distance হিসাব করা হয়েছে। `ss-1`-এ frame center `(958.5, 536.5)` ধরে head-estimate distance `24.75px` / normalized `0.011265`; এটি pose model-এর অনুমানের ওপর নির্ভরশীল, target-hit বা aim accuracy নয়।
 - OpenCV `5.1.0.95` ও project package virtual environment-এ install হয়েছে।
 - `vd-1.mp4`-এর metadata: 59 সেকেন্ড, 2560×1440, 120 FPS, 7,080 frame, ফাইল প্রায় 203 MB।
 - 5, 15, 25, 35, 45 ও 55 সেকেন্ডের frame sample দেখা হয়েছে; এটি পুরো video review নয়। 25 ও 45 সেকেন্ডের sample-এ opponent দেখা যায়, তবে দূরে ও ছোট। সব frame-এ enemy থাকবে এমন নয়—enemy কিছু সময় অনুপস্থিত থেকে পরে দেখা দিতে পারে, সেটি স্বাভাবিক।
@@ -35,7 +42,7 @@
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-Enemy box হাতে label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` যোগ করা হয়েছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হবে। Annotation GUI-নির্ভর; এই সেশনে key/mouse দিয়ে পাঁচটি frame label করা হয়নি, তাই ground-truth box ও metric এখনো তৈরি হয়নি। এখনো body-region model, tracker, alignment calculation বা dashboard তৈরি হয়নি।
+Enemy box হাতে label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` যোগ করা হয়েছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হবে। Annotation GUI-নির্ভর; এই সেশনে key/mouse দিয়ে পাঁচটি frame label করা হয়নি, তাই ground-truth box ও metric এখনো তৈরি হয়নি। Body-region estimation-এর experimental model ও preview আছে, কিন্তু সেটিও labeled ground truth দিয়ে যাচাই হয়নি। Tracker, alignment calculation ও dashboard এখনো তৈরি হয়নি।
 
 ## কাজের roadmap
 
@@ -45,9 +52,9 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
 | 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | label ও metric tool তৈরি; পাঁচটি frame-এর ground-truth label বাকি |
-| 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Confidence-সহ region estimate | শুরু হয়নি |
-| 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | শুরু হয়নি |
-| 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | শুরু হয়নি |
+| 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
+| 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker ও CSV export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
+| 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
 | 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | শুরু হয়নি |
 | 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | শুরু হয়নি |
 
@@ -142,6 +149,42 @@ python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-thre
 
 Evaluator এক frame-এর detector box ও hand-labeled opponent box-কে one-to-one IoU overlap দিয়ে মেলায়। Uncertain frame বাদ পড়ে; CSV `reports/detector_evaluation.csv`-এ যায়। Label file তৈরি না হওয়া পর্যন্ত metric বানানো হবে না, আর threshold comparison-কে ground-truth evaluation বলা যাবে না।
 
+## M5: experimental body-region estimate
+
+একটি screenshot বা video frame-এ চালাও:
+
+```powershell
+python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --estimate-body-regions --max-side 1920
+```
+
+Output-এ COCO keypoint-গুলো এবং সেগুলো থেকে নেওয়া head/chest/lower-torso/legs region center দেখা যায়। `--keypoint-score-threshold` দিয়ে raw heatmap response-এর cutoff বদলানো যায়; raw response probability বা calibrated confidence নয়। Missing point/region দেখানো হবে না—অনুমান করে পূরণ করা হবে না। Model card: [MODEL_CARDS.md](MODEL_CARDS.md)।
+
+প্রথম run-এ `ss-1` ও `vd-1` frame 3000-এ body point পাওয়া গেছে; frame 5400-এ কোনো person candidate আসেনি, যদিও baseline detector সেখানে দূরের opponent candidate পেয়েছিল। তাই বর্তমান keypoint model ছোট/distant opponent-এর জন্য যথেষ্ট নয়। Preview-গুলো qualitative inspection মাত্র, region accuracy নয়।
+
+## M6: sampled video candidate tracking
+
+সংক্ষিপ্ত segment-এ চালানোর উদাহরণ:
+
+```powershell
+python tools/track_video.py "data/input/videos/vd-1.mp4" --start-frame 3000 --stop-frame 3061 --frame-step 10 --preview-frame 3010 --output reports/vd-1_tracking.csv
+```
+
+`--frame-step 10` মানে প্রতি 10 source frame-এ inference। CSV-তে bounding box, temporary track ID, confidence এবং image-plane velocity (pixel/second) থাকে। Source FPS আলাদা করে দেখায়; inference throughput ও detector latency-ও terminal-এ মাপে। `--stop-frame` শেষ সীমা, সেটি অন্তর্ভুক্ত নয়।
+
+25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
+
+## M7: crosshair-to-region alignment
+
+Frame center-কে default reference ধরে estimate মাপতে:
+
+```powershell
+python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions --measure-alignment
+```
+
+নিজের crosshair reference original source pixel-এ দিতে পারো, উদাহরণ: `--crosshair 959,536`। Pixel distance হলো region center ও reference-এর Euclidean distance; normalized distance = pixel distance / `sqrt(width² + height²)`। Preview-তে red cross reference দেখায়।
+
+`ss-1`-এ default frame-center দিয়ে head estimate-এর distance 24.75px, normalized 0.011265 পাওয়া গেছে। Region centerটি COCO Keypoint R-CNN-এর অনুমান, তাই এই measurement-ও অনুমাননির্ভর। এটি geometric offset—enemy identity, shot hit, accuracy percentage বা aim automation নয়।
+
 ## ছবি ও ভিডিও GitHub-এ যাবে কি?
 
 `data/input/screenshots/` এবং `data/input/videos/`-এর media Git ignore করা আছে। তাই স্বাভাবিক `git add`, commit ও push-এ ছবিগুলো বা ভিডিও GitHub-এ যাবে না। `git add -f` দিয়ে জোর করে যোগ করলে upload হতে পারে—ইচ্ছা করে না করলে এমন করবে না। `data/previews/`-এর তৈরি preview-ও Git ignore করা।
@@ -157,7 +200,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1 ও M2 সম্পন্ন। M3-এর detector পাঁচটি নির্বাচিত video frame-এ চালানো ও হাতে review করা হয়েছে; threshold বাড়ালে দূরের ছোট opponent বাদ পড়ে। M4-এর annotation ও evaluation tools তৈরি হয়েছে, কিন্তু GUI-তে label এখনো save করা হয়নি। পরের কাজ: উপরের command চালিয়ে পাঁচটি frame label করা, তারপর evaluator চালানো। বর্তমান model COCO `person` model, Valorant enemy model নয়; তাই হাতে label ছাড়া এর ফলকে accuracy বলা যাবে না।
+M1, M2 সম্পন্ন; M3–M6-এর baseline/experiment আছে। পরের প্রস্তাবিত ধাপ: M4 annotation GUI দিয়ে পাঁচটি representative frame-এর box label করা, তারপর evaluator চালিয়ে precision/recall মাপা। সেই sample-এ body-region estimate-ও হাতে যাচাই করতে হবে। Label ছাড়া detector, pose বা tracking accuracy দাবি করা যাবে না। এরপর alignment metric ও result export/dashboard তৈরি হবে।
 
 ## ভাষার নিয়ম
 

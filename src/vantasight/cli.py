@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from vantasight.analytics import center_crosshair, measure_alignment
 from vantasight.input import VideoReader, load_image
 from vantasight.visualization.frame_preview import save_frame_preview
 from vantasight.visualization.pose_renderer import render_pose_estimates
@@ -30,6 +31,18 @@ def _parse_region(value: str) -> tuple[int, int, int, int]:
     if x1 >= x2 or y1 >= y2:
         raise argparse.ArgumentTypeError("Region must have x1 < x2 and y1 < y2")
     return x1, y1, x2, y2
+
+
+def _parse_point(value: str) -> tuple[float, float]:
+    """Parse a crosshair point written as x,y in source-image pixels."""
+
+    try:
+        coordinates = tuple(float(part.strip()) for part in value.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Expected two comma-separated coordinates: x,y") from exc
+    if len(coordinates) != 2:
+        raise argparse.ArgumentTypeError("Expected two comma-separated coordinates: x,y")
+    return coordinates
 
 
 def _detect_and_save(
@@ -69,16 +82,23 @@ def _estimate_body_regions_and_save(
     configured_regions = _load_excluded_regions(args.regions_file, asset_name)
     estimator = TorchvisionBodyRegionEstimator(
         person_confidence_threshold=args.confidence_threshold,
-        keypoint_confidence_threshold=args.keypoint_threshold,
+        keypoint_score_threshold=args.keypoint_score_threshold,
         device=args.device,
         min_size=min(1080, args.max_side),
         max_size=args.max_side,
         excluded_regions=(*configured_regions, *(args.exclude_region or ())),
     )
     observations = estimator.estimate(pixels)
+    height, width = pixels.shape[:2]
     print(f"Device: {estimator.device}")
     print("Model: COCO Keypoint R-CNN (not trained for Valorant footage)")
     print(f"Person candidates: {len(observations)}")
+    reference = None
+    if args.measure_alignment:
+        reference = args.crosshair or center_crosshair(width, height)
+        if not (0 <= reference[0] <= width and 0 <= reference[1] <= height):
+            raise ValueError("Crosshair coordinates must lie inside the source frame")
+        print(f"Crosshair reference (source pixels): ({reference[0]:.1f}, {reference[1]:.1f})")
     for index, observation in enumerate(observations, start=1):
         print(
             f"  Candidate {index}: confidence={observation.person_confidence:.3f} "
@@ -87,12 +107,26 @@ def _estimate_body_regions_and_save(
         for region in observation.body_regions:
             print(
                 f"    {region.name} estimate center={region.center_xy} "
-                f"keypoint-confidence={region.confidence:.3f} "
+                f"mean-keypoint-heatmap-score={region.mean_keypoint_score:.3f} "
                 f"from={','.join(region.supporting_keypoints)}"
             )
+            if reference is not None:
+                measurement = measure_alignment(
+                    point_xy=region.center_xy,
+                    crosshair_xy=reference,
+                    width=width,
+                    height=height,
+                    region_name=region.name,
+                )
+                print(
+                    f"      alignment distance={measurement.distance_pixels:.2f}px "
+                    f"normalized={measurement.distance_normalized:.6f}"
+                )
         if not observation.body_regions:
             print("    Body regions: uncertain (no keypoints passed the threshold)")
-    saved_path = save_annotated_image(render_pose_estimates(pixels, observations), output_path)
+    saved_path = save_annotated_image(
+        render_pose_estimates(pixels, observations, crosshair_xy=reference), output_path
+    )
     print(f"Body-region preview: {saved_path}")
 
 
@@ -157,15 +191,25 @@ def main() -> int:
         help="Run the experimental COCO Keypoint R-CNN on an image or selected video frame",
     )
     parser.add_argument(
-        "--keypoint-threshold",
+        "--keypoint-score-threshold",
         type=float,
-        default=0.50,
-        help="Minimum keypoint confidence for a visible point (default: 0.50)",
+        default=0.0,
+        help="Minimum raw keypoint heatmap score, not a probability (default: 0.0)",
     )
     parser.add_argument(
         "--pose-output",
         type=Path,
         help="Body-region preview path (default: data/previews/<input>_body_regions.png)",
+    )
+    parser.add_argument(
+        "--measure-alignment",
+        action="store_true",
+        help="Measure region-center distance from the frame-center crosshair or --crosshair point",
+    )
+    parser.add_argument(
+        "--crosshair",
+        type=_parse_point,
+        help="Crosshair reference as source-pixel x,y (default: geometric frame center)",
     )
     parser.add_argument(
         "--confidence-threshold",
@@ -209,6 +253,10 @@ def main() -> int:
                 parser.error("--exclude-region requires --detect-persons or --estimate-body-regions")
             if args.pose_output is not None and not args.estimate_body_regions:
                 parser.error("--pose-output requires --estimate-body-regions")
+            if args.measure_alignment and not args.estimate_body_regions:
+                parser.error("--measure-alignment requires --estimate-body-regions")
+            if args.crosshair is not None and not args.measure_alignment:
+                parser.error("--crosshair requires --measure-alignment")
             image = load_image(path)
             print(f"Type: image\nPath: {image.path}\nResolution: {image.width}x{image.height}")
             if args.detect_persons:
@@ -227,6 +275,10 @@ def main() -> int:
             parser.error("--output requires --detect-persons")
         if args.pose_output is not None and not args.estimate_body_regions:
             parser.error("--pose-output requires --estimate-body-regions")
+        if args.measure_alignment and not args.estimate_body_regions:
+            parser.error("--measure-alignment requires --estimate-body-regions")
+        if args.crosshair is not None and not args.measure_alignment:
+            parser.error("--crosshair requires --measure-alignment")
         if args.exclude_region and not (args.detect_persons or args.estimate_body_regions):
             parser.error("--exclude-region requires --detect-persons or --estimate-body-regions")
         if (args.detect_persons or args.estimate_body_regions) and args.frame_index is None:

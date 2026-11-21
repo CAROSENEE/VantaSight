@@ -97,6 +97,37 @@ python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-thre
 
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
 
+## Track candidates in a recorded video
+
+Run short-term box association offline and export sampled detections with temporary IDs and image-plane velocity:
+
+```powershell
+python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --preview-frame 3000
+```
+
+The frame step is in source frames. Use `--start-frame` and exclusive `--stop-frame` to analyze a segment. Results go to `reports/tracks.csv`; an optional preview goes to `data/previews/`. IDs associate boxes only, can fragment when detections disappear or change shape, and do not identify players, teams, or enemies. Velocity is measured in source-image pixels per second, not game-world speed.
+
+## Experimental body-region estimate
+
+The optional COCO Keypoint R-CNN experiment can be run on a screenshot or one selected video frame:
+
+```powershell
+python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --estimate-body-regions --max-side 1920
+```
+
+It draws visible keypoints and coarse head/chest/lower-torso/leg centers to `data/previews/`. These are geometric estimates from COCO pose keypoints, not Valorant-trained anatomy labels. TorchVision's keypoint heatmap response is a raw score, not a probability or calibrated confidence; missing regions remain unreported. See [the model card](docs/MODEL_CARDS.md).
+
+Measure alignment from the frame-center reference, or configure one in source-image pixels:
+
+```powershell
+python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions --measure-alignment
+python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions --measure-alignment --crosshair 959,536
+```
+
+The CLI reports pixel distance and distance divided by the frame diagonal for each available estimated region. This is geometry only; it is not hit probability, enemy identification, or an instruction to move aim. A red cross in the preview marks the reference point.
+
+Track sampled candidate boxes in an offline video with [the tracking tool](tools/track_video.py). Its IDs are temporary associations, and its speed values are measured in source-image pixels per second.
+
 ## Current scope
 
 - PNG, JPEG, BMP, and WebP screenshots
