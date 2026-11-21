@@ -36,9 +36,10 @@ echo Opening the offline review gallery. No labels are created automatically.
 start "" "%CD%\%GALLERY%"
 if errorlevel 1 (
     echo Windows could not open the gallery automatically.
-    echo Open this file manually: %CD%\%GALLERY%
     goto finish_error
 )
+echo If no browser page appears, open this local file manually:
+echo %CD%\%GALLERY%
 echo Review frames yourself and press Save frame to create manual labels.
 pause
 exit /b 0

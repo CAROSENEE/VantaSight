@@ -676,3 +676,7 @@ Video source resolution আগের মতো পূর্ণ 2560×1440 থা
 ### M98: downloaded annotation validate করে import
 
 Browser থেকে JSONL download করার পর সঠিক annotation filename/path-এ সরাতে ভুল হতে পারে এবং ভুল video-র label evaluator-এ চলে যেতে পারে। `tools/import_review_annotations.py` এখন JSONL-কে canonical `data/annotations/<video>_user_verified.jsonl` path-এ copy করার আগে manual-review flag, non-prefilled source, shortlist-এর exact frame coverage, video SHA, decoded frame SHA, timestamp, dimensions, box bounds ও optional body-point schema/bounds যাচাই করে। Timestamp-কে decoded source timestamp থেকে 1 ms-এর বেশি বিচ্যুত হতে দেওয়া হয় না। `.venv` দিয়ে `--help` চালিয়ে CLI/import load যাচাই হয়েছে; কোনো review file দেওয়া হয়নি, annotation file তৈরি হয়নি, পূর্ণ import flow test করা হয়নি। Existing destination overwrite করা default-এ নিষিদ্ধ; `--replace` স্পষ্টভাবে দিতে হয়। Importer ground truth বানায় না—downloaded human-reviewed file ছাড়া কাজ করবে না।
+
+### M99: gallery launcher-এর manual-open fallback
+
+Windows shell browser-কে foreground-এ না আনলে launcher এখন local `index.html`-এর absolute path সবসময় দেখায়। এতে browser নিজে না উঠলেও user একই offline gallery path হাতে খুলতে পারবেন। Launcher নিজে কোনো label লেখে না; desktop UI visibility এই environment-এ এখনো যাচাই হয়নি।
