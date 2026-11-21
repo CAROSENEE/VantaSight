@@ -77,7 +77,8 @@
 const dataset = JSON.parse(atob("__GALLERY_DATA__"));
 const frames = dataset.frames;
 const labels = {};
-const storageKey = `vantasight-review:${dataset.source_video}:${dataset.source_sha256}`;
+const reviewSampleKey = frames.map(frame => frame.frame_index).join(",");
+const storageKey = `vantasight-review:${dataset.source_video}:${dataset.source_sha256}:${reviewSampleKey}`;
 let current = 0;
 let status = null;
 let boxes = [];

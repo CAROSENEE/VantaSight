@@ -666,3 +666,7 @@ LFS smudge skip করে normal depth-1 checkout করা আলাদা temp
 ### M96: ছোট target-এর জন্য browser gallery zoom
 
 Video source resolution আগের মতো পূর্ণ 2560×1440 থাকে; gallery শুরুতে 50% view-তে দেখায়। ছোট দূরের opponent-এ box ও region point ঠিকভাবে বসানোর সুবিধার জন্য 50–200% zoom slider যোগ করেছি। Zoom শুধু screen-এ দেখার আকার বদলায়; canvas source pixels-এই থাকে, তাই JSONL coordinates evaluator-এর frame size-এর সঙ্গে মেলে। Horizontal/vertical overflow হলে gallery-র image pane scroll করা যাবে। Browser visual QA এখনো বাকি।
+
+### M97: review storage-কে নির্বাচিত sample-এর সঙ্গে বাঁধা
+
+একই source video থেকে shortlist বদলালে browser local storage-তে আগের sample-এর frame labels মিশে export হওয়ার ঝুঁকি ছিল। Storage key-তে এখন ordered frame-index তালিকাও থাকে; তাই আলাদা shortlist আলাদা review state পায়। একই video ও একই shortlist-এ launcher template refresh করলেও সংরক্ষিত manual labels browser storage-তে আগের মতোই থাকে। JSONL export-এ gallery sample-এ থাকা saved rows-ই যাবে।
