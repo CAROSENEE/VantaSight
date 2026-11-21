@@ -6,7 +6,8 @@ from pathlib import Path
 
 from vantasight.input import VideoReader, load_image
 from vantasight.visualization.frame_preview import save_frame_preview
-from vantasight.vision import TorchvisionPersonDetector
+from vantasight.visualization.pose_renderer import render_pose_estimates
+from vantasight.vision import TorchvisionBodyRegionEstimator, TorchvisionPersonDetector
 from vantasight.visualization.detection_renderer import render_detections, save_annotated_image
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
@@ -57,6 +58,42 @@ def _detect_and_save(
     annotated = render_detections(pixels, detections)
     saved_path = save_annotated_image(annotated, output_path)
     print(f"Annotated preview: {saved_path}")
+
+
+def _estimate_body_regions_and_save(
+    pixels,
+    args: argparse.Namespace,
+    output_path: Path,
+    asset_name: str,
+) -> None:
+    configured_regions = _load_excluded_regions(args.regions_file, asset_name)
+    estimator = TorchvisionBodyRegionEstimator(
+        person_confidence_threshold=args.confidence_threshold,
+        keypoint_confidence_threshold=args.keypoint_threshold,
+        device=args.device,
+        min_size=min(1080, args.max_side),
+        max_size=args.max_side,
+        excluded_regions=(*configured_regions, *(args.exclude_region or ())),
+    )
+    observations = estimator.estimate(pixels)
+    print(f"Device: {estimator.device}")
+    print("Model: COCO Keypoint R-CNN (not trained for Valorant footage)")
+    print(f"Person candidates: {len(observations)}")
+    for index, observation in enumerate(observations, start=1):
+        print(
+            f"  Candidate {index}: confidence={observation.person_confidence:.3f} "
+            f"box={observation.box_xyxy} keypoints={len(observation.keypoints)}"
+        )
+        for region in observation.body_regions:
+            print(
+                f"    {region.name} estimate center={region.center_xy} "
+                f"keypoint-confidence={region.confidence:.3f} "
+                f"from={','.join(region.supporting_keypoints)}"
+            )
+        if not observation.body_regions:
+            print("    Body regions: uncertain (no keypoints passed the threshold)")
+    saved_path = save_annotated_image(render_pose_estimates(pixels, observations), output_path)
+    print(f"Body-region preview: {saved_path}")
 
 
 def _load_excluded_regions(
@@ -115,6 +152,22 @@ def main() -> int:
         help="Run the optional COCO person-candidate detector on the image or selected video frame",
     )
     parser.add_argument(
+        "--estimate-body-regions",
+        action="store_true",
+        help="Run the experimental COCO Keypoint R-CNN on an image or selected video frame",
+    )
+    parser.add_argument(
+        "--keypoint-threshold",
+        type=float,
+        default=0.50,
+        help="Minimum keypoint confidence for a visible point (default: 0.50)",
+    )
+    parser.add_argument(
+        "--pose-output",
+        type=Path,
+        help="Body-region preview path (default: data/previews/<input>_body_regions.png)",
+    )
+    parser.add_argument(
         "--confidence-threshold",
         type=float,
         default=0.25,
@@ -150,21 +203,34 @@ def main() -> int:
         if path.suffix.lower() in IMAGE_SUFFIXES:
             if args.frame_index is not None:
                 parser.error("--frame-index can only be used with a video")
-            if (args.output is not None or args.exclude_region) and not args.detect_persons:
-                parser.error("--output and --exclude-region require --detect-persons")
+            if args.output is not None and not args.detect_persons:
+                parser.error("--output requires --detect-persons for image input")
+            if args.exclude_region and not (args.detect_persons or args.estimate_body_regions):
+                parser.error("--exclude-region requires --detect-persons or --estimate-body-regions")
+            if args.pose_output is not None and not args.estimate_body_regions:
+                parser.error("--pose-output requires --estimate-body-regions")
             image = load_image(path)
             print(f"Type: image\nPath: {image.path}\nResolution: {image.width}x{image.height}")
             if args.detect_persons:
                 output = args.output or Path("data/previews") / f"{path.stem}_detections.png"
                 _detect_and_save(image.pixels, args, output, path.name)
+            if args.estimate_body_regions:
+                output = args.pose_output or Path("data/previews") / f"{path.stem}_body_regions.png"
+                _estimate_body_regions_and_save(image.pixels, args, output, path.name)
             return 0
 
         if args.output is not None and args.frame_index is None:
             parser.error("--output requires --frame-index for video input")
-        if args.exclude_region and not args.detect_persons:
-            parser.error("--exclude-region requires --detect-persons")
-        if args.detect_persons and args.frame_index is None:
-            parser.error("--detect-persons on a video requires --frame-index")
+        if args.pose_output is not None and args.frame_index is None:
+            parser.error("--pose-output requires --frame-index for video input")
+        if args.output is not None and not args.detect_persons:
+            parser.error("--output requires --detect-persons")
+        if args.pose_output is not None and not args.estimate_body_regions:
+            parser.error("--pose-output requires --estimate-body-regions")
+        if args.exclude_region and not (args.detect_persons or args.estimate_body_regions):
+            parser.error("--exclude-region requires --detect-persons or --estimate-body-regions")
+        if (args.detect_persons or args.estimate_body_regions) and args.frame_index is None:
+            parser.error("Detection or body-region estimation on a video requires --frame-index")
 
         with VideoReader(path) as reader:
             assert reader.info is not None
@@ -192,7 +258,12 @@ def main() -> int:
                             f"{path.stem}_frame_{args.frame_index:06d}_detections.png"
                         )
                     _detect_and_save(frame.pixels, args, output, path.name)
-                else:
+                if args.estimate_body_regions:
+                    pose_output = args.pose_output or Path("data/previews") / (
+                        f"{path.stem}_frame_{args.frame_index:06d}_body_regions.png"
+                    )
+                    _estimate_body_regions_and_save(frame.pixels, args, pose_output, path.name)
+                if not (args.detect_persons or args.estimate_body_regions):
                     saved_path = save_frame_preview(frame, output)
                     print(
                         f"Preview: {saved_path}\n"
