@@ -13,6 +13,23 @@ def _finite_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
+def _validate_summary_distribution(value: object, label: str, *, nonnegative: bool) -> int:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    count = value.get("count")
+    if type(count) is not int or count < 0:
+        raise ValueError(f"{label} count must be a nonnegative integer")
+    for field in ("min", "mean", "median", "p95", "max"):
+        number = value.get(field)
+        if count == 0:
+            if number is not None:
+                raise ValueError(f"Empty {label} values must be null")
+        elif not _finite_number(number) or (nonnegative and number < 0):
+            qualifier = "finite and nonnegative" if nonnegative else "finite"
+            raise ValueError(f"{label} {field} must be {qualifier}")
+    return count
+
+
 def load_tracking_report(path: Path) -> dict[str, Any]:
     """Read a version 1 tracking JSON report and validate required sections."""
 
@@ -77,6 +94,36 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
                 raise ValueError(f"Detector confidence {field} must be between 0 and 1")
         if count != summary["candidate_detections"]:
             raise ValueError("Detector confidence count must match candidate_detections")
+    region_distributions = summary.get("body_region_heatmap_response")
+    if region_distributions is not None:
+        if not isinstance(region_distributions, dict):
+            raise ValueError("Summary body_region_heatmap_response must be an object")
+        for region_name, distribution in region_distributions.items():
+            if region_name not in {"head", "chest", "lower_torso", "legs"}:
+                raise ValueError("Body-region response summary has an unsupported region")
+            _validate_summary_distribution(
+                distribution, f"Body-region {region_name} heatmap response", nonnegative=False
+            )
+    track_summary = summary.get("temporary_tracks")
+    if track_summary is not None:
+        if not isinstance(track_summary, dict):
+            raise ValueError("Summary temporary_tracks must be an object")
+        track_count = track_summary.get("track_count")
+        single_count = track_summary.get("single_observation_tracks")
+        if type(track_count) is not int or not 0 <= track_count <= summary["candidate_detections"]:
+            raise ValueError("Temporary track count must fit candidate_detections")
+        if type(single_count) is not int or not 0 <= single_count <= track_count:
+            raise ValueError("Single-observation track count must fit track_count")
+        observations_count = _validate_summary_distribution(
+            track_summary.get("observations_per_track"), "Observations per track", nonnegative=True
+        )
+        span_count = _validate_summary_distribution(
+            track_summary.get("observed_span_seconds_per_track"),
+            "Observed span per track",
+            nonnegative=True,
+        )
+        if observations_count != track_count or span_count != track_count:
+            raise ValueError("Temporary track distributions must match track_count")
 
     previous_frame_index = -1
     for frame in frames:

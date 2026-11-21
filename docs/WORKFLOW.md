@@ -344,3 +344,7 @@ M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alig
 Video JSON report-এ temporary ID-গুলোর per-ID sampled observation count এবং প্রথম/শেষ observed sample-এর সময়ের ব্যবধান যোগ হয়েছে; dashboard header track count, এক-sample ID সংখ্যা এবং median/max observed span দেখায়। এটি sparse sampled observation-এর বর্ণনা। Sample-এর মাঝখানে object অবিরত ছিল, ID একই player-এর, বা tracking সঠিক—এমন দাবি করে না।
 
 `vd-1`-এর 120-frame interval-এ full clip চালিয়ে 59 sampled frame ও 188 candidate observation পাওয়া গেছে। 127 temporary ID-এর মধ্যে 96টি এক sample-এ ছিল। Observations per ID median `1`, max `6`; observed span median `0s`, p95 `3s`, max `7s`। Median zero হওয়া মানে অর্ধেকের বেশি ID-কে একবারই দেখা গেছে। Report loader-এ JSON validate হয়েছে; unit suite `43/43`, compileall ও diff check pass করেছে। Throughput `3.415 sampled frame/s` এই machine ও run-এর measurement, detector accuracy বা অন্য computer-এর benchmark নয়।
+
+### M24: নতুন summary field report validation
+
+Dashboard report loader এখন M22 body-region response summary এবং M23 temporary-track summary-এর structure, finite values, count ও nonnegative time span যাচাই করে। ভুল region, distribution-এর count mismatch, অথবা track count candidate count-এর চেয়ে বেশি হলে report reject হবে। পুরোনো report-এ এই optional field না থাকলেও load হয়। Unit test suite `44/44`; M22/M23-এর তিনটি saved image/video report validate, compileall ও diff check pass করেছে।
