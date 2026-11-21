@@ -16,6 +16,7 @@ from tkinter import filedialog, messagebox, ttk
 import cv2
 import numpy as np
 
+from vantasight.analytics import summarize_zero_candidate_runs
 from vantasight.dashboard import load_tracking_report, summarize_alignment_errors
 from vantasight.dashboard.evaluation_summary import (
     load_detector_evaluation,
@@ -155,6 +156,20 @@ def main(argv: list[str] | None = None) -> int:
         if spans.get("count", 0):
             track_line += f"  |  Observed span median/max: {spans['median']:.2f}/{spans['max']:.2f}s"
         summary_lines.append(track_line)
+    candidate_gaps = summarize_zero_candidate_runs(report["frames"])
+    gap_count = candidate_gaps["zero_candidate_sample_count"]
+    sample_count = candidate_gaps["sampled_frame_count"]
+    if sample_count:
+        gap_line = f"No person candidates in {gap_count}/{sample_count} report samples"
+        fraction = candidate_gaps["zero_candidate_sample_fraction"]
+        gap_line += f" ({fraction:.1%})"
+        longest_gap = candidate_gaps["longest_zero_candidate_run"]
+        if longest_gap:
+            gap_line += (
+                f"  |  Longest adjacent run: {longest_gap['sample_count']} samples, "
+                f"frames {longest_gap['start_frame_index']}–{longest_gap['end_frame_index']}"
+            )
+        summary_lines.append(gap_line)
     if summary.get("pose_latency_mean_ms") is not None:
         summary_lines.append(f"Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms")
     ttk.Label(header, text="\n".join(summary_lines), wraplength=1200, justify="left").pack(
@@ -162,8 +177,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     ttk.Label(
         header,
-        text="Offline COCO person candidates only. Boxes and temporary IDs do not verify enemy, team, or player identity.",
+        text=(
+            "Offline COCO person candidates only. Boxes and temporary IDs do not verify enemy, team, "
+            "or player identity. Zero-candidate samples do not prove that no enemy is present."
+        ),
         foreground="#9a4d00",
+        wraplength=1200,
+        justify="left",
     ).pack(anchor="w", pady=(4, 0))
     if detector_evaluation:
         metric_text = detector_evaluation

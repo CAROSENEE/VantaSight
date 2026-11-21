@@ -22,6 +22,7 @@ from vantasight.analytics.distribution import (
     summarize_body_region_responses,
     summarize_distribution,
     summarize_temporary_tracks,
+    summarize_zero_candidate_runs,
 )
 from vantasight.analytics.pose_association import associate_pose_observations
 from vantasight.analytics.presence_evaluation import (
@@ -65,5 +66,6 @@ __all__ = [
     "summarize_distribution",
     "summarize_body_region_responses",
     "summarize_temporary_tracks",
+    "summarize_zero_candidate_runs",
     "write_tracking_report",
 ]

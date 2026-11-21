@@ -51,3 +51,38 @@ def summarize_temporary_tracks(frames: Sequence[Mapping[str, Any]]) -> dict[str,
         "observations_per_track": summarize_distribution(counts),
         "observed_span_seconds_per_track": summarize_distribution(spans),
     }
+
+
+def summarize_zero_candidate_runs(frames: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Describe adjacent sampled frames with no model candidates, not enemy absence."""
+    runs: list[list[Mapping[str, Any]]] = []
+    current_run: list[Mapping[str, Any]] = []
+    for frame in frames:
+        if frame.get("detections"):
+            if current_run:
+                runs.append(current_run)
+                current_run = []
+        else:
+            current_run.append(frame)
+    if current_run:
+        runs.append(current_run)
+
+    longest = max(runs, key=lambda run: (len(run), -int(run[0]["frame_index"])), default=None)
+    zero_count = sum(len(run) for run in runs)
+    return {
+        "sampled_frame_count": len(frames),
+        "zero_candidate_sample_count": zero_count,
+        "zero_candidate_sample_fraction": zero_count / len(frames) if frames else None,
+        "zero_candidate_run_count": len(runs),
+        "longest_zero_candidate_run": (
+            {
+                "sample_count": len(longest),
+                "start_frame_index": int(longest[0]["frame_index"]),
+                "end_frame_index": int(longest[-1]["frame_index"]),
+                "start_timestamp_seconds": float(longest[0]["timestamp_seconds"]),
+                "end_timestamp_seconds": float(longest[-1]["timestamp_seconds"]),
+            }
+            if longest
+            else None
+        ),
+    }

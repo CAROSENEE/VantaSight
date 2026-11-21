@@ -578,3 +578,7 @@ Windows launcher আগে CSV না পেলে শুধু তৈরির 
 ### M82: annotation-এর আগে frame preflight
 
 Annotation tool-এ `--dry-run` যোগ হয়েছে: shortlist fingerprint যাচাই করে নির্বাচিত frame-গুলো video থেকে decode করে, কিন্তু GUI খোলে না এবং annotation file লেখে না। Windows launcher-ও GUI খোলার আগে এই preflight চালায়। `vd-1.mp4` (2560×1440)-এর বর্তমান shortlist-এ 12/12 frame decode হয়েছে: 540, 1080, 1650, 1800, 3030, 3210, 3840, 4650, 4890, 4980, 6090, 6480। Command শেষে স্পষ্ট জানিয়েছে window খোলা বা label লেখা হয়নি; output file-ও নেই। `git diff --check` পরিষ্কার; test suite চালানো হয়নি।
+
+### M83: sampled report-এ candidate-শূন্য gap summary
+
+`summarize_zero_candidate_runs()` sampled frame-এ model-এর detection শূন্য থাকার সংখ্যা, অনুপাত, run-সংখ্যা এবং দীর্ঘতম adjacent run-এর frame/timestamp হিসাব করে। Dashboard-এ এই তথ্য person-candidate output হিসেবে দেখানো হয় এবং warning-এ বলা হয়, candidate না পাওয়া enemy অনুপস্থিতির প্রমাণ নয়। Dense `vd-1` report-এর 236 sample-এ 27টি candidate-শূন্য sample (11.4%), 15টি আলাদা run; দীর্ঘতম run 10 sample, frame 3570–3840 (29.75–32.0s)। এটি detector miss, inference cadence বা game scene—কোন কারণে হয়েছে তা একা নির্ধারণ করে না। বর্তমান dense JSON দিয়ে summary function চালিয়ে ফল পেয়েছি; dashboard GUI-তে নতুন লাইন দেখা যাচাই হয়নি, test suite চালানো হয়নি।
