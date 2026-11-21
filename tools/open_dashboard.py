@@ -51,6 +51,8 @@ def main() -> int:
         f"Person candidates: {summary.get('candidate_detections', 0)}    •    "
         f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms"
     )
+    if summary.get("pose_latency_mean_ms") is not None:
+        summary_text += f"    •    Mean pose latency: {summary['pose_latency_mean_ms']:.1f} ms"
     ttk.Label(header, text=summary_text).pack(anchor="w", pady=(5, 0))
     ttk.Label(
         header,
@@ -100,6 +102,20 @@ def main() -> int:
             cv2.rectangle(image, (x1, y1), (x2, y2), color, 3)
             label = f"ID {item.get('track_id', '?')}  {item.get('detector_score', 0):.2f}"
             cv2.putText(image, label, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2, cv2.LINE_AA)
+            for region in item.get("body_regions", []):
+                rx, ry = (int(value) for value in region["center_xy"])
+                region_color = (255, 190, 0) if region["name"] == "head" else (0, 190, 255)
+                cv2.drawMarker(image, (rx, ry), region_color, cv2.MARKER_CROSS, 16, 2)
+                cv2.putText(
+                    image,
+                    region["name"],
+                    (rx + 6, max(16, ry - 6)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.45,
+                    region_color,
+                    1,
+                    cv2.LINE_AA,
+                )
 
         available_width = max(1, canvas.winfo_width())
         available_height = max(1, canvas.winfo_height())
@@ -125,6 +141,25 @@ def main() -> int:
             speed = "unavailable" if velocity is None else f"({velocity[0]:.1f}, {velocity[1]:.1f}) px/s"
             detail.insert("end", f"\nID {item.get('track_id', '?')} — score {item.get('detector_score', 0):.3f}\n")
             detail.insert("end", f"Box: {item.get('box_xyxy')}\nVelocity: {speed}\n")
+            if "pose_status" in item:
+                detail.insert("end", f"Pose association: {item['pose_status']}\n")
+            if "pose_person_score" in item:
+                detail.insert("end", f"Pose model person score: {item['pose_person_score']:.3f}\n")
+            if item.get("pose_status") == "matched" and not item.get("body_regions"):
+                detail.insert("end", "No body-region centers were returned for this pose.\n")
+            for region in item.get("body_regions", []):
+                detail.insert(
+                    "end",
+                    f"{region['name']} center: {region['center_xy']} | mean raw keypoint score: "
+                    f"{region['mean_keypoint_score']:.3f}\n",
+                )
+                alignment = region.get("alignment")
+                if alignment:
+                    detail.insert(
+                        "end",
+                        f"  Crosshair offset: {alignment['distance_pixels']:.1f}px | "
+                        f"normalized {alignment['distance_normalized']:.5f}\n",
+                    )
         detail.configure(state="disabled")
 
     def on_select(_event: object = None) -> None:

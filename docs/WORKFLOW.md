@@ -55,7 +55,7 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
-| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export ও local report dashboard যোগ হয়েছে; Windows-এ UI visual review বাকি |
+| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, tracking dashboard, body-region/alignment JSON fields যোগ হয়েছে; Windows-এ UI visual review বাকি |
 | 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Maximum one-to-one detector matching ও metric module আছে; representative frame label ও pose-region evaluation বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
@@ -171,7 +171,13 @@ python tools/track_video.py "data/input/videos/vd-1.mp4" --start-frame 3000 --st
 
 `--frame-step 10` মানে প্রতি 10 source frame-এ inference। CSV-তে bounding box, temporary track ID, confidence এবং image-plane velocity (pixel/second) থাকে। Source FPS আলাদা করে দেখায়; inference throughput ও detector latency-ও terminal-এ মাপে। `--stop-frame` শেষ সীমা, সেটি অন্তর্ভুক্ত নয়।
 
-একই run থেকে `reports/tracks.json`-এ structured report-ও তৈরি হয়। এতে video metadata, ব্যবহৃত threshold ও sampling settings, per-frame candidate detection/box/temporary ID/velocity এবং run summary থাকে। `--json-output` দিয়ে অন্য path বেছে নেওয়া যায়। JSON schema-র `schema_version` ভবিষ্যৎ পরিবর্তন চিহ্নিত করবে। CSV ও JSON-ই ignored `reports/` folder-এ থাকে।
+একই run থেকে `reports/tracks.json`-এ structured report-ও তৈরি হয়। এতে video metadata, ব্যবহৃত threshold ও sampling settings, per-frame candidate detection/box/temporary ID/velocity এবং run summary থাকে। `--json-output` দিয়ে অন্য path বেছে নেওয়া যায়। JSON schema-র `schema_version` ভবিষ্যৎ পরিবর্তন চিহ্নিত করবে। CSV ও JSON-ই ignored `reports/` folder-এ থাকে। `--estimate-body-regions` দিলে sampled frame-এ pose model চালিয়ে candidate box-এর সঙ্গে one-to-one IoU association হয়; `--pose-match-iou-threshold` দিয়ে minimum overlap বদলানো যায়। Pose model-এর person detection threshold `--pose-person-threshold` এবং raw keypoint heatmap score cutoff `--keypoint-score-threshold` আলাদা settings। কোনো match না হলে `pose_status: unmatched` থাকে। `--measure-alignment` যোগ করলে matched region center-এর crosshair offsetও JSON-এ আসে। Raw keypoint score probability নয়। Alignment offset hit probability বা accuracy নয়। Dashboard body-region center ও alignment offset-ও দেখায়।
+
+`vd-1` frame 3000, 3030 ও 3060-এ তিন-frame smoke run-এ 10টি person candidate ছিল। Frame 3000-এ 2টি candidate-এর সঙ্গে pose model মেলানো গেছে; frame 3030 ও 3060-এর candidate-গুলোর কোনো pose match আসেনি। এটি model-এর intermittent miss দেখায়, accuracy metric নয়। ছোট sample-এ full video performance বা body-region accuracy দাবি করা যাবে না।
+
+Integration smoke run-এ frame 3000-এর 3টি person candidate-এর জন্য 2টি pose observation match হয়েছে এবং 8টি coarse region alignment measurement JSON-এ লেখা হয়েছে। এক frame-এ combined throughput `0.325` sampled frame/s ছিল (detector mean `1170.7ms`, pose mean `893.3ms`); এটি শুধু একটি frame ও এই GPU run-এর সময়, representative speed benchmark নয়। Matched pose-গুলোর মধ্যে false person candidate থাকতে পারে; hand labels ছাড়া region correctness জানা যায় না।
+
+Frame 3000-এর combined preview-তে একটি in-game character candidate-এর পাশাপাশি webcam/first-person এলাকার ওপর বড় person candidate এবং pose keypoint-ও দেখা গেছে। এগুলো likely overlay/weapon false positive, কিন্তু হাতে label না করা পর্যন্ত evaluator-এ false positive হিসেবে গণনা করছি না। Webcam-এর জন্য rectangle বড় করলে সেই অংশের সম্ভাব্য in-game target-ও বাদ পড়তে পারে; তাই frame review ছাড়া mask বড় করা হয়নি।
 
 ### M8: আলাদা offline dashboard
 

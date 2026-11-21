@@ -105,6 +105,14 @@ Run short-term box association offline and export sampled detections with tempor
 python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --preview-frame 3000
 ```
 
+Add experimental body-region estimates and geometric alignment measurements when desired:
+
+```powershell
+python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --estimate-body-regions --measure-alignment
+```
+
+Use `--crosshair x,y` to set a different reference in source-image pixels. Pose estimates are matched to candidate boxes by one-to-one IoU (`--pose-match-iou-threshold` changes the minimum overlap); unmatched pose observations remain unassociated. `--pose-person-threshold` filters pose-model person detections, while `--keypoint-score-threshold` filters raw keypoint heatmap values. These are distinct scores. The keypoint model is COCO-trained, and its raw keypoint scores are not calibrated confidence values. Alignment is a geometric offset, not hit probability or aim accuracy.
+
 The frame step is in source frames. Use `--start-frame` and exclusive `--stop-frame` to analyze a segment. Results go to `reports/tracks.csv` and the structured `reports/tracks.json`; use `--output` and `--json-output` to choose other paths. The JSON report includes video metadata, analysis settings, per-frame detections, temporary IDs, image-plane velocity, and a runtime summary. An optional preview goes to `data/previews/`. IDs associate boxes only, can fragment when detections disappear or change shape, and do not identify players, teams, or enemies. Velocity is measured in source-image pixels per second, not game-world speed.
 
 Open the saved report in the separate offline dashboard:

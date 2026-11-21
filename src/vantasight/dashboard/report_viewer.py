@@ -24,4 +24,14 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
     for frame in frames:
         if not isinstance(frame, dict) or not isinstance(frame.get("detections"), list):
             raise ValueError("Each report frame must contain a detections list")
+        for detection in frame["detections"]:
+            if not isinstance(detection, dict):
+                raise ValueError("Each frame detection must be an object")
+            box = detection.get("box_xyxy")
+            if not isinstance(box, list) or len(box) != 4 or not all(
+                isinstance(value, (int, float)) for value in box
+            ):
+                raise ValueError("Each frame detection must contain a four-coordinate box_xyxy")
+            if "body_regions" in detection and not isinstance(detection["body_regions"], list):
+                raise ValueError("Detection body_regions must be a list")
     return report

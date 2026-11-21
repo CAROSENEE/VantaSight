@@ -12,6 +12,7 @@ from vantasight.analytics.detection_evaluation import (
     calculate_metrics,
     match_boxes,
 )
+from vantasight.analytics.pose_association import associate_pose_observations
 from vantasight.analytics.tracking_report import write_tracking_report
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "DetectionCounts",
     "DetectionMetrics",
     "box_iou",
+    "associate_pose_observations",
     "calculate_metrics",
     "center_crosshair",
     "match_boxes",

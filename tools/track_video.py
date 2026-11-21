@@ -10,11 +10,18 @@ import time
 from pathlib import Path
 
 from vantasight.cli import _load_excluded_regions
-from vantasight.analytics import write_tracking_report
+from vantasight.analytics import (
+    associate_pose_observations,
+    center_crosshair,
+    measure_alignment,
+    write_tracking_report,
+)
 from vantasight.input import VideoReader
 from vantasight.tracking import IoUTracker
+from vantasight.vision.body_region_estimator import TorchvisionBodyRegionEstimator
 from vantasight.vision import TorchvisionPersonDetector
 from vantasight.visualization.detection_renderer import save_annotated_image
+from vantasight.visualization.pose_renderer import render_pose_estimates
 from vantasight.visualization.tracking_renderer import render_tracks
 
 
@@ -30,6 +37,12 @@ def main() -> int:
     parser.add_argument("--iou-threshold", type=float, default=0.30)
     parser.add_argument("--max-missed-updates", type=int, default=1)
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--estimate-body-regions", action="store_true")
+    parser.add_argument("--measure-alignment", action="store_true")
+    parser.add_argument("--crosshair", type=str, help="Reference point in source pixels as x,y")
+    parser.add_argument("--pose-person-threshold", type=float, default=0.25)
+    parser.add_argument("--keypoint-score-threshold", type=float, default=0.0)
+    parser.add_argument("--pose-match-iou-threshold", type=float, default=0.10)
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument(
         "--regions-file",
@@ -47,6 +60,23 @@ def main() -> int:
         parser.error("--stop-frame must be greater than --start-frame")
     if args.preview_frame is not None and args.preview_frame < 0:
         parser.error("--preview-frame must be nonnegative")
+    if args.measure_alignment and not args.estimate_body_regions:
+        parser.error("--measure-alignment requires --estimate-body-regions")
+    if args.crosshair and not args.measure_alignment:
+        parser.error("--crosshair requires --measure-alignment")
+    if args.keypoint_score_threshold < 0:
+        parser.error("--keypoint-score-threshold must be zero or greater")
+    if not 0.0 <= args.pose_person_threshold <= 1.0:
+        parser.error("--pose-person-threshold must be between 0 and 1")
+    if not 0.0 < args.pose_match_iou_threshold <= 1.0:
+        parser.error("--pose-match-iou-threshold must be greater than 0 and at most 1")
+    crosshair_override = None
+    if args.crosshair:
+        try:
+            x_text, y_text = args.crosshair.split(",", maxsplit=1)
+            crosshair_override = (float(x_text), float(y_text))
+        except (ValueError, TypeError):
+            parser.error("--crosshair must use the format x,y")
 
     video = args.video.expanduser()
     output = args.output.expanduser()
@@ -66,9 +96,22 @@ def main() -> int:
             iou_threshold=args.iou_threshold,
             max_missed_updates=args.max_missed_updates,
         )
+        pose_estimator = (
+            TorchvisionBodyRegionEstimator(
+                person_confidence_threshold=args.pose_person_threshold,
+                device=args.device,
+                min_size=min(1080, args.max_side),
+                max_size=args.max_side,
+                keypoint_score_threshold=args.keypoint_score_threshold,
+                excluded_regions=regions,
+            )
+            if args.estimate_body_regions
+            else None
+        )
         rows: list[dict] = []
         frame_records: list[dict] = []
         latencies_ms: list[float] = []
+        pose_latencies_ms: list[float] = []
         sampled_frames = 0
         total_detections = 0
         preview_saved = False
@@ -77,6 +120,16 @@ def main() -> int:
         with VideoReader(video) as reader:
             if reader.info is None:
                 raise RuntimeError("Could not read video metadata")
+            reference_xy = (
+                crosshair_override
+                if crosshair_override is not None
+                else center_crosshair(reader.info.width, reader.info.height)
+            )
+            if args.measure_alignment and not (
+                0 <= reference_xy[0] <= reader.info.width
+                and 0 <= reference_xy[1] <= reader.info.height
+            ):
+                raise ValueError("Crosshair reference must lie within the source frame")
             for frame in reader.frames(start_frame=args.start_frame):
                 if args.stop_frame is not None and frame.index >= args.stop_frame:
                     break
@@ -87,6 +140,17 @@ def main() -> int:
                 detections = detector.detect(frame.pixels)
                 latencies_ms.append((time.perf_counter() - inference_started) * 1000)
                 tracked = tracker.update(detections, frame.index, frame.timestamp_seconds)
+                if pose_estimator:
+                    pose_started = time.perf_counter()
+                    pose_observations = pose_estimator.estimate(frame.pixels)
+                    pose_latencies_ms.append((time.perf_counter() - pose_started) * 1000)
+                else:
+                    pose_observations = []
+                pose_by_candidate = associate_pose_observations(
+                    [item.detection.box_xyxy for item in tracked],
+                    pose_observations,
+                    iou_threshold=args.pose_match_iou_threshold,
+                ) if pose_estimator else {}
                 sampled_frames += 1
                 total_detections += len(detections)
 
@@ -104,6 +168,35 @@ def main() -> int:
                             "velocity_xy_pixels_per_second": None if velocity is None else list(velocity),
                         }
                     )
+                    candidate_record = frame_detections[-1]
+                    if pose_estimator:
+                        pose = pose_by_candidate.get(len(frame_detections) - 1)
+                        candidate_record["pose_status"] = "matched" if pose else "unmatched"
+                        if pose:
+                            candidate_record["pose_box_xyxy"] = list(pose.box_xyxy)
+                            candidate_record["pose_person_score"] = pose.person_confidence
+                            candidate_record["body_regions"] = []
+                            for region in pose.body_regions:
+                                region_record = {
+                                    "name": region.name,
+                                    "center_xy": list(region.center_xy),
+                                    "mean_keypoint_score": region.mean_keypoint_score,
+                                    "supporting_keypoints": list(region.supporting_keypoints),
+                                }
+                                if args.measure_alignment:
+                                    measurement = measure_alignment(
+                                        tuple(float(v) for v in region.center_xy),
+                                        reference_xy,
+                                        reader.info.width,
+                                        reader.info.height,
+                                        region_name=region.name,
+                                    )
+                                    region_record["alignment"] = {
+                                        "crosshair_xy": list(measurement.crosshair_xy),
+                                        "distance_pixels": measurement.distance_pixels,
+                                        "distance_normalized": measurement.distance_normalized,
+                                    }
+                                candidate_record["body_regions"].append(region_record)
                 frame_records.append(
                     {
                         "frame_index": frame.index,
@@ -115,7 +208,14 @@ def main() -> int:
 
                 if args.preview_frame == frame.index:
                     preview = Path("data/previews") / f"{video.stem}_frame_{frame.index:06d}_tracks.png"
-                    save_annotated_image(render_tracks(frame.pixels, tracked), preview)
+                    preview_image = render_tracks(frame.pixels, tracked)
+                    if pose_estimator:
+                        preview_image = render_pose_estimates(
+                            preview_image,
+                            pose_observations,
+                            crosshair_xy=reference_xy if args.measure_alignment else None,
+                        )
+                    save_annotated_image(preview_image, preview)
                     preview_saved = True
 
                 if not tracked:
@@ -164,6 +264,12 @@ def main() -> int:
         throughput = sampled_frames / elapsed if elapsed > 0 else 0.0
         mean_latency = statistics.mean(latencies_ms) if latencies_ms else 0.0
         p95_latency = sorted(latencies_ms)[math.ceil(0.95 * len(latencies_ms)) - 1] if latencies_ms else 0.0
+        mean_pose_latency = statistics.mean(pose_latencies_ms) if pose_latencies_ms else None
+        p95_pose_latency = (
+            sorted(pose_latencies_ms)[math.ceil(0.95 * len(pose_latencies_ms)) - 1]
+            if pose_latencies_ms
+            else None
+        )
         report = {
             "schema_version": 1,
             "analysis_type": "offline_sampled_person_candidate_tracking",
@@ -189,6 +295,12 @@ def main() -> int:
                 "iou_threshold": args.iou_threshold,
                 "max_missed_updates": args.max_missed_updates,
                 "device": str(detector.device),
+                "body_region_estimation": args.estimate_body_regions,
+                "pose_person_threshold": args.pose_person_threshold if pose_estimator else None,
+                "alignment_measurement": args.measure_alignment,
+                "crosshair_xy": list(reference_xy) if args.measure_alignment else None,
+                "keypoint_score_threshold": args.keypoint_score_threshold,
+                "pose_match_iou_threshold": args.pose_match_iou_threshold,
             },
             "summary": {
                 "sampled_frames": sampled_frames,
@@ -197,6 +309,8 @@ def main() -> int:
                 "sampled_frames_per_second": throughput,
                 "detector_latency_mean_ms": mean_latency,
                 "detector_latency_p95_ms": p95_latency,
+                "pose_latency_mean_ms": mean_pose_latency,
+                "pose_latency_p95_ms": p95_pose_latency,
             },
             "frames": frame_records,
         }
@@ -206,6 +320,8 @@ def main() -> int:
         print(f"Sampled frames: {sampled_frames}; detections: {total_detections}")
         print(f"Analysis throughput: {throughput:.3f} sampled frames/s")
         print(f"Detector latency: mean={mean_latency:.1f} ms p95={p95_latency:.1f} ms")
+        if pose_latencies_ms:
+            print(f"Pose latency: mean={mean_pose_latency:.1f} ms p95={p95_pose_latency:.1f} ms")
         print(f"Track rows: {output.resolve()}")
         print(f"Structured JSON report: {json_output.resolve()}")
         if args.preview_frame is not None:

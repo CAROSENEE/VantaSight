@@ -1,6 +1,12 @@
 import unittest
 
-from vantasight.analytics import DetectionCounts, calculate_metrics, match_boxes
+from vantasight.analytics import (
+    DetectionCounts,
+    associate_pose_observations,
+    calculate_metrics,
+    match_boxes,
+)
+from vantasight.vision.body_region_estimator import PoseObservation
 
 
 class DetectionEvaluationTests(unittest.TestCase):
@@ -25,6 +31,16 @@ class DetectionEvaluationTests(unittest.TestCase):
         self.assertIsNone(metrics.precision)
         self.assertIsNone(metrics.recall)
         self.assertIsNone(metrics.f1)
+
+    def test_pose_association_keeps_maximum_number_of_candidate_matches(self) -> None:
+        candidates = [(0, 0, 9, 10), (0, 0, 8, 10)]
+        observations = [
+            PoseObservation((0, 0, 10, 10), 0.9, (), ()),
+            PoseObservation((2, 0, 12, 10), 0.8, (), ()),
+        ]
+        matched = associate_pose_observations(candidates, observations, 0.55)
+        self.assertEqual(len(matched), 2)
+        self.assertEqual(len({id(value) for value in matched.values()}), 2)
 
 
 if __name__ == "__main__":
