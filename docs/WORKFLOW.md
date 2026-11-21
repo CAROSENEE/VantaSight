@@ -318,6 +318,14 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
+## বর্তমান অবস্থান (M63)
+
+- Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
+- M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
+- M62-এর playback layout fix এবং M63-এর dashboard crosshair field-এর visual QA অসম্পূর্ণ। Computer-use window list dashboard দেখিয়েছে, কিন্তু window minimized; controls, field, playback বা layout চোখে দেখে যাচাই হয়নি।
+- Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
+- পরবর্তী gate: dashboard দৃশ্যমান হলে playback controls ও crosshair field যাচাই; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
+
 ## আমরা যেভাবে কাজ করব
 
 1. কাজ শুরুর আগে লক্ষ্য এবং কোন file বা অংশে পরিবর্তন হতে পারে তা জানাব।
@@ -325,7 +333,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 3. ধাপ শেষে কী বদলেছে, কীভাবে ব্যবহার করতে হবে, কী যাচাই হয়েছে এবং কী সীমাবদ্ধতা আছে—তা বুঝিয়ে বলব।
 4. বাস্তব footage লাগলে তোমার দেওয়া screenshot বা ছোট recorded clip দিয়ে ফল পর্যালোচনা করব।
 
-## পরের কাজের জন্য যা দরকার
+## M35-এর সময়কার পুরোনো পরিকল্পনা
 
 M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping, M26 offline-boundary audit এবং M27 planned annotation coverage check, M28 annotation review progress indicator এবং M29 source-frame fingerprint, M30 annotation record serialization test, M31 confidence threshold sweep এবং M32 dashboard threshold-sweep view এবং M33 cross-row consistency gate এবং M34 package/input CLI smoke check এবং M35 threshold-sweep sample composition আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
