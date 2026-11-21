@@ -10,6 +10,8 @@ VantaSight analyzes recorded screenshots and video offline. The current prototyp
 
 These previews come from the local `ss-1`, `ss-2`, and `vd-1` samples. Green boxes are generic COCO person candidates, not verified enemy detections or accuracy results. The video preview's webcam inset was covered after inference for sharing; the detector boxes were produced before that cover was added.
 
+The two source screenshots and their user-provided presence labels are included as a small reproducible pilot dataset, along with the HUD exclusion-region configuration. The `vd-1.mp4` source video is stored with Git LFS; the video annotation file remains local and is not included.
+
 | `ss-1`: a candidate overlaps the in-world character | `ss-2`: the candidate is a first-person arm/weapon false positive |
 |---|---|
 | <img src="docs/assets/ss-1_candidate_preview.jpg" alt="VantaSight person candidate on the in-world character in ss-1" width="480"> | <img src="docs/assets/ss-2_candidate_preview.jpg" alt="VantaSight person candidate incorrectly covers a first-person arm and weapon in ss-2" width="480"> |
@@ -24,6 +26,8 @@ These previews come from the local `ss-1`, `ss-2`, and `vd-1` samples. Green box
 - The dependencies in `requirements.txt`
 
 ## Setup on Windows (PowerShell)
+
+Install Git LFS before cloning to fetch the `vd-1.mp4` sample. If this repository is already cloned, run `git lfs install` and then `git lfs pull` from the repository directory. Screenshot-only analysis does not need the video file.
 
 ```powershell
 py -3.13 -m venv .venv

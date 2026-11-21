@@ -235,10 +235,17 @@ data/previews/*
 !data/previews/.gitkeep
 data/annotations/*
 !data/annotations/.gitkeep
+!data/annotations/screenshot_presence.csv
+!data/annotations/source_regions.json
 data/samples/*
 !data/samples/.gitkeep
 reports/*
 !reports/.gitkeep
+
+# Small, user-approved reproducibility samples; video is stored with Git LFS.
+!data/input/screenshots/ss-1.png
+!data/input/screenshots/ss-2.png
+!data/input/videos/vd-1.mp4
 
 .task-tmp/
 models/cache/

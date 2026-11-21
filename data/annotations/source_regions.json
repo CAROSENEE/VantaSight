@@ -1,0 +1,19 @@
+{
+  "ss-1.png": [
+    {"name": "minimap", "box_xyxy": [0, 0, 320, 360]},
+    {"name": "scoreboard portraits", "box_xyxy": [390, 0, 1540, 110]},
+    {"name": "kill feed", "box_xyxy": [1450, 80, 1917, 170]},
+    {"name": "player card and replay mark", "box_xyxy": [0, 740, 320, 900]}
+  ],
+  "ss-2.png": [
+    {"name": "minimap", "box_xyxy": [0, 0, 320, 360]},
+    {"name": "scoreboard portraits", "box_xyxy": [390, 0, 1540, 110]},
+    {"name": "player card", "box_xyxy": [0, 740, 320, 900]}
+  ],
+  "vd-1.mp4": [
+    {"name": "minimap", "box_xyxy": [0, 0, 520, 450]},
+    {"name": "scoreboard portraits", "box_xyxy": [600, 0, 1900, 125]},
+    {"name": "kill feed", "box_xyxy": [1900, 100, 2560, 280]},
+    {"name": "stream webcam", "box_xyxy": [0, 620, 530, 960]}
+  ]
+}

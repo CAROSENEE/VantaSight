@@ -1,0 +1,3 @@
+asset_id,game,visible_in_game_enemy,user_labeled,notes
+ss-1,Valorant,true,true,"Enemy character visible in the doorway; replay/HUD silhouettes are not the label target."
+ss-2,Valorant,false,true,"No enemy character visible in the gameplay scene; replay/HUD silhouettes are excluded."
