@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from vantasight.cli import _load_excluded_regions
+from vantasight.analytics import write_tracking_report
 from vantasight.input import VideoReader
 from vantasight.tracking import IoUTracker
 from vantasight.vision import TorchvisionPersonDetector
@@ -37,6 +38,7 @@ def main() -> int:
     )
     parser.add_argument("--preview-frame", type=int, help="Save a tracking preview for this sampled frame")
     parser.add_argument("--output", type=Path, default=Path("reports/tracks.csv"))
+    parser.add_argument("--json-output", type=Path, default=Path("reports/tracks.json"))
     args = parser.parse_args()
 
     if args.frame_step < 1 or args.start_frame < 0 or args.max_side < 1:
@@ -48,6 +50,9 @@ def main() -> int:
 
     video = args.video.expanduser()
     output = args.output.expanduser()
+    json_output = args.json_output.expanduser()
+    if output.resolve() == json_output.resolve():
+        parser.error("--output and --json-output must use different file paths")
     try:
         regions = _load_excluded_regions(args.regions_file.expanduser(), video.name)
         detector = TorchvisionPersonDetector(
@@ -62,6 +67,7 @@ def main() -> int:
             max_missed_updates=args.max_missed_updates,
         )
         rows: list[dict] = []
+        frame_records: list[dict] = []
         latencies_ms: list[float] = []
         sampled_frames = 0
         total_detections = 0
@@ -83,6 +89,29 @@ def main() -> int:
                 tracked = tracker.update(detections, frame.index, frame.timestamp_seconds)
                 sampled_frames += 1
                 total_detections += len(detections)
+
+                frame_detections = []
+                for item in tracked:
+                    velocity = item.velocity_xy_pixels_per_second
+                    x1, y1, x2, y2 = item.detection.box_xyxy
+                    frame_detections.append(
+                        {
+                            "track_id": item.track_id,
+                            "class_name": item.detection.class_name,
+                            "detector_score": item.detection.confidence,
+                            "box_xyxy": [x1, y1, x2, y2],
+                            "center_xy": [(x1 + x2) / 2, (y1 + y2) / 2],
+                            "velocity_xy_pixels_per_second": None if velocity is None else list(velocity),
+                        }
+                    )
+                frame_records.append(
+                    {
+                        "frame_index": frame.index,
+                        "timestamp_seconds": frame.timestamp_seconds,
+                        "detection_count": len(frame_detections),
+                        "detections": frame_detections,
+                    }
+                )
 
                 if args.preview_frame == frame.index:
                     preview = Path("data/previews") / f"{video.stem}_frame_{frame.index:06d}_tracks.png"
@@ -135,12 +164,50 @@ def main() -> int:
         throughput = sampled_frames / elapsed if elapsed > 0 else 0.0
         mean_latency = statistics.mean(latencies_ms) if latencies_ms else 0.0
         p95_latency = sorted(latencies_ms)[math.ceil(0.95 * len(latencies_ms)) - 1] if latencies_ms else 0.0
+        report = {
+            "schema_version": 1,
+            "analysis_type": "offline_sampled_person_candidate_tracking",
+            "interpretation_limits": [
+                "Detections are COCO person candidates, not verified enemies or teams.",
+                "Track IDs are temporary box associations, not player identities.",
+                "Velocity is measured in source-image pixels per second.",
+                "This report contains no game input or live gameplay data.",
+            ],
+            "source": {
+                "file_name": video.name,
+                "width": reader.info.width,
+                "height": reader.info.height,
+                "fps": reader.info.fps,
+                "frame_count": reader.info.frame_count,
+                "duration_seconds": reader.info.duration_seconds,
+            },
+            "settings": {
+                "frame_step": args.frame_step,
+                "start_frame": args.start_frame,
+                "stop_frame_exclusive": args.stop_frame,
+                "confidence_threshold": args.confidence_threshold,
+                "iou_threshold": args.iou_threshold,
+                "max_missed_updates": args.max_missed_updates,
+                "device": str(detector.device),
+            },
+            "summary": {
+                "sampled_frames": sampled_frames,
+                "candidate_detections": total_detections,
+                "analysis_elapsed_seconds": elapsed,
+                "sampled_frames_per_second": throughput,
+                "detector_latency_mean_ms": mean_latency,
+                "detector_latency_p95_ms": p95_latency,
+            },
+            "frames": frame_records,
+        }
+        write_tracking_report(json_output, report)
         print(f"Device: {detector.device}")
         print(f"Source FPS: {reader.info.fps:.3f}")
         print(f"Sampled frames: {sampled_frames}; detections: {total_detections}")
         print(f"Analysis throughput: {throughput:.3f} sampled frames/s")
         print(f"Detector latency: mean={mean_latency:.1f} ms p95={p95_latency:.1f} ms")
         print(f"Track rows: {output.resolve()}")
+        print(f"Structured JSON report: {json_output.resolve()}")
         if args.preview_frame is not None:
             print("Tracking preview saved" if preview_saved else "Requested preview frame was not sampled")
         print("Track IDs are temporary box associations; they are not player identity or enemy/team labels.")

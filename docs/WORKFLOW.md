@@ -55,7 +55,7 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker ও CSV export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
-| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | শুরু হয়নি |
+| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | Tracking-এর CSV ও structured JSON export যোগ হয়েছে; dashboard বাকি |
 | 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | শুরু হয়নি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
@@ -171,6 +171,8 @@ python tools/track_video.py "data/input/videos/vd-1.mp4" --start-frame 3000 --st
 
 `--frame-step 10` মানে প্রতি 10 source frame-এ inference। CSV-তে bounding box, temporary track ID, confidence এবং image-plane velocity (pixel/second) থাকে। Source FPS আলাদা করে দেখায়; inference throughput ও detector latency-ও terminal-এ মাপে। `--stop-frame` শেষ সীমা, সেটি অন্তর্ভুক্ত নয়।
 
+একই run থেকে `reports/tracks.json`-এ structured report-ও তৈরি হয়। এতে video metadata, ব্যবহৃত threshold ও sampling settings, per-frame candidate detection/box/temporary ID/velocity এবং run summary থাকে। `--json-output` দিয়ে অন্য path বেছে নেওয়া যায়। JSON schema-র `schema_version` ভবিষ্যৎ পরিবর্তন চিহ্নিত করবে। CSV ও JSON-ই ignored `reports/` folder-এ থাকে।
+
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
 ## M7: crosshair-to-region alignment
@@ -187,7 +189,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 ## ছবি ও ভিডিও GitHub-এ যাবে কি?
 
-`data/input/screenshots/` এবং `data/input/videos/`-এর media Git ignore করা আছে। তাই স্বাভাবিক `git add`, commit ও push-এ ছবিগুলো বা ভিডিও GitHub-এ যাবে না। `git add -f` দিয়ে জোর করে যোগ করলে upload হতে পারে—ইচ্ছা করে না করলে এমন করবে না। `data/previews/`-এর তৈরি preview-ও Git ignore করা।
+`data/input/screenshots/` এবং `data/input/videos/`-এর media আপাতত Git ignore করা আছে, তাই স্বাভাবিক commit/push-এ যাবে না। তুমি gameplay video, screenshot ও preview GitHub-এ upload করার অনুমতি দিয়েছ। বড় video-র জন্য Git LFS বা অন্য উপযুক্ত storage পদ্ধতি ঠিক করে পরে নির্বাচিত sample upload করব; generated preview-ও প্রয়োজনমতো বেছে নেওয়া হবে।
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
@@ -200,7 +202,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1, M2 সম্পন্ন; M3–M6-এর baseline/experiment আছে। পরের প্রস্তাবিত ধাপ: M4 annotation GUI দিয়ে পাঁচটি representative frame-এর box label করা, তারপর evaluator চালিয়ে precision/recall মাপা। সেই sample-এ body-region estimate-ও হাতে যাচাই করতে হবে। Label ছাড়া detector, pose বা tracking accuracy দাবি করা যাবে না। এরপর alignment metric ও result export/dashboard তৈরি হবে।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking এবং M7 alignment calculation আছে। M8-এ tracking-এর CSV ও JSON export যোগ হয়েছে; পরের code ধাপ আলাদা offline dashboard/preview। Detector ও pose model-এর বাস্তব accuracy যাচাইয়ের জন্য GUI-তে হাতে annotation এখনও দরকার; সেই ধাপে representative frame label করে evaluator চালাব। Label ছাড়া accuracy দাবি করা যাবে না.
 
 ## ভাষার নিয়ম
 
