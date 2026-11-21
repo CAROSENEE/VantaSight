@@ -320,7 +320,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M67)
+## বর্তমান অবস্থান (M68)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -328,8 +328,9 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M65-এ dense report থেকে প্রতি frame-এর person-candidate box height group করার CSV tool যোগ হয়েছে; এটি annotation ছাড়াই review-এর candidate shortlist দেয়, কিন্তু recall/ground truth নয়।
 - M66-এ Windows annotation launcher ও README command থেকে unverified provisional-box prefill সরানো হয়েছে; পরের user review scratch থেকে শুরু হবে।
 - M67-এ desktop-এর আগে থেকে খোলা dashboard foreground-এ এনে দেখা হয়েছে: Previous/Next/Play samples/Pause/Stop controls, custom crosshair field এবং candidate-only warning দৃশ্যমান। কিন্তু window-টি পুরোনো `vd-1_dashboard_tracks.json` (59 sampled frame, 188 candidate) খুলেছে; এতে AP/threshold panel `unreviewed_exploratory` হিসেবে দেখানো। বর্তমান launcher-এর dense report এখনও চোখে দেখে খোলা হয়নি, এবং click করে playback frame পরিবর্তনও নিশ্চিত হয়নি। তাই এটি partial layout QA, playback/launcher pass নয়।
+- M68-এ launcher-এ নির্ধারিত dense report ও বর্তমান local video-র SHA-256 মেলানো হয়েছে: `3917b7d5…` দুই পাশেই একই; report-এ 236 sampled frame ও 816 person candidate আছে। Viewer source mismatch-এ report reject করবে না—এটুকু নিশ্চিত, UI launch/playback বা detection accuracy নয়।
 - Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
-- পরবর্তী gate: dashboard দৃশ্যমান হলে playback controls ও crosshair field যাচাই; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
+- পরবর্তী gate: corrected launcher দিয়ে dense report খুলে যাচাই করা এবং playback interaction নিশ্চিত করা; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
 
 ## আমরা যেভাবে কাজ করব
 
@@ -543,3 +544,7 @@ M63 যাচাই: সংশ্লিষ্ট তিনটি Python file `co
 ### M67: dashboard-এর দৃশ্যমান layout আংশিক পর্যালোচনা
 
 Computer-use-এ existing `VantaSight Offline Dashboard — vd-1.mp4` window foreground-এ এনে screenshot review করেছি। Header-এ source metadata, candidate count, temporary-track summary ও “Offline COCO person candidates only” warning দেখা যায়। Previous/Next/Play samples/Pause/Stop buttons, local-media panel এবং custom `Crosshair x,y` field-ও দৃশ্যমান; screenshot-এ এগুলো clipped নয়। কিন্তু live window-এর report label ছিল `reports/vd-1_dashboard_tracks.json`, dense report নয়; AP ও threshold panels-এ `unreviewed_exploratory` লেখা ছিল। এগুলো invalidated provisional label থেকে আসা, তাই ফল হিসেবে ব্যবহার করা যাবে না। Next/Play click-এর পর frame বদলেছে—এমন নির্ভরযোগ্য visual confirmation পাইনি। সংশোধিত launcher-এ যে dense report খুলবে তা এখনও desktop-এ verify করা হয়নি; playback interaction-ও pending।
+
+### M68: dense report ও source video-র fingerprint মিল
+
+PowerShell দিয়ে `reports/vd-1_dashboard_tracks_dense.json`-এর `source.source_sha256` এবং বর্তমান `data/input/videos/vd-1.mp4`-এর SHA-256 তুলনা করেছি। দুটোই `3917b7d52fe197c69d9305a698a50ff087e9378f01b3ab8c3f26668e5447c930`; dense report-এ 236 sampled frame ও 816 candidate লেখা আছে। এতে dashboard loader-এর source-fingerprint gate পাস করার পূর্বশর্ত মেলে। এই integrity check report-এর সঠিক source file নিশ্চিত করে; dashboard window launch, playback, enemy identity বা detector accuracy নিশ্চিত করে না। Report ও video Git-ignored local files।
