@@ -199,6 +199,10 @@ python tools/open_dashboard.py reports/tracks.json
 
 Dashboard sampled frame-এর তালিকা দেয়; frame নির্বাচন করলে local video থেকে ওই frame পড়ে JSON report-এর candidate box/temporary ID এবং থাকলে pose-region/alignment overlay আঁকে। পাশে timestamp, detector score, box coordinate ও image-plane velocity দেখা যায়। Header-এ analysis throughput ও region অনুযায়ী alignment error-এর median/p95 থাকে। `reports/detector_evaluation.csv` ও `reports/pose_region_evaluation.csv` থাকলে একই video-র precision/recall/F1 এবং region coverage/error-ও দেখায়। অন্য folder-এর video হলে `--video path\to\clip.mp4` দাও। Dashboard live screen/game capture করে না। এই environment থেকে Windows window-তে click করে visual review করা যায়নি; স্থানীয় desktop-এ চালিয়ে UI layout দেখে নিতে হবে।
 
+### M10: sampled-frame playback control
+
+Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছে। Play report-এর analyzed sample-গুলো timestamp অনুযায়ী সামনে নেয়; Pause বর্তমান sample-এ থামে; Stop প্রথম sample-এ ফেরে। Previous/Next বা frame list দিয়ে হাতে frame বাছলেও playback থেমে যায়। এটি আসল ভিডিওর প্রতিটি frame চালায় না; এটি detection ও temporary ID review করার জন্য sampled-frame sequence। UI-টি এই environment-এ হাতে চালিয়ে visual review করা হয়নি—স্থানীয় desktop-এ যাচাই করতে হবে।
+
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
 ## M7: crosshair-to-region alignment
@@ -228,7 +232,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। M9 detector evaluator-এ one-to-one maximum matching, আর pose-region evaluator-এ point-error/coverage metric যোগ হয়েছে। এখন representative gameplay frame label ছাড়া বাস্তব metric বাকি। পরের কাজ local annotation window-তে frame 600, 3000, 4200, 5400 ও 6600-এর opponent box label করা; চাইলে একই সঙ্গে body-region point চিহ্নিত করা; এরপর দুই evaluator চালানো। Label ছাড়া detector বা pose accuracy দাবি করা যাবে না।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। M9 detector evaluator-এ one-to-one maximum matching, আর pose-region evaluator-এ point-error/coverage metric যোগ হয়েছে। M10-এ dashboard sampled-frame playback control যোগ হয়েছে। এখন representative gameplay frame label ছাড়া বাস্তব metric বাকি। পরের কাজ local annotation window-তে frame 600, 3000, 4200, 5400 ও 6600-এর opponent box label করা; চাইলে একই সঙ্গে body-region point চিহ্নিত করা; এরপর দুই evaluator চালানো। Label ছাড়া detector বা pose accuracy দাবি করা যাবে না।
 
 ## ভাষার নিয়ম
 

@@ -132,6 +132,8 @@ def main() -> int:
 
     current_index = 0
     displayed_photo: tk.PhotoImage | None = None
+    playback_after_id: str | None = None
+    playback_running = False
 
     def show_frame(index: int) -> None:
         nonlocal current_index, displayed_photo
@@ -214,18 +216,58 @@ def main() -> int:
     def on_select(_event: object = None) -> None:
         selection = frame_list.curselection()
         if selection:
+            stop_playback()
             show_frame(selection[0])
+
+    def stop_playback() -> None:
+        nonlocal playback_after_id, playback_running
+        playback_running = False
+        if playback_after_id is not None:
+            root.after_cancel(playback_after_id)
+            playback_after_id = None
+
+    def advance_playback() -> None:
+        nonlocal playback_after_id
+        playback_after_id = None
+        if not playback_running:
+            return
+        if current_index + 1 >= len(frames):
+            stop_playback()
+            return
+        previous_timestamp = float(frames[current_index].get("timestamp_seconds", 0.0))
+        next_timestamp = float(frames[current_index + 1].get("timestamp_seconds", previous_timestamp))
+        show_frame(current_index + 1)
+        delay_ms = max(25, min(2000, round(max(0.025, next_timestamp - previous_timestamp) * 1000)))
+        playback_after_id = root.after(delay_ms, advance_playback)
+
+    def play_sampled_frames() -> None:
+        nonlocal playback_running
+        if playback_running:
+            return
+        if current_index + 1 >= len(frames):
+            show_frame(0)
+        playback_running = True
+        advance_playback()
+
+    def close_dashboard() -> None:
+        stop_playback()
+        capture.release()
+        root.destroy()
 
     frame_list.bind("<<ListboxSelect>>", on_select)
     controls = ttk.Frame(image_panel, padding=(0, 8, 0, 0))
     controls.pack(fill="x")
-    ttk.Button(controls, text="◀ Previous", command=lambda: show_frame(current_index - 1)).pack(side="left")
-    ttk.Button(controls, text="Next ▶", command=lambda: show_frame(current_index + 1)).pack(side="left", padx=8)
+    ttk.Button(controls, text="◀ Previous", command=lambda: (stop_playback(), show_frame(current_index - 1))).pack(side="left")
+    ttk.Button(controls, text="Next ▶", command=lambda: (stop_playback(), show_frame(current_index + 1))).pack(side="left", padx=8)
+    ttk.Button(controls, text="▶ Play samples", command=play_sampled_frames).pack(side="left", padx=(14, 4))
+    ttk.Button(controls, text="Pause", command=stop_playback).pack(side="left", padx=4)
+    ttk.Button(controls, text="Stop", command=lambda: (stop_playback(), show_frame(0))).pack(side="left", padx=4)
     ttk.Label(controls, text=f"Report: {report_path}").pack(side="right")
+    ttk.Label(image_panel, text="Playback advances through analyzed samples only; it does not play every source-video frame.").pack(anchor="w")
 
     root.update_idletasks()
     show_frame(0)
-    root.protocol("WM_DELETE_WINDOW", lambda: (capture.release(), root.destroy()))
+    root.protocol("WM_DELETE_WINDOW", close_dashboard)
     root.mainloop()
     return 0
 

@@ -129,7 +129,7 @@ Open the saved report in the separate offline dashboard:
 python tools/open_dashboard.py reports/tracks.json
 ```
 
-The dashboard loads the report and source video from local disk, lets you browse sampled frames, and draws the recorded candidate boxes, temporary track IDs, pose points, and alignment references when present. Its header summarizes analysis throughput, alignment-error distributions, and manual-label detector/pose evaluation CSVs from `reports/` when available; pass `--detector-evaluation` or `--pose-evaluation` to select other files. Pass `--video path\to\source.mp4` when the video is stored outside `data/input/videos/`. It does not capture the desktop or interact with a game.
+The dashboard loads the report and source video from local disk, lets you browse sampled frames, and draws the recorded candidate boxes, temporary track IDs, pose points, and alignment references when present. Use Play samples, Pause, and Stop to review the analyzed frame sequence; playback advances only through sampled frames and does not play every source frame. Its header summarizes analysis throughput, alignment-error distributions, and manual-label detector/pose evaluation CSVs from `reports/` when available; pass `--detector-evaluation` or `--pose-evaluation` to select other files. Pass `--video path\to\source.mp4` when the video is stored outside `data/input/videos/`. It does not capture the desktop or interact with a game.
 
 ## Experimental body-region estimate
 
