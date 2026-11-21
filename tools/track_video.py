@@ -139,12 +139,11 @@ def main() -> int:
                 and 0 <= reference_xy[1] <= reader.info.height
             ):
                 raise ValueError("Crosshair reference must lie within the source frame")
-            for frame in reader.frames(start_frame=args.start_frame):
-                if args.stop_frame is not None and frame.index >= args.stop_frame:
-                    break
-                if (frame.index - args.start_frame) % args.frame_step:
-                    continue
-
+            for frame in reader.sampled_frames(
+                frame_step=args.frame_step,
+                start_frame=args.start_frame,
+                stop_frame=args.stop_frame,
+            ):
                 pause_started: float | None = None
                 while pause_file is not None and pause_file.exists():
                     if pause_started is None:

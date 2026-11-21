@@ -297,6 +297,9 @@ python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 120 --max-
 59টি sampled frame-এ 188 person-candidate observation এসেছে; 11 frame-এ কোনো candidate আসেনি। 127 temporary ID-এর মধ্যে 96টি ID এক sample-এ দেখা গেছে; কোনো ID সর্বোচ্চ 6টি sample-এ candidate জুড়েছে। Detector latency mean `145.8ms`, p95 `195.7ms`; observed sampled analysis throughput `1.016 frame/s`। নতুন JSON report 59 frame-সহ dashboard report loader-এ validate হয়েছে। সব CSV/JSON output `reports/`-এ Git-ignored। এগুলো detector candidate ও sparse IoU association-এর পরিমাপ—enemy accuracy বা tracking continuity ground truth নয়; ID-গুলো player identity-ও নয়। Throughput এই machine/model/config-এ মাপা, অন্য hardware-এর benchmark নয়।
 
 
+### M21: sampled video-তে indexed seeking
+
+M20-তে frame-step `120` হলেও আগের loop 7,080 source frame sequentially decode করে 59টি inference sample নিয়েছিল। Input reader-এ `sampled_frames(frame_step, start_frame, stop_frame)` যোগ করে প্রতিটি দরকারি index সরাসরি seek করা হয়েছে; `--stop-frame` আগের মতো exclusive। Synthetic MJPG test-এ index `2,5,8`, timestamp ও decoded pixel পরীক্ষা pass করেছে। `vd-1`-এর একই `59` frame পুনরায় চালালে candidate output হুবহু একই ছিল (`188` candidates), কিন্তু throughput `1.016` থেকে `3.207 sampled frame/s` হয়েছে—এই machine ও video-তে প্রায় `3.2×`। Mean detector latency `139.8ms`, p95 `202.9ms`; report loader-এ 59-frame JSON validate হয়েছে। এটি শুধু ওই hardware/clip/settings-এর মাপ, detector accuracy বা real-time benchmark নয়। Unit test suite `41/41`, `compileall` ও diff check pass করেছে।
 ## M7: crosshair-to-region alignment
 
 Frame center-কে default reference ধরে estimate মাপতে:
@@ -324,7 +327,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate এবং M20 full-clip coarse tracking আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking এবং M21 indexed sampling আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 

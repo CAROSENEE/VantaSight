@@ -109,3 +109,29 @@ class VideoReader:
 
         timestamp = self._capture.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
         return VideoFrame(index=frame_index, timestamp_seconds=timestamp, pixels=pixels)
+
+    def sampled_frames(
+        self, frame_step: int, start_frame: int = 0, stop_frame: int | None = None
+    ) -> Iterator[VideoFrame]:
+        """Seek directly to selected frames; stop_frame is exclusive, like range()."""
+
+        if self._capture is None:
+            raise RuntimeError("Use VideoReader inside a 'with' block before reading frames")
+        if frame_step < 1:
+            raise ValueError("Frame step must be a positive integer")
+        if start_frame < 0:
+            raise ValueError("Start frame must be zero or greater")
+        if stop_frame is not None and stop_frame <= start_frame:
+            raise ValueError("Stop frame must be greater than start frame")
+        if self.info is not None and self.info.frame_count > 0 and start_frame >= self.info.frame_count:
+            raise IndexError(
+                f"Start frame {start_frame} is outside the video ({self.info.frame_count} frames)"
+            )
+
+        index = start_frame
+        while stop_frame is None or index < stop_frame:
+            try:
+                yield self.read_frame(index)
+            except IndexError:
+                break
+            index += frame_step
