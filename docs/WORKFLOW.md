@@ -18,6 +18,8 @@
 - `vd-1`-এর আরও পাঁচটি frame—5s, 25s, 35s, 45s ও 55s—GPU-তে বিশ্লেষণ করা হয়েছে। 25s ও 45s-এ দূরের opponent candidate ধরা পড়েছে; 5s, 35s ও 55s-এ দৃশ্যমান opponent না থাকলেও হাতে/অস্ত্রে, overlay বা artwork-এ ভুল candidate এসেছে। 35s-এর stream inset আগের mask-এর জায়গায় ছিল না—ভিডিওতে overlay-এর অবস্থান বদলাতে পারে।
 - পাঁচটি frame-এর হাতে দেখা ফল `data/annotations/vd-1_frame_review.csv`-এ রাখা হয়েছে: মোট 2টি সঠিক candidate এবং 9টি false candidate। এটি পাঁচটি নির্বাচিত frame-এর review মাত্র; পুরো video-র accuracy নয়।
 - Annotated frame-গুলো `data/previews/vd-1_frame_000600_detections.png` থেকে `vd-1_frame_006600_detections.png` পর্যন্ত আছে; একসঙ্গে দেখার sheet `data/previews/vd-1_detection_review_sheet.jpg`। এগুলো local ignored output।
+- একই পাঁচটি frame-এ confidence threshold `0.25`, `0.50` ও `0.75` তুলনা করা হয়েছে। Candidate count যথাক্রমে 11, 8 ও 5; হাতে চিহ্নিত সঠিক candidate 2, 1 ও 1; false candidate 9, 7 ও 4। `0.50` এবং `0.75`-এ 45s-এর ছোট opponent (confidence `0.322`) বাদ পড়ে, কিন্তু কিছু ভুল hand/weapon candidate উচ্চ confidence-এ টিকে যায়।
+- Threshold-ভিত্তিক candidate ও box-এর ফল `data/annotations/vd-1_threshold_comparison.csv`-এ আছে; পাশাপাশি তুলনার preview `data/previews/vd-1_threshold_comparison.jpg`। Threshold বাড়ালে false positive কিছু কমে, তবে ছোট opponent miss হয়—তাই default `0.25` আপাতত বদলানো হয়নি।
 - OpenCV `5.1.0.95` ও project package virtual environment-এ install হয়েছে।
 - `vd-1.mp4`-এর metadata: 59 সেকেন্ড, 2560×1440, 120 FPS, 7,080 frame, ফাইল প্রায় 203 MB।
 - 5, 15, 25, 35, 45 ও 55 সেকেন্ডের frame sample দেখা হয়েছে; এটি পুরো video review নয়। 25 ও 45 সেকেন্ডের sample-এ opponent দেখা যায়, তবে দূরে ও ছোট। সব frame-এ enemy থাকবে এমন নয়—enemy কিছু সময় অনুপস্থিত থেকে পরে দেখা দিতে পারে, সেটি স্বাভাবিক।
@@ -135,7 +137,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1 ও M2 সম্পন্ন। M3-এর detector পাঁচটি নির্বাচিত video frame-এ চালানো ও হাতে review করা হয়েছে: দূরের opponent ধরা পড়েছে, তবে first-person arm/weapon, artwork ও সরে যাওয়া overlay-এ false positive অনেক। পরের ধাপ হবে এই সীমাবদ্ধতা কমানোর পদ্ধতি পরীক্ষা করা এবং বেশি representative frame-এ label যোগ করা। বর্তমান model COCO `person` model, Valorant enemy model নয়; তাই এর ফলকে accuracy হিসেবে ধরা যাবে না।
+M1 ও M2 সম্পন্ন। M3-এর detector পাঁচটি নির্বাচিত video frame-এ চালানো ও হাতে review করা হয়েছে: দূরের opponent ধরা পড়েছে, তবে first-person arm/weapon, artwork ও সরে যাওয়া overlay-এ false positive অনেক। Confidence threshold বাড়ালে কিছু ভুল কমে, কিন্তু দূরের ছোট opponent-ও বাদ যায়। পরের ধাপ হবে আরও representative frame-এ opponent box হাতে label করে Valorant footage-এ detector মূল্যায়ন/উন্নতির উপযোগী training sample তৈরি করা। বর্তমান model COCO `person` model, Valorant enemy model নয়; তাই এর ফলকে accuracy হিসেবে ধরা যাবে না।
 
 ## ভাষার নিয়ম
 
