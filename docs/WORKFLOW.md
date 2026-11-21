@@ -680,3 +680,7 @@ Browser থেকে JSONL download করার পর সঠিক annotation 
 ### M99: gallery launcher-এর manual-open fallback
 
 Windows shell browser-কে foreground-এ না আনলে launcher এখন local `index.html`-এর absolute path সবসময় দেখায়। এতে browser নিজে না উঠলেও user একই offline gallery path হাতে খুলতে পারবেন। Launcher নিজে কোনো label লেখে না; desktop UI visibility এই environment-এ এখনো যাচাই হয়নি।
+
+### M100: review gallery JavaScript syntax check
+
+Current `tools/review_gallery_template.html`-এর inline script temporary `.js` file-এ নিয়ে `node --check` চালিয়েছি; syntax check পাস। Check শেষে temporary file সরানো হয়েছে। এটি শুধু parse/syntax যাচাই—browser DOM event, canvas interaction, localStorage বা download behavior runtime-এ যাচাই করে না।
