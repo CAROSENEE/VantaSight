@@ -4,7 +4,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from vantasight.input import VideoReader
+from vantasight.input import VideoReader, frame_sha256, verify_frame_fingerprint
 
 
 class VideoReaderSamplingTests(unittest.TestCase):
@@ -45,6 +45,19 @@ class VideoReaderSamplingTests(unittest.TestCase):
                 list(reader.sampled_frames(frame_step=1, start_frame=-1))
             with self.assertRaises(ValueError):
                 list(reader.sampled_frames(frame_step=1, start_frame=2, stop_frame=2))
+
+    def test_annotation_fingerprint_matches_redecoded_video_frame(self):
+        video = Path("reports/.test_video_reader_fingerprint.avi")
+        self.addCleanup(lambda: video.unlink(missing_ok=True))
+        self._make_video(video)
+        with VideoReader(video) as reader:
+            labeled_frame = reader.read_frame(5)
+            same_frame = reader.read_frame(5)
+            different_frame = reader.read_frame(6)
+        record = {"source_frame_sha256": frame_sha256(labeled_frame.pixels)}
+        verify_frame_fingerprint(record, same_frame.pixels, 5)
+        with self.assertRaisesRegex(ValueError, "fingerprint mismatch"):
+            verify_frame_fingerprint(record, different_frame.pixels, 5)
 
 
 if __name__ == "__main__":
