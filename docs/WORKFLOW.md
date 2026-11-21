@@ -409,4 +409,8 @@ Threshold-sweep dashboard loader এখন CSV-তে থাকা sampled throu
 
 ### M39: annotation window-এর idle CPU ব্যবহার কমানো
 
-একই স্থির frame প্রতি 25 ms-এ resize ও redraw না করে annotation window এখন 100 ms event-poll interval ব্যবহার করে। Still-frame review-তে এই গতি যথেষ্ট, আর idle redraw-এর CPU pressure কমার কথা; key/mouse response সর্বোচ্চ প্রায় 100 ms পিছোতে পারে। নতুন process-এ change কার্যকর হবে—আগে থেকে খোলা annotation window পুরোনো code-এই চলবে। Compile/help check pass করেছে; দীর্ঘ idle CPU ব্যবহার নতুন process-এ মাপা হয়নি।
+একই স্থির frame প্রতি 25 ms-এর বদলে 100 ms event-poll interval ব্যবহার করা হয়েছে। তবে নতুন process idle-এ frame redraw চালিয়ে যাওয়ায় প্রায় 88 wall-second-এ 34 CPU-second ব্যবহার করেছে; polling interval একা যথেষ্ট ছিল না। এ জন্য M40-এ dirty-state redraw যোগ করা হয়েছে।
+
+### M40: annotation frame শুধু পরিবর্তনে redraw
+
+Annotation viewer প্রথমে frame render করে; zoom/pan, mouse drag, label বা keyboard control বদলালে নতুন করে render করে। Idle অবস্থায় `waitKey(100)` শুধু mouse/keyboard event poll করে, full-resolution frame resize ও overlay redraw করে না। এতে static review-তে CPU pressure কমার উচিত; actual long-idle CPU measurement ও zoom/box GUI visual review বাকি। Compile/help check pass করেছে.

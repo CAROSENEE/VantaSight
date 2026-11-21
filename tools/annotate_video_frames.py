@@ -177,11 +177,12 @@ def _annotate_one(
     drag_current: tuple[int, int] | None = None
     pending_point: tuple[int, int] | None = None
     pan_start: tuple[int, int, float, float] | None = None
+    redraw_required = True
     window_name = f"VantaSight annotation - {video_name} frame {frame.index}"
 
     def mouse_callback(event: int, x: int, y: int, flags: int, _userdata: object) -> None:
         nonlocal drag_start, drag_current, pending_point, notice
-        nonlocal zoom, view_center_x, view_center_y, pan_start
+        nonlocal zoom, view_center_x, view_center_y, pan_start, redraw_required
         if event == cv2.EVENT_MOUSEWHEEL and y < display_height:
             left, top, right, bottom = view_bounds()
             anchor_x = left + x * (right - left) / display_width
@@ -198,6 +199,7 @@ def _annotate_one(
                 view_center_x = anchor_x + (0.5 - fraction_x) * next_width
                 view_center_y = anchor_y + (0.5 - fraction_y) * next_height
                 zoom = next_zoom
+                redraw_required = True
             return
         if event == cv2.EVENT_RBUTTONDOWN and zoom > 1.0:
             pan_start = (x, y, view_center_x, view_center_y)
@@ -206,6 +208,7 @@ def _annotate_one(
             left, top, right, bottom = view_bounds()
             view_center_x = pan_start[2] - (x - pan_start[0]) * (right - left) / display_width
             view_center_y = pan_start[3] - (y - pan_start[1]) * (bottom - top) / display_height
+            redraw_required = True
             return
         if event == cv2.EVENT_RBUTTONUP and pan_start is not None:
             pan_start = None
@@ -215,10 +218,12 @@ def _annotate_one(
             if active_region is None:
                 drag_start = location
                 drag_current = drag_start
+                redraw_required = True
             else:
                 pending_point = location
         elif event == cv2.EVENT_MOUSEMOVE and drag_start is not None:
             drag_current = (min(max(x, 0), display_width), min(max(y, 0), display_height))
+            redraw_required = True
         elif event == cv2.EVENT_LBUTTONUP and pending_point is not None and active_region is not None:
             if not (0 <= x < display_width and 0 <= y < display_height):
                 notice = "click inside the video frame to mark a body point"
@@ -230,8 +235,10 @@ def _annotate_one(
                 if x1 <= source_point[0] <= x2 and y1 <= source_point[1] <= y2:
                     region_points_by_box.setdefault(selected_box_index, {})[active_region] = source_point
                     notice = f"{active_region} point set for box {selected_box_index + 1}"
+                    redraw_required = True
                 else:
                     notice = "body point must be inside the selected opponent box"
+                    redraw_required = True
             pending_point = None
         elif event == cv2.EVENT_LBUTTONUP and drag_start is not None:
             end = (min(max(x, 0), display_width), min(max(y, 0), display_height))
@@ -243,8 +250,10 @@ def _annotate_one(
                 box = (box_left, box_top, box_right, box_bottom)
                 boxes.append(box)
                 status = "opponent_visible"
+                redraw_required = True
             drag_start = None
             drag_current = None
+            redraw_required = True
 
     try:
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -259,66 +268,70 @@ def _annotate_one(
     result: dict | None = None
     try:
         while True:
-            view_left, view_top, view_right, view_bottom = view_bounds()
-            canvas = cv2.resize(
-                frame.pixels[view_top:view_bottom, view_left:view_right],
-                (display_width, display_height),
-            )
-            for box in boxes:
-                cv2.rectangle(canvas, to_display(box[0], box[1]), to_display(box[2], box[3]), (40, 230, 80), 2)
-            if boxes:
-                x1, y1, x2, y2 = boxes[min(selected_box_index, len(boxes) - 1)]
-                cv2.rectangle(
-                    canvas,
-                    to_display(x1, y1),
-                    to_display(x2, y2),
-                    (255, 255, 0),
-                    3,
+            if redraw_required:
+                view_left, view_top, view_right, view_bottom = view_bounds()
+                canvas = cv2.resize(
+                    frame.pixels[view_top:view_bottom, view_left:view_right],
+                    (display_width, display_height),
                 )
-            for box_index, points in region_points_by_box.items():
-                for region_name, (px, py) in points.items():
-                    display_point = to_display(px, py)
-                    color = BODY_REGION_COLORS[region_name]
-                    cv2.drawMarker(canvas, display_point, color, cv2.MARKER_CROSS, 14, 2)
-                    cv2.putText(canvas, region_name, (display_point[0] + 7, max(14, display_point[1] - 6)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1, cv2.LINE_AA)
-            if drag_start is not None and drag_current is not None:
-                cv2.rectangle(canvas, drag_start, drag_current, (0, 220, 255), 2)
+                for box in boxes:
+                    cv2.rectangle(canvas, to_display(box[0], box[1]), to_display(box[2], box[3]), (40, 230, 80), 2)
+                if boxes:
+                    x1, y1, x2, y2 = boxes[min(selected_box_index, len(boxes) - 1)]
+                    cv2.rectangle(
+                        canvas,
+                        to_display(x1, y1),
+                        to_display(x2, y2),
+                        (255, 255, 0),
+                        3,
+                    )
+                for box_index, points in region_points_by_box.items():
+                    for region_name, (px, py) in points.items():
+                        display_point = to_display(px, py)
+                        color = BODY_REGION_COLORS[region_name]
+                        cv2.drawMarker(canvas, display_point, color, cv2.MARKER_CROSS, 14, 2)
+                        cv2.putText(canvas, region_name, (display_point[0] + 7, max(14, display_point[1] - 6)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1, cv2.LINE_AA)
+                if drag_start is not None and drag_current is not None:
+                    cv2.rectangle(canvas, drag_start, drag_current, (0, 220, 255), 2)
 
-            panel = cv2.copyMakeBorder(
-                canvas, 0, 180, 0, 0, cv2.BORDER_CONSTANT, value=(25, 25, 25)
-            )
-            status_text = status or "not labeled"
-            mode_text = f"box {selected_box_index + 1}" if active_region is None else f"{active_region} point for box {selected_box_index + 1}"
-            notice_text = notice or "draw a box or mark optional body-region points"
-            suggestion_text = (
-                f"PROVISIONAL SUGGESTIONS: {len(boxes)} box(es); inspect and confirm status"
-                if suggestion is not None
-                else ""
-            )
-            instructions = [
-                f"Review {review_position}/{review_total} | {video_name} | frame {frame.index} | "
-                f"{frame.timestamp_seconds:.3f}s | {source_width}x{source_height} | zoom {zoom:.1f}x",
-                f"Label: {status_text} | Opponent boxes: {len(boxes)} | Mode: {mode_text}",
-                f"Note: {notice_text}",
-                suggestion_text,
-                "Drag to add box. r: box mode | 1=head 2=chest 3=lower torso 4=legs, then click center inside selected box",
-                "[/] select box | y: confirm visible | n: none (clear boxes first) | u: unsure | z: undo | c: clear",
-                "Enter: save only after choosing y/n/u | q: quit | +/-: zoom | wheel: Windows zoom | right-drag: pan | 0: reset",
-            ]
-            for line_number, text in enumerate(instructions):
-                cv2.putText(
-                    panel,
-                    text,
-                    (8, display_height + 18 + line_number * 23),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.48,
-                    (235, 235, 235),
-                    1,
-                    cv2.LINE_AA,
+                panel = cv2.copyMakeBorder(
+                    canvas, 0, 180, 0, 0, cv2.BORDER_CONSTANT, value=(25, 25, 25)
                 )
-            cv2.imshow(window_name, panel)
+                status_text = status or "not labeled"
+                mode_text = f"box {selected_box_index + 1}" if active_region is None else f"{active_region} point for box {selected_box_index + 1}"
+                notice_text = notice or "draw a box or mark optional body-region points"
+                suggestion_text = (
+                    f"PROVISIONAL SUGGESTIONS: {len(boxes)} box(es); inspect and confirm status"
+                    if suggestion is not None
+                    else ""
+                )
+                instructions = [
+                    f"Review {review_position}/{review_total} | {video_name} | frame {frame.index} | "
+                    f"{frame.timestamp_seconds:.3f}s | {source_width}x{source_height} | zoom {zoom:.1f}x",
+                    f"Label: {status_text} | Opponent boxes: {len(boxes)} | Mode: {mode_text}",
+                    f"Note: {notice_text}",
+                    suggestion_text,
+                    "Drag to add box. r: box mode | 1=head 2=chest 3=lower torso 4=legs, then click center inside selected box",
+                    "[/] select box | y: confirm visible | n: none (clear boxes first) | u: unsure | z: undo | c: clear",
+                    "Enter: save only after choosing y/n/u | q: quit | +/-: zoom | wheel: Windows zoom | right-drag: pan | 0: reset",
+                ]
+                for line_number, text in enumerate(instructions):
+                    cv2.putText(
+                        panel,
+                        text,
+                        (8, display_height + 18 + line_number * 23),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.48,
+                        (235, 235, 235),
+                        1,
+                        cv2.LINE_AA,
+                    )
+                cv2.imshow(window_name, panel)
+                redraw_required = False
             key = cv2.waitKey(100) & 0xFF
+            if key != 0xFF:
+                redraw_required = True
 
             if key in LABELS:
                 status = LABELS[key]
