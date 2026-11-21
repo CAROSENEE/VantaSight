@@ -422,6 +422,11 @@ def main(argv: list[str] | None = None) -> int:
         detail.delete("1.0", "end")
         detail.insert("end", f"Frame: {frame_index}\nTimestamp: {frame_record.get('timestamp_seconds', 0):.3f}s\n")
         detail.insert("end", f"Person candidates: {len(frame_record['detections'])}\n")
+        if not frame_record["detections"]:
+            detail.insert(
+                "end",
+                "The model returned no person candidates for this sample; this does not prove no enemy is present.\n",
+            )
         for item in frame_record["detections"]:
             velocity = item.get("velocity_xy_pixels_per_second")
             speed = "unavailable" if velocity is None else f"({velocity[0]:.1f}, {velocity[1]:.1f}) px/s"

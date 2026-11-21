@@ -582,3 +582,7 @@ Annotation tool-এ `--dry-run` যোগ হয়েছে: shortlist fingerprint
 ### M83: sampled report-এ candidate-শূন্য gap summary
 
 `summarize_zero_candidate_runs()` sampled frame-এ model-এর detection শূন্য থাকার সংখ্যা, অনুপাত, run-সংখ্যা এবং দীর্ঘতম adjacent run-এর frame/timestamp হিসাব করে। Dashboard-এ এই তথ্য person-candidate output হিসেবে দেখানো হয় এবং warning-এ বলা হয়, candidate না পাওয়া enemy অনুপস্থিতির প্রমাণ নয়। Dense `vd-1` report-এর 236 sample-এ 27টি candidate-শূন্য sample (11.4%), 15টি আলাদা run; দীর্ঘতম run 10 sample, frame 3570–3840 (29.75–32.0s)। এটি detector miss, inference cadence বা game scene—কোন কারণে হয়েছে তা একা নির্ধারণ করে না। বর্তমান dense JSON দিয়ে summary function চালিয়ে ফল পেয়েছি; dashboard GUI-তে নতুন লাইন দেখা যাচাই হয়নি, test suite চালানো হয়নি।
+
+### M84: zero-candidate frame-এর detail সতর্কতা
+
+Dashboard-এ কোনো sampled frame-এ detection না থাকলে detail panel এখন জানায় যে model person candidate ফেরায়নি এবং এটিকে enemy অনুপস্থিতির প্রমাণ ধরা যাবে না। README-তেও individual-frame caveat যোগ হয়েছে। `git diff --check` clean; dashboard GUI-তে text wrap বা দৃশ্যমানতা যাচাই হয়নি, test suite-ও চালানো হয়নি।
