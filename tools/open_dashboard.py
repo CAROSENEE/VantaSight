@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 from datetime import datetime
 from pathlib import Path
 import queue
@@ -512,6 +513,28 @@ def main(argv: list[str] | None = None) -> int:
         if alignment_enabled.get() and not pose_enabled.get():
             messagebox.showerror("Alignment setting", "Enable body-region estimation before measuring alignment.", parent=root)
             return
+        crosshair_text = crosshair_entry.get().strip()
+        crosshair_xy: tuple[float, float] | None = None
+        if crosshair_text:
+            if not alignment_enabled.get():
+                messagebox.showerror(
+                    "Crosshair reference",
+                    "Enable alignment measurement before entering custom coordinates.",
+                    parent=root,
+                )
+                return
+            try:
+                coordinates = tuple(float(part.strip()) for part in crosshair_text.split(","))
+            except ValueError:
+                coordinates = ()
+            if len(coordinates) != 2 or not all(math.isfinite(value) for value in coordinates):
+                messagebox.showerror(
+                    "Crosshair reference",
+                    "Enter two finite source-pixel coordinates as x,y.",
+                    parent=root,
+                )
+                return
+            crosshair_xy = (coordinates[0], coordinates[1])
 
         if is_image:
             metadata_image = cv2.imread(str(media_to_analyze))
@@ -532,6 +555,13 @@ def main(argv: list[str] | None = None) -> int:
             metadata_capture.release()
             duration = count / fps if fps > 0 else 0
             media_details.set(f"Selected: {media_to_analyze.name} | {width}×{height} | {fps:.2f} FPS | {duration:.1f}s")
+        if crosshair_xy is not None and not (0 <= crosshair_xy[0] <= width and 0 <= crosshair_xy[1] <= height):
+            messagebox.showerror(
+                "Crosshair reference",
+                f"Coordinates must be within this {width}×{height} source frame.",
+                parent=root,
+            )
+            return
 
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         report_output = (Path("reports") / f"{media_to_analyze.stem}_{stamp}_{'image' if is_image else 'tracks'}.json").resolve()
@@ -558,6 +588,8 @@ def main(argv: list[str] | None = None) -> int:
             command.append("--estimate-body-regions")
         if alignment_enabled.get():
             command.append("--measure-alignment")
+        if crosshair_xy is not None:
+            command.extend(("--crosshair", f"{crosshair_xy[0]},{crosshair_xy[1]}"))
         if preserve_resolution_enabled.get():
             command.append("--preserve-source-resolution")
 
@@ -633,7 +665,10 @@ def main(argv: list[str] | None = None) -> int:
     alignment_enabled = tk.BooleanVar(value=False)
     preserve_resolution_enabled = tk.BooleanVar(value=False)
     ttk.Checkbutton(analysis_controls, text="Estimate body regions (slower)", variable=pose_enabled).pack(anchor="w")
-    ttk.Checkbutton(analysis_controls, text="Measure frame-center alignment", variable=alignment_enabled).pack(anchor="w")
+    ttk.Checkbutton(analysis_controls, text="Measure crosshair alignment", variable=alignment_enabled).pack(anchor="w")
+    ttk.Label(analysis_controls, text="Crosshair x,y (source pixels; blank uses frame center)").pack(anchor="w", pady=(4, 0))
+    crosshair_entry = ttk.Entry(analysis_controls, width=16)
+    crosshair_entry.pack(anchor="w", pady=(2, 5))
     ttk.Checkbutton(analysis_controls, text="Preserve source resolution (higher memory)", variable=preserve_resolution_enabled).pack(anchor="w")
     analyze_button = ttk.Button(analysis_controls, text="Choose image or video…", command=analyze_another_media)
     analyze_button.pack(fill="x", pady=(6, 2))

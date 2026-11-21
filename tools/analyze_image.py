@@ -15,7 +15,7 @@ from vantasight.analytics import (
     summarize_distribution,
     write_tracking_report,
 )
-from vantasight.cli import IMAGE_SUFFIXES, _load_excluded_regions
+from vantasight.cli import IMAGE_SUFFIXES, _load_excluded_regions, _parse_point
 from vantasight.input import file_sha256, load_image
 from vantasight.vision import TorchvisionBodyRegionEstimator, TorchvisionPersonDetector
 
@@ -29,6 +29,7 @@ def main() -> int:
     parser.add_argument("--preserve-source-resolution", action="store_true", help="Disable model-side resizing for this image (higher memory use)")
     parser.add_argument("--estimate-body-regions", action="store_true")
     parser.add_argument("--measure-alignment", action="store_true")
+    parser.add_argument("--crosshair", type=_parse_point, help="Reference point in source pixels as x,y")
     parser.add_argument("--keypoint-score-threshold", type=float, default=0.0)
     parser.add_argument("--pose-person-threshold", type=float, default=0.25)
     parser.add_argument("--pose-match-iou-threshold", type=float, default=0.10)
@@ -54,6 +55,8 @@ def main() -> int:
         parser.error("--pose-match-iou-threshold must be greater than 0 and at most 1")
     if args.measure_alignment and not args.estimate_body_regions:
         parser.error("--measure-alignment requires --estimate-body-regions")
+    if args.crosshair is not None and not args.measure_alignment:
+        parser.error("--crosshair requires --measure-alignment")
     if csv_path.resolve() == json_path.resolve():
         parser.error("--output and --json-output must use different file paths")
 
@@ -100,7 +103,15 @@ def main() -> int:
             iou_threshold=args.pose_match_iou_threshold,
         ) if pose_estimator else {}
 
-        reference_xy = center_crosshair(width, height) if args.measure_alignment else None
+        reference_xy = (
+            (args.crosshair or center_crosshair(width, height))
+            if args.measure_alignment
+            else None
+        )
+        if reference_xy is not None and not (
+            0 <= reference_xy[0] <= width and 0 <= reference_xy[1] <= height
+        ):
+            raise ValueError("Crosshair coordinates must lie inside the source image")
         detection_records: list[dict] = []
         detector_scores = [item.confidence for item in detections]
         rows: list[dict] = []
