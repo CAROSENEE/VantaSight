@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
+import queue
+import subprocess
+import sys
+import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, messagebox, ttk
 
 import cv2
 import numpy as np
@@ -14,13 +19,13 @@ from vantasight.dashboard import load_tracking_report, summarize_alignment_error
 from vantasight.dashboard.evaluation_summary import load_detector_evaluation, load_pose_evaluation
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Open a saved offline VantaSight tracking report.")
     parser.add_argument("report", type=Path, nargs="?", default=Path("reports/tracks.json"))
     parser.add_argument("--video", type=Path, help="Source video; defaults to data/input/videos/<report source>")
     parser.add_argument("--detector-evaluation", type=Path, help="Optional manual-label detector CSV")
     parser.add_argument("--pose-evaluation", type=Path, help="Optional manual-point pose CSV")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     report_path = args.report.expanduser()
     try:
@@ -117,6 +122,8 @@ def main() -> int:
     body.add(side_panel, weight=1)
     canvas = tk.Canvas(image_panel, background="#141820", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
+    analysis_controls = ttk.LabelFrame(side_panel, text="Analyze a local video", padding=8)
+    analysis_controls.pack(fill="x", pady=(0, 10))
 
     ttk.Label(side_panel, text="Sampled frames", font=("Segoe UI", 11, "bold")).pack(anchor="w")
     frame_list = tk.Listbox(side_panel, exportselection=False, height=18)
@@ -134,6 +141,10 @@ def main() -> int:
     displayed_photo: tk.PhotoImage | None = None
     playback_after_id: str | None = None
     playback_running = False
+    analysis_results: queue.Queue[tuple[int, str, Path, Path]] = queue.Queue()
+    analysis_process: dict[str, subprocess.Popen[str] | None] = {"process": None}
+    analysis_cancel = threading.Event()
+    reopen_dashboard: tuple[Path, Path] | None = None
 
     def show_frame(index: int) -> None:
         nonlocal current_index, displayed_photo
@@ -251,8 +262,140 @@ def main() -> int:
 
     def close_dashboard() -> None:
         stop_playback()
+        analysis_cancel.set()
+        if analysis_process["process"] is not None and analysis_process["process"].poll() is None:
+            try:
+                analysis_process["process"].terminate()
+            except OSError:
+                pass
         capture.release()
         root.destroy()
+
+    def poll_analysis() -> None:
+        nonlocal reopen_dashboard
+        try:
+            return_code, output, selected_video, new_report = analysis_results.get_nowait()
+        except queue.Empty:
+            root.after(150, poll_analysis)
+            return
+        analysis_process["process"] = None
+        analyze_button.configure(state="normal")
+        cancel_button.configure(state="disabled")
+        if return_code == 0 and new_report.is_file():
+            analysis_status.set(f"Analysis complete. Opening {new_report.name}…")
+            reopen_dashboard = (new_report, selected_video)
+            capture.release()
+            root.destroy()
+        elif analysis_cancel.is_set():
+            analysis_status.set("Analysis cancelled.")
+            messagebox.showinfo("VantaSight", "Offline analysis was cancelled. No report was opened.", parent=root)
+        else:
+            analysis_status.set("Analysis failed. See the message for the runner output.")
+            messagebox.showerror(
+                "Analysis failed",
+                (output.strip() or "The offline analysis runner returned an error.")[-5000:],
+                parent=root,
+            )
+
+    def analyze_another_video() -> None:
+        selected = filedialog.askopenfilename(
+            parent=root,
+            title="Select a recorded video for offline analysis",
+            filetypes=[("Video files", "*.mp4 *.mkv *.mov *.avi *.webm"), ("All files", "*.*")],
+        )
+        if not selected:
+            return
+        video_to_analyze = Path(selected).resolve()
+        frame_step_text = frame_step_entry.get().strip()
+        try:
+            frame_step = int(frame_step_text)
+            if frame_step < 1:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Invalid sampling interval", "Frame step must be a positive whole number.", parent=root)
+            return
+        if alignment_enabled.get() and not pose_enabled.get():
+            messagebox.showerror("Alignment setting", "Enable body-region estimation before measuring alignment.", parent=root)
+            return
+
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        report_output = (Path("reports") / f"{video_to_analyze.stem}_{stamp}_tracks.json").resolve()
+        csv_output = report_output.with_suffix(".csv")
+        runner = Path(__file__).resolve().parent / "track_video.py"
+        command = [
+            sys.executable,
+            str(runner),
+            str(video_to_analyze),
+            "--frame-step",
+            str(frame_step),
+            "--output",
+            str(csv_output),
+            "--json-output",
+            str(report_output),
+        ]
+        if pose_enabled.get():
+            command.append("--estimate-body-regions")
+        if alignment_enabled.get():
+            command.append("--measure-alignment")
+
+        analysis_cancel.clear()
+        analyze_button.configure(state="disabled")
+        cancel_button.configure(state="normal")
+        analysis_status.set(f"Analyzing {video_to_analyze.name} offline…")
+
+        def run_worker() -> None:
+            process: subprocess.Popen[str] | None = None
+            output = ""
+            return_code = 1
+            try:
+                process = subprocess.Popen(
+                    command,
+                    cwd=Path(__file__).resolve().parents[1],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+                analysis_process["process"] = process
+                while True:
+                    if analysis_cancel.is_set() and process.poll() is None:
+                        try:
+                            process.terminate()
+                        except OSError:
+                            pass
+                    try:
+                        output, _ = process.communicate(timeout=0.2)
+                        return_code = process.returncode
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
+            except OSError as exc:
+                output = str(exc)
+            analysis_results.put((return_code, output, video_to_analyze, report_output))
+
+        threading.Thread(target=run_worker, name="vantasight-offline-analysis", daemon=True).start()
+        root.after(150, poll_analysis)
+
+    def cancel_analysis() -> None:
+        analysis_cancel.set()
+        cancel_button.configure(state="disabled")
+        analysis_status.set("Stopping offline analysis…")
+
+    ttk.Label(analysis_controls, text="Analyze every N source frames").pack(anchor="w")
+    frame_step_entry = ttk.Entry(analysis_controls, width=10)
+    frame_step_entry.insert(0, "30")
+    frame_step_entry.pack(anchor="w", pady=(2, 5))
+    pose_enabled = tk.BooleanVar(value=False)
+    alignment_enabled = tk.BooleanVar(value=False)
+    ttk.Checkbutton(analysis_controls, text="Estimate body regions (slower)", variable=pose_enabled).pack(anchor="w")
+    ttk.Checkbutton(analysis_controls, text="Measure frame-center alignment", variable=alignment_enabled).pack(anchor="w")
+    analyze_button = ttk.Button(analysis_controls, text="Choose video and analyze…", command=analyze_another_video)
+    analyze_button.pack(fill="x", pady=(6, 2))
+    cancel_button = ttk.Button(analysis_controls, text="Cancel analysis", command=cancel_analysis, state="disabled")
+    cancel_button.pack(fill="x")
+    analysis_status = tk.StringVar(value="Analysis reads only the selected local recording.")
+    ttk.Label(analysis_controls, textvariable=analysis_status, wraplength=250).pack(anchor="w", pady=(5, 0))
 
     frame_list.bind("<<ListboxSelect>>", on_select)
     controls = ttk.Frame(image_panel, padding=(0, 8, 0, 0))
@@ -269,6 +412,9 @@ def main() -> int:
     show_frame(0)
     root.protocol("WM_DELETE_WINDOW", close_dashboard)
     root.mainloop()
+    if reopen_dashboard is not None:
+        next_report, next_video = reopen_dashboard
+        return main([str(next_report), "--video", str(next_video)])
     return 0
 
 
