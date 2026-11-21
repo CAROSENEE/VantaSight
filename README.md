@@ -79,6 +79,24 @@ Annotated previews go to `data/previews/` by default. `--max-side` controls inte
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the step-by-step roadmap, current progress, and plain-language notes about each component.
 
+## Manually label opponent boxes
+
+Use the local annotation tool to create review labels for selected recorded-video frames:
+
+```powershell
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600
+```
+
+The preview is scaled only to fit the window; saved boxes use the original video pixel coordinates. Drag around each visible in-world opponent. Do not label the streamer inset, teammates, first-person hands/weapons, HUD, or replay silhouettes as opponents. Use `u` if the frame is ambiguous. Press `y` to mark an opponent visible, `n` for none visible, and `Enter` to save and continue. Use `z` to undo the latest box, `c` to clear, and `q` to stop; saved rows remain. Labels append to the local, Git-ignored `data/annotations/manual_enemy_boxes.jsonl` file.
+
+After labeling, calculate offline detection metrics with:
+
+```powershell
+python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-threshold 0.25 --iou-threshold 0.50
+```
+
+The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
+
 ## Current scope
 
 - PNG, JPEG, BMP, and WebP screenshots

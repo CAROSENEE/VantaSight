@@ -35,7 +35,7 @@
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-এখনো detector, body-region model, tracker, alignment calculation বা dashboard তৈরি হয়নি।
+Enemy box হাতে label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` যোগ করা হয়েছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হবে। Annotation GUI-নির্ভর; এই সেশনে key/mouse দিয়ে পাঁচটি frame label করা হয়নি, তাই ground-truth box ও metric এখনো তৈরি হয়নি। এখনো body-region model, tracker, alignment calculation বা dashboard তৈরি হয়নি।
 
 ## কাজের roadmap
 
@@ -44,7 +44,7 @@
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | দুই screenshot ও `vd-1`-এর 5টি frame review হয়েছে; আরও বিস্তৃত review বাকি |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | label ও metric tool তৈরি; পাঁচটি frame-এর ground-truth label বাকি |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Confidence-সহ region estimate | শুরু হয়নি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | শুরু হয়নি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | শুরু হয়নি |
@@ -122,6 +122,26 @@ Model image-কে ভিতরে resize করতে পারে, কিন�
 
 বর্তমান baseline COCO dataset-এর ordinary-person example-এ প্রশিক্ষিত; Valorant footage-এর জন্য তৈরি নয়। তাই result কেবল candidate—miss ও false positive হাতে পর্যালোচনা করতে হবে। Weight ও license detail: [MODEL_CARDS.md](MODEL_CARDS.md)।
 
+## M4: opponent box হাতে label করা
+
+Ground-truth box তৈরি করতে local desktop-এ চালাও:
+
+```powershell
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600
+```
+
+Window-তে mouse টেনে প্রতিটি দৃশ্যমান in-world opponent-কে box করো। `y` = opponent দেখা যাচ্ছে, `n` = opponent দেখা যাচ্ছে না, `u` = নিশ্চিত নও, `Enter` = save করে পরের frame, `z` = শেষ box undo, `c` = frame-এর box মুছে ফেলা, `q` = বন্ধ করা। Box মূল video resolution-এর pixel coordinate-এ save হয়; preview ছোট করা হলেও input frame বদলায় না। Streamer inset, teammate, নিজের first-person হাত/অস্ত্র, HUD বা replay silhouette-কে opponent box করবে না।
+
+প্রতিটি frame নিশ্চিত করে save করলে annotation `data/annotations/manual_enemy_boxes.jsonl`-এ append হবে; আগে save করা frame আবার skip হবে। Output file Git-ignored এবং source video-ও পরিবর্তিত হয় না।
+
+Label করার পর metric চালাও:
+
+```powershell
+python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-threshold 0.25 --iou-threshold 0.50
+```
+
+Evaluator এক frame-এর detector box ও hand-labeled opponent box-কে one-to-one IoU overlap দিয়ে মেলায়। Uncertain frame বাদ পড়ে; CSV `reports/detector_evaluation.csv`-এ যায়। Label file তৈরি না হওয়া পর্যন্ত metric বানানো হবে না, আর threshold comparison-কে ground-truth evaluation বলা যাবে না।
+
 ## ছবি ও ভিডিও GitHub-এ যাবে কি?
 
 `data/input/screenshots/` এবং `data/input/videos/`-এর media Git ignore করা আছে। তাই স্বাভাবিক `git add`, commit ও push-এ ছবিগুলো বা ভিডিও GitHub-এ যাবে না। `git add -f` দিয়ে জোর করে যোগ করলে upload হতে পারে—ইচ্ছা করে না করলে এমন করবে না। `data/previews/`-এর তৈরি preview-ও Git ignore করা।
@@ -137,7 +157,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1 ও M2 সম্পন্ন। M3-এর detector পাঁচটি নির্বাচিত video frame-এ চালানো ও হাতে review করা হয়েছে: দূরের opponent ধরা পড়েছে, তবে first-person arm/weapon, artwork ও সরে যাওয়া overlay-এ false positive অনেক। Confidence threshold বাড়ালে কিছু ভুল কমে, কিন্তু দূরের ছোট opponent-ও বাদ যায়। পরের ধাপ হবে আরও representative frame-এ opponent box হাতে label করে Valorant footage-এ detector মূল্যায়ন/উন্নতির উপযোগী training sample তৈরি করা। বর্তমান model COCO `person` model, Valorant enemy model নয়; তাই এর ফলকে accuracy হিসেবে ধরা যাবে না।
+M1 ও M2 সম্পন্ন। M3-এর detector পাঁচটি নির্বাচিত video frame-এ চালানো ও হাতে review করা হয়েছে; threshold বাড়ালে দূরের ছোট opponent বাদ পড়ে। M4-এর annotation ও evaluation tools তৈরি হয়েছে, কিন্তু GUI-তে label এখনো save করা হয়নি। পরের কাজ: উপরের command চালিয়ে পাঁচটি frame label করা, তারপর evaluator চালানো। বর্তমান model COCO `person` model, Valorant enemy model নয়; তাই হাতে label ছাড়া এর ফলকে accuracy বলা যাবে না।
 
 ## ভাষার নিয়ম
 
