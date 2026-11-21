@@ -12,6 +12,7 @@ class _TrackState:
     center_xy: tuple[float, float]
     last_frame_index: int
     last_timestamp_seconds: float
+    velocity_xy_pixels_per_second: tuple[float, float] | None = None
     missed_updates: int = 0
 
 
@@ -38,6 +39,18 @@ def _iou(first: tuple[int, int, int, int], second: tuple[int, int, int, int]) ->
     return intersection / union if union else 0.0
 
 
+def _predicted_box(track: _TrackState, timestamp_seconds: float) -> tuple[int, int, int, int]:
+    """Translate the last observed box by its velocity for short-gap matching."""
+
+    velocity = track.velocity_xy_pixels_per_second
+    elapsed = timestamp_seconds - track.last_timestamp_seconds
+    if velocity is None or elapsed <= 0:
+        return track.box_xyxy
+    dx, dy = velocity[0] * elapsed, velocity[1] * elapsed
+    x1, y1, x2, y2 = track.box_xyxy
+    return round(x1 + dx), round(y1 + dy), round(x2 + dx), round(y2 + dy)
+
+
 class IoUTracker:
     """Associate nearby boxes over time; IDs are temporary and not identity claims."""
 
@@ -60,9 +73,13 @@ class IoUTracker:
         """Match this frame's detections and estimate center velocity in px/s."""
 
         track_ids = list(self._tracks)
+        predicted_boxes = {
+            track_id: _predicted_box(self._tracks[track_id], timestamp_seconds)
+            for track_id in track_ids
+        }
         pairs = sorted(
             (
-                (_iou(self._tracks[track_id].box_xyxy, detection.box_xyxy), track_id, index)
+                (_iou(predicted_boxes[track_id], detection.box_xyxy), track_id, index)
                 for track_id in track_ids
                 for index, detection in enumerate(detections)
             ),
@@ -88,6 +105,7 @@ class IoUTracker:
                     (current_center[0] - track.center_xy[0]) / delta_t,
                     (current_center[1] - track.center_xy[1]) / delta_t,
                 )
+                track.velocity_xy_pixels_per_second = velocity
             assignments[detection_index] = (track_id, velocity)
             matched_tracks.add(track_id)
             matched_detections.add(detection_index)
