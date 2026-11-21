@@ -192,7 +192,7 @@ Saved JSON report ও তার source video দেখতে:
 python tools/open_dashboard.py reports/tracks.json
 ```
 
-Dashboard sampled frame-এর তালিকা দেয়; frame নির্বাচন করলে local video থেকে ওই frame পড়ে JSON report-এর candidate box/temporary ID এবং থাকলে pose-region/alignment overlay আঁকে। পাশে timestamp, detector score, box coordinate ও image-plane velocity দেখা যায়। Header-এ analysis throughput ও region অনুযায়ী alignment error-এর median/p95 থাকে। `reports/detector_evaluation.csv` ও `reports/pose_region_evaluation.csv` থাকলে একই video-র precision/recall/F1 এবং region coverage/error-ও দেখায়। অন্য folder-এর video হলে `--video path\to\clip.mp4` দাও। Dashboard live screen/game capture করে না। এই environment থেকে Windows window-তে click করে visual review করা যায়নি; স্থানীয় desktop-এ চালিয়ে UI layout দেখে নিতে হবে।
+Dashboard sampled frame-এর তালিকা দেয়; frame নির্বাচন করলে local video থেকে ওই frame পড়ে JSON report-এর candidate box/temporary ID এবং থাকলে pose-region/alignment overlay আঁকে। পাশে timestamp, detector score, box coordinate ও image-plane velocity দেখা যায়। Header-এ analysis throughput ও region অনুযায়ী alignment error-এর median/p95 থাকে। Detector/pose evaluation CSV default-এ load হয় না; user-verified label report থাকলে আলাদা করে `--detector-evaluation` বা `--pose-evaluation` দিয়ে দিতে হয়। Confidence sweep ও IoU/AP report-ও explicit path দিয়ে দিতে হয়। অন্য folder-এর video হলে `--video path\to\clip.mp4` দাও। Dashboard live screen/game capture করে না। এই environment থেকে Windows window-তে click করে visual review করা যায়নি; স্থানীয় desktop-এ চালিয়ে UI layout দেখে নিতে হবে।
 
 ### M10: sampled-frame playback control
 
@@ -289,7 +289,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M73)
+## বর্তমান অবস্থান (M74)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -535,3 +535,9 @@ Ignored `reports/VantaSight Dashboard Review.lnk` COM properties পড়ে দ�
 ### M73: unverified annotation ও metric পরিষ্কার
 
 User নিশ্চিত করেছেন যে annotation window তিনি দেখেননি। তাই `vd-1`-এর provisional JSONL-কে annotation হিসেবে গণ্য করা ভুল; user-confirmed label বা metric নেই। Git-ignored `data/annotations/vd-1_provisional_review.jsonl` এবং তার সঙ্গে মিলে থাকা 10টি provisional/recheck CSV report local machine থেকে সরানো হয়েছে। `vd-1_frame_review.csv` ও `vd-1_threshold_comparison.csv`-এর unverified classification-ও মুছে ফেলা হয়েছে। Workflow-র পুরোনো threshold table, provisional score এবং hand-review classification দাবিগুলো প্রত্যাহার করে বর্তমান অবস্থাকে পরিষ্কার করা হয়েছে। এই পরিবর্তন কেবল unverified artifact/দাবি মুছে; কোনো নতুন annotation, detector evaluation বা accuracy result তৈরি করেনি। `git diff --check` দিয়ে whitespace যাচাই করে তারপর docs-only change commit/push করা হবে.
+
+### M74: dashboard যেন নিজে থেকে evaluation CSV না তোলে
+
+চালু থাকা পুরোনো dashboard window-তে coarse `vd-1` report-এর পাশে `unreviewed_exploratory` AP ও threshold result দেখা গেছে। এগুলো আগের unverified label থেকে তৈরি; accuracy হিসেবে ব্যবহার করা যাবে না। Code audit-এ পাওয়া গেছে যে dashboard command-এ evaluation path না দিলেও `reports/detector_evaluation.csv` ও `reports/pose_region_evaluation.csv` নামে local file থাকলে সেগুলো auto-load হতো। `tools/open_dashboard.py`-তে এই default loading সরিয়ে এখন detector/pose CSV কেবল explicit `--detector-evaluation` / `--pose-evaluation` path দিলে load হয়। README ও M8-ও সেই নিয়ম জানায়; dense dashboard batch launcher কোনো evaluation CSV path দেয় না।
+
+বর্তমান খোলা window পুরোনো process/report; এই code change সেটির in-memory display বদলায় না। Computer-use refresh-এর সময় window-তে user input শনাক্ত হওয়ায় আর UI action করিনি। ফলে updated dense report-এর visible window ও playback এখনও verify হয়নি। `git diff --check` clean; test চালানো হয়নি।

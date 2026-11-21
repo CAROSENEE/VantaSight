@@ -65,10 +65,16 @@ def main(argv: list[str] | None = None) -> int:
         frames = report["frames"]
         if not frames:
             raise ValueError("This report has no sampled frames to display")
-        detector_eval_path = args.detector_evaluation or Path("reports/detector_evaluation.csv")
-        pose_eval_path = args.pose_evaluation or Path("reports/pose_region_evaluation.csv")
-        detector_evaluation = load_detector_evaluation(detector_eval_path, report["source"]["file_name"])
-        pose_evaluation = load_pose_evaluation(pose_eval_path, report["source"]["file_name"])
+        detector_evaluation = (
+            load_detector_evaluation(args.detector_evaluation.expanduser(), report["source"]["file_name"])
+            if args.detector_evaluation
+            else None
+        )
+        pose_evaluation = (
+            load_pose_evaluation(args.pose_evaluation.expanduser(), report["source"]["file_name"])
+            if args.pose_evaluation
+            else None
+        )
         threshold_sweep = (
             load_threshold_sweep(
                 args.threshold_sweep.expanduser(), report["source"]["file_name"],
