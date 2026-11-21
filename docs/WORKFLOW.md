@@ -568,3 +568,7 @@ Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py repo
 ### M80: shortlist CSV থেকে সরাসরি annotation frame নেওয়া
 
 `tools/annotate_video_frames.py`-তে `--shortlist-csv` যোগ হয়েছে। Tool CSV থেকে unique, non-negative frame index নেয় এবং annotation window খোলার আগে `source_video` নাম ও source video-র SHA-256 মিলিয়ে দেখে; অন্য video বা বদলে যাওয়া source-এর shortlist reject হয়। পুরোনো `--frames` command-ও রাখা হয়েছে; দুটির মধ্যে একটিই দিতে হবে। `tools/start_vd1_annotation.bat` `reports/vd-1_manual_review_shortlist.csv`-কে input করে, file না থাকলে dense report-থেকে shortlist বানানোর command দেখায়। README ও workflow-তে CSV-ভিত্তিক command update হয়েছে। বর্তমান `vd-1.mp4` ও shortlist CSV দিয়ে source-fingerprint validation চালিয়ে প্রত্যাশিত 12টি index পেয়েছি; CLI help-এ mutually exclusive input দুটিও দেখা গেছে। GUI runtime চালানো হয়নি, কোনো annotation file লেখা হয়নি, test suite চালানো হয়নি।
+
+### M81: annotation launcher-এ shortlist auto-generation
+
+Windows launcher আগে CSV না পেলে শুধু তৈরির নির্দেশ দিত। এখন dense tracking report পাওয়া গেলে launch-এর সময় `create_review_shortlist.py` চালিয়ে স্থানীয় CSV তৈরি করে; dense report না থাকলে প্রয়োজনীয় tracking command console-এ দেখিয়ে থামে। এরপর annotation tool CSV-এর source fingerprint validate করে। README-তে নতুন আচরণ লেখা হয়েছে। Batch launcher run বা GUI open করা হয়নি; test suite চালানো হয়নি।

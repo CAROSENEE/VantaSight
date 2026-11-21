@@ -2,36 +2,41 @@
 setlocal
 cd /d "%~dp0\.."
 
-if not exist ".venv\Scripts\python.exe" (
+set "PYTHON=.venv\Scripts\python.exe"
+set "VIDEO=data\input\videos\vd-1.mp4"
+set "REPORT=reports\vd-1_dashboard_tracks_dense.json"
+set "SHORTLIST=reports\vd-1_manual_review_shortlist.csv"
+
+if not exist "%PYTHON%" (
     echo VantaSight virtual environment not found.
     echo Create it and install the project dependencies first.
     pause
     exit /b 1
 )
 
-if not exist "data\input\videos\vd-1.mp4" (
-    echo data\input\videos\vd-1.mp4 was not found.
+if not exist "%VIDEO%" (
+    echo %VIDEO% was not found.
     echo Put the local video in that folder, then run this launcher again.
     pause
     exit /b 1
 )
 
-if not exist "reports\vd-1_manual_review_shortlist.csv" (
-    if not exist "reports\vd-1_dashboard_tracks_dense.json" (
-        echo reports\vd-1_dashboard_tracks_dense.json was not found. Generate the dense tracking report first.
+if not exist "%SHORTLIST%" (
+    if not exist "%REPORT%" (
+        echo %REPORT% was not found. Generate the dense tracking report first:
+        echo .venv\Scripts\python.exe tools\track_video.py "data\input\videos\vd-1.mp4" --frame-step 30 --preserve-source-resolution --output reports\vd-1_dashboard_tracks_dense.csv --json-output reports\vd-1_dashboard_tracks_dense.json
         pause
         exit /b 1
     )
-    echo reports\vd-1_manual_review_shortlist.csv was not found. Generate it from the dense report:
-    echo .venv\Scripts\python.exe tools\create_review_shortlist.py reports\vd-1_dashboard_tracks_dense.json --output reports\vd-1_manual_review_shortlist.csv
-    pause
-    exit /b 1
+    echo Creating the local review shortlist from %REPORT%...
+    "%PYTHON%" "tools\create_review_shortlist.py" "%REPORT%" --output "%SHORTLIST%"
+    if errorlevel 1 goto finish
 )
 
 echo Starting a blank manual review. No provisional boxes will be loaded.
 echo Look for a window titled "VantaSight annotation - vd-1.mp4 frame ...".
 echo If the window does not appear, keep this console open and read any error below.
-".venv\Scripts\python.exe" "tools\annotate_video_frames.py" "data\input\videos\vd-1.mp4" --shortlist-csv "reports\vd-1_manual_review_shortlist.csv" --output "data\annotations\vd-1_user_verified.jsonl" --keep-on-top
+"%PYTHON%" "tools\annotate_video_frames.py" "%VIDEO%" --shortlist-csv "%SHORTLIST%" --output "data\annotations\vd-1_user_verified.jsonl" --keep-on-top
 
 if errorlevel 1 (
     echo.
