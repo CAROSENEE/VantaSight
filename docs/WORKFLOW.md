@@ -207,16 +207,18 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 
 ### M12: video annotation — এখনো সম্পন্ন হয়নি
 
-কোনো annotation window user-এর কাছে দেখা যায়নি; কোনো video frame-এর label-ও user confirm করেননি। আগের provisional rows এবং সেগুলো থেকে বানানো detector metric তাই ভুয়া ground truth হিসেবে প্রত্যাহার; unverified label ও derived report local folder থেকে মুছে ফেলা হয়েছে। Annotation tool-এর code বা command থাকা মানে annotation হওয়া নয়। User পরে করবেন বলেছেন, তাই এখন annotation tool launch বা evaluator চালানো হচ্ছে না।
+কোনো annotation window user-এর কাছে দেখা যায়নি; কোনো video frame-এর label-ও user confirm করেননি। আগের provisional rows এবং সেগুলো থেকে বানানো detector metric তাই ground truth হিসেবে বাতিল; unverified label ও derived report local folder থেকে মুছে ফেলা হয়েছে। Annotation tool-এর code বা command থাকা মানে annotation হওয়া নয়। User আগে review পরে করতে বলেছেন, তাই frame review বা evaluator চালানো হয়নি।
 
-User প্রস্তুত হয়ে annotation window নিজে দেখতে পারলে তখন blank review থেকে শুরু করবেন:
+Windows-এ browser gallery নিজে খুলতে `tools/start_vd1_review_gallery.bat` double-click করুন। এটি current template দিয়ে gallery refresh করে তারপর browser খোলে। Frame দেখে status/box এবং চাইলে region point নিজে save করুন। Download করা JSONL validate করে canonical path-এ আনতে M98 importer ব্যবহার করুন।
+
+OpenCV annotation window ব্যবহার করতে চাইলে blank review preflight ও launcher command:
 
 ```powershell
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --dry-run
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --output data/annotations/vd-1_user_verified.jsonl
 ```
 
-Frame ধরে দেখে user নিজে visible opponent-এর box/status নিশ্চিত করে save করবেন। Window দেখা যাচ্ছে কি না নিশ্চিত না হওয়া পর্যন্ত এই ধাপ শুরু হয়েছে বলা যাবে না; verified output user-পর্যবেক্ষণ ও save ছাড়া তৈরি হয়েছে বলে ধরা যাবে না। Evaluator কেবল user review শেষ হওয়ার পর আলাদা ধাপে চালানো হবে।
+Frame ধরে দেখে user নিজে visible opponent-এর box/status নিশ্চিত করে save করবেন। Browser বা OpenCV—কোনো tool চলা মানেই label save হয়েছে নয়; verified output user observation ও Save action ছাড়া তৈরি হয়েছে বলে ধরা যাবে না। Evaluator কেবল user review শেষ হওয়ার পর আলাদা ধাপে চালানো হবে।
 ### M13: confidence-threshold sensitivity — বাতিল
 
 আগের provisional annotation দিয়ে তৈরি threshold table ও সংশ্লিষ্ট detector metric বাতিল। Annotation window user দেখেননি এবং label নিশ্চিত করেননি; তাই ওই সংখ্যাগুলো ground truth-এর সঙ্গে তুলনা নয় এবং detector performance-এর প্রমাণ নয়। সংশ্লিষ্ট local provisional label ও derived report মুছে ফেলা হয়েছে। Verified label তৈরি না হওয়া পর্যন্ত এই ধাপ অসম্পূর্ণ থাকবে; কোনো cutoff recommendation এই ফলের ওপর নির্ভর করবে না।
@@ -670,3 +672,7 @@ Video source resolution আগের মতো পূর্ণ 2560×1440 থা
 ### M97: review storage-কে নির্বাচিত sample-এর সঙ্গে বাঁধা
 
 একই source video থেকে shortlist বদলালে browser local storage-তে আগের sample-এর frame labels মিশে export হওয়ার ঝুঁকি ছিল। Storage key-তে এখন ordered frame-index তালিকাও থাকে; তাই আলাদা shortlist আলাদা review state পায়। একই video ও একই shortlist-এ launcher template refresh করলেও সংরক্ষিত manual labels browser storage-তে আগের মতোই থাকে। JSONL export-এ gallery sample-এ থাকা saved rows-ই যাবে।
+
+### M98: downloaded annotation validate করে import
+
+Browser থেকে JSONL download করার পর সঠিক annotation filename/path-এ সরাতে ভুল হতে পারে এবং ভুল video-র label evaluator-এ চলে যেতে পারে। `tools/import_review_annotations.py` এখন JSONL-কে canonical `data/annotations/<video>_user_verified.jsonl` path-এ copy করার আগে manual-review flag, non-prefilled source, shortlist-এর exact frame coverage, video SHA, decoded frame SHA, dimensions, box bounds ও optional body-point schema/bounds যাচাই করে। Existing destination overwrite করা default-ээр নিষিদ্ধ; `--replace` স্পষ্টভাবে দিতে হয়। Importer ground truth বানায় না—downloaded human-reviewed file ছাড়া কাজ করবে না.

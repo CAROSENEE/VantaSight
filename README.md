@@ -122,12 +122,18 @@ If the OpenCV annotation window is difficult to find, export a standalone browse
 python tools/export_review_gallery.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --output-dir data/previews/vd-1_review_gallery
 ```
 
-On Windows, double-click `tools/start_vd1_review_gallery.bat`. It checks the local video and virtual environment, creates the shortlist when its dense tracking report is present, refreshes the gallery from the current review template, and opens it in your default browser. If the dense report is missing, the launcher prints the command to create it. Review each frame and save it yourself, then choose **Download reviewed JSONL**. The zoom slider enlarges small targets for marking while stored box/point coordinates remain in source pixels. Optionally, select an opponent box and mark approximate head, chest, lower-torso, or legs centers for the body-region experiment. Move the downloaded `vd-1_user_verified.jsonl` into `data/annotations/` before running evaluation. The page stores saved rows in browser local storage when available; export before closing if the page reports that browser storage is unavailable. It does not access a live display, send game inputs, or use the network.
+On Windows, double-click `tools/start_vd1_review_gallery.bat`. It checks the local video and virtual environment, creates the shortlist when its dense tracking report is present, refreshes the gallery from the current review template, and opens it in your default browser. If the dense report is missing, the launcher prints the command to create it. Review each frame and save it yourself, then choose **Download reviewed JSONL**. The zoom slider enlarges small targets for marking while stored box/point coordinates remain in source pixels. Optionally, select an opponent box and mark approximate head, chest, lower-torso, or legs centers for the body-region experiment. To validate the downloaded labels and copy them to the canonical annotation path, run:
+
+```powershell
+python tools/import_review_annotations.py "data/input/videos/vd-1.mp4" "<download-folder>/vd-1_user_verified.jsonl" --shortlist-csv reports/vd-1_manual_review_shortlist.csv
+```
+
+The importer checks manual-review provenance, exact shortlist coverage, video and frame fingerprints, box bounds, and optional body points. It refuses to overwrite an existing output unless `--replace` is explicitly passed. The page stores saved rows in browser local storage when available; export before closing if the page reports that browser storage is unavailable. It does not access a live display, send game inputs, or use the network.
 
 After labeling, calculate offline detection metrics with:
 
 ```powershell
-python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-threshold 0.25 --iou-threshold 0.50
+python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --confidence-threshold 0.25 --iou-threshold 0.50
 ```
 
 For a planned frame sample, optionally require exact annotation coverage with `--expected-frames 540,1080,1650,1800,3030,3210,3840,4650,4890,4980,6090,6480`; the evaluator reports missing or extra indexes before inference.
@@ -170,7 +176,7 @@ This compares whether any person candidate was returned with the user-labeled en
 If you marked body-region points, compare the COCO pose model against them with:
 
 ```powershell
-python tools/evaluate_pose_regions.py "data/input/videos/vd-1.mp4"
+python tools/evaluate_pose_regions.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl
 ```
 
 This reports pixel and frame-normalized localization errors and coverage. Missing estimates reduce coverage; they are not assigned guessed coordinates.
