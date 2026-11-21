@@ -696,3 +696,7 @@ Gallery directory-তে `index.html`, manifest, এবং ১২টি extracte
 ### M103: motion-prediction comparison
 
 একই `vd-1` SHA-256, source-resolution mode, 30-frame step, confidence `0.25`, IoU `0.30`, 236 sampled frame ও 816 candidate detection-এ baseline-এ 386 temporary track/256 single-observation track পাওয়া গেছে। Velocity prediction-কে gap-এর বাইরেও ব্যবহার করা exploratory run-এ 406/257; gap-only run-এ 391/257। Candidate-track count ground truth metric নয়, gap-only result-ও continuity উন্নতির প্রমাণ দেয়নি। তাই motion prediction opt-in, default off রাখা হয়েছে। Video label ছাড়া এই comparison থেকে tracking accuracy বা opponent identity সম্পর্কে সিদ্ধান্ত নেওয়া যাবে না। Reports local ignored `reports/` directory-তে আছে; test suite চালানো হয়নি।
+
+### M104: opt-in tracking CLI run
+
+`tools/track_video.py`-তে `--predict-after-missed-updates` দিয়ে `vd-1` আবার চালিয়েছি। JSON report-এ source SHA-256 `3917b7d5…`, `settings.predict_after_missed_updates: true`, 236 sampled frame, 816 detection, 391 temporary track ও 257 single-observation track লেখা হয়েছে। Run প্রায় 139.0 সেকেন্ডে শেষ হয়েছে (1.698 sampled frame/s); ফলাফল `reports/vd-1_motion_predicted_tracks_optin.json` এবং CSV-তে local আছে, Git-ignored। এটা CLI ও report-setting-এর runtime confirmation, tracker accuracy বা improvement-এর evidence নয়। Video label এখনো নেই; test suite চালানো হয়নি।
