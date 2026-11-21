@@ -33,9 +33,10 @@
 - দেওয়া দুটি screenshot `ss-1.png` ও `ss-2.png` নামে input folder-এ রাখা হয়েছে; resolution যথাক্রমে 1917×1073 এবং 1917×1070। এগুলো ও screenshot presence-এর দুইটি user-provided label reproducible pilot sample হিসেবে GitHub-এ রাখা হয়েছে।
 - প্রাথমিক visual label: `ss-1`-এ gameplay doorway-তে enemy character দৃশ্যমান; `ss-2`-এ main sightline-এ সাধারণ gameplay character দৃশ্যমান নয়। `ss-2`-এর লাল replay silhouette-গুলোকে আলাদা overlay হিসেবে ধরব, normal gameplay player detection-এর ground truth হিসেবে নয়।
 - Video ও screenshot-এর ID আলাদা ধারায় চলবে: `vd-1`, `vd-2`, ... এবং `ss-1`, `ss-2`, ...। File extension আগের মতো থাকবে, যেমন `vd-1.mp4` বা `ss-1.png`।
-- `README.md`-তে setup ও ব্যবহারের নির্দেশনা আছে। `.gitignore` input media ও generated preview Git থেকে বাদ রাখে।
+- `README.md`-তে setup ও ব্যবহারের নির্দেশনা আছে। `.gitignore` সাধারণ input media ও generated preview বাদ রাখে; নির্বাচিত reproducibility sample আলাদা করে track করা।
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে। এই pilot CSV ও `source_regions.json` tracked; পরবর্তী video annotation ও generated report Git ignore থাকে।
+- M85-এ দুইটি original screenshot ও তাদের presence labels GitHub-এ যোগ হয়েছে। `vd-1.mp4` Git LFS-এ track করা, তবে fresh clone fetch verification pending।
 
 Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে metric হিসাবের evaluator আছে। Annotation window user-এর কাছে দৃশ্যমান হয়নি এবং কোনো video label user confirm করেননি। তাই কোনো verified video benchmark নেই; পুরোনো unverified metric প্রত্যাহার ও local data থেকে মুছে ফেলা হয়েছে। User পরে annotation করবেন বলেছেন। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
@@ -288,11 +289,11 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 ## ছবি ও ভিডিও GitHub-এ যাবে কি?
 
-`data/input/screenshots/` এবং `data/input/videos/`-এর media আপাতত Git ignore করা আছে, তাই স্বাভাবিক commit/push-এ যাবে না। তুমি gameplay video, screenshot ও preview GitHub-এ upload করার অনুমতি দিয়েছ। বড় video-র জন্য Git LFS বা অন্য উপযুক্ত storage পদ্ধতি ঠিক করে পরে নির্বাচিত sample upload করব; generated preview-ও প্রয়োজনমতো বেছে নেওয়া হবে।
+GitHub-এ reproducibility-র জন্য `ss-1.png`, `ss-2.png`, screenshot presence-এর user-provided CSV, sample `source_regions.json`, এবং `vd-1.mp4` Git LFS pointer যোগ করা হয়েছে। অন্য input media, generated preview/report, এবং video annotation এখনো Git ignore করা। নতুন clone-এ `vd-1.mp4` আনতে Git LFS প্রয়োজন। LFS push command সফল exit code দিয়েছে, তবে fresh clone-এ remote object fetch এখনো সম্পন্ন করে যাচাই করতে পারিনি।
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M78)
+## বর্তমান অবস্থান (M85)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -586,3 +587,7 @@ Annotation tool-এ `--dry-run` যোগ হয়েছে: shortlist fingerprint
 ### M84: zero-candidate frame-এর detail সতর্কতা
 
 Dashboard-এ কোনো sampled frame-এ detection না থাকলে detail panel এখন জানায় যে model person candidate ফেরায়নি এবং এটিকে enemy অনুপস্থিতির প্রমাণ ধরা যাবে না। README-তেও individual-frame caveat যোগ হয়েছে। `git diff --check` clean; dashboard GUI-তে text wrap বা দৃশ্যমানতা যাচাই হয়নি, test suite-ও চালানো হয়নি।
+
+### M85: reproducible sample media GitHub-এ
+
+দুটি source screenshot, `screenshot_presence.csv`-এর user-provided yes/no label, এবং HUD exclusion-region configuration repository-তে যোগ হয়েছে। GitHub clone-এ default screenshot evaluator তাই original sample input পাবে। 212,593,238-byte `vd-1.mp4`-কে `.gitattributes`-এ `*.mp4` Git LFS দিয়ে track করেছি; commit `ed8c3cf` push হয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। Local `git lfs fsck`-ও OK। Fresh shallow clone-এ remote LFS object fetch দিয়ে যাচাই করতে গিয়েছিলাম, কিন্তু দুই মিনিটেও LFS cache-এ object আসেনি; পরের `git ls-remote`-ও GitHub proxy connection error দিয়েছে। তাই LFS object remote থেকে download করা যায় কি না এখনো unverified; temporary clone সরানো হয়েছে। নতুন video annotation file commit হয়নি।
