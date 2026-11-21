@@ -6,6 +6,7 @@ from vantasight.analytics.alignment import (
     measure_alignment,
 )
 from vantasight.analytics.annotation_provenance import annotation_provenance
+from vantasight.analytics.annotation_coverage import parse_frame_indexes, validate_annotation_coverage
 from vantasight.analytics.detection_evaluation import (
     DetectionCounts,
     DetectionMetrics,
@@ -35,6 +36,8 @@ from vantasight.analytics.tracking_report import write_tracking_report
 __all__ = [
     "AlignmentMeasurement",
     "annotation_provenance",
+    "parse_frame_indexes",
+    "validate_annotation_coverage",
     "DetectionCounts",
     "DetectionMetrics",
     "RegionLocalization",

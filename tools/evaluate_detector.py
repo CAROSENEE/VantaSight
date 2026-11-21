@@ -7,7 +7,14 @@ import csv
 import json
 from pathlib import Path
 
-from vantasight.analytics import DetectionCounts, annotation_provenance, calculate_metrics, match_boxes
+from vantasight.analytics import (
+    DetectionCounts,
+    annotation_provenance,
+    calculate_metrics,
+    match_boxes,
+    parse_frame_indexes,
+    validate_annotation_coverage,
+)
 from vantasight.cli import _load_excluded_regions
 from vantasight.input import VideoReader
 from vantasight.vision import TorchvisionPersonDetector
@@ -97,6 +104,11 @@ def main() -> int:
     )
     parser.add_argument("--confidence-threshold", type=float, default=0.25)
     parser.add_argument("--iou-threshold", type=float, default=0.50)
+    parser.add_argument(
+        "--expected-frames",
+        type=parse_frame_indexes,
+        help="Require exactly these comma-separated annotated source frame indexes",
+    )
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument("--max-side", type=int, default=1920)
     parser.add_argument(
@@ -128,6 +140,8 @@ def main() -> int:
     output = args.output.expanduser()
     try:
         records = _read_annotations(annotation_path, video.name, allow_unreviewed=args.allow_unreviewed_labels)
+        if args.expected_frames is not None:
+            validate_annotation_coverage(records, args.expected_frames)
         regions = _load_excluded_regions(args.regions_file, video.name)
         detector = TorchvisionPersonDetector(
             confidence_threshold=args.confidence_threshold,

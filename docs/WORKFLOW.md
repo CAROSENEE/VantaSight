@@ -214,8 +214,8 @@ Frame `0, 600, 1200, 1800, 2400, 3000, 3600, 4200, 4800, 5400, 6000, 6600`—প
 User-verified copy বানাতে:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
-python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --prefill data/annotations/vd-1_provisional_review.jsonl --output data/annotations/vd-1_user_verified.jsonl
+python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
 ```
 
 Evaluator default-এ শুধু interactive annotation tool-এর manually reviewed row গ্রহণ করে। পুরোনো/প্রাথমিক provisional file দিয়ে কেবল exploratory comparison করতে চাইলে স্পষ্টভাবে `--allow-unreviewed-labels` দাও; output CSV-তে `unreviewed_exploratory` provenance ও terminal-এ warning থাকবে। উদাহরণ:
@@ -327,7 +327,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping এবং M26 offline-boundary audit আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping, M26 offline-boundary audit এবং M27 planned annotation coverage check আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 
@@ -356,3 +356,7 @@ Dashboard-এর এক লাইনের summary-তে M22/M23 যোগ হ�
 ### M26: offline-only boundary code review
 
 `src/` ও `tools/`-এ input/capture API পর্যালোচনা করে দেখা হয়েছে video reader ও dashboard-এর `cv2.VideoCapture` নির্বাচিত file path খোলে; screen capture, game-process/memory access, injected overlay, mouse/keyboard game-input automation বা socket/request-based live stream handling পাওয়া যায়নি। `cv2.waitKey` কেবল offline annotation window-এর label key পড়তে ব্যবহৃত। Model checkpoint প্রথমবার TorchVision থেকে নামতে পারে—একবার cache হলে footage analysis selected local file-এ চলে। এটি source-code search ও path review, formal security audit নয়।
+
+### M27: planned annotation coverage check
+
+`evaluate_detector.py`-তে ঐচ্ছিক `--expected-frames` যুক্ত হয়েছে। Comma-separated source frame index-এর set ঠিক মিলতে হবে; কোনো planned frame missing বা বাড়তি frame থাকলে detector inference-এর আগেই evaluator স্পষ্ট error দেবে। এটি user-এর label status বা box সঠিক কি না যাচাই করে না; কেবল dataset coverage gate। `vd-1`-এর 12-frame review-এর জন্য exact list-সহ command উপরের M12 workflow-তে দেওয়া আছে। Test-এ parse validation, missing ও unexpected index যাচাই করা হয়েছে।

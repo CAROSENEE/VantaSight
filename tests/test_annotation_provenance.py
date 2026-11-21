@@ -1,6 +1,11 @@
+import argparse
 import unittest
 
-from vantasight.analytics import annotation_provenance
+from vantasight.analytics import (
+    annotation_provenance,
+    parse_frame_indexes,
+    validate_annotation_coverage,
+)
 
 
 class AnnotationProvenanceTests(unittest.TestCase):
@@ -31,6 +36,19 @@ class AnnotationProvenanceTests(unittest.TestCase):
                 source="labels.jsonl",
                 line_number=2,
             )
+
+    def test_parses_unique_expected_frame_indexes(self):
+        self.assertEqual(parse_frame_indexes("0, 600,1200"), (0, 600, 1200))
+        with self.assertRaises(argparse.ArgumentTypeError):
+            parse_frame_indexes("0,0")
+
+    def test_annotation_coverage_requires_exact_frame_set(self):
+        records = [{"frame_index": 0}, {"frame_index": 600}]
+        validate_annotation_coverage(records, [0, 600])
+        with self.assertRaisesRegex(ValueError, r"missing frames: \[600\]"):
+            validate_annotation_coverage(records[:1], [0, 600])
+        with self.assertRaisesRegex(ValueError, r"unexpected frames: \[1200\]"):
+            validate_annotation_coverage(records + [{"frame_index": 1200}], [0, 600])
 
 
 if __name__ == "__main__":

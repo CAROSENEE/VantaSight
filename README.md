@@ -103,6 +103,8 @@ After labeling, calculate offline detection metrics with:
 python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-threshold 0.25 --iou-threshold 0.50
 ```
 
+For a planned frame sample, optionally require exact annotation coverage with `--expected-frames 0,600,1200`; the evaluator reports missing or extra indexes before inference.
+
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
 
 By default, detector and pose evaluators require records saved from the interactive annotation tool, which marks each manually reviewed row. For an explicitly exploratory run on provisional or legacy rows, pass `--allow-unreviewed-labels`; the output labels that provenance and warns that the metrics are not a reviewed ground-truth benchmark.
