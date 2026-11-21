@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -153,6 +154,17 @@ def main() -> int:
                     raise ValueError(f"Frame {frame_index} has no source-frame fingerprint")
                 frame = reader.read_frame(frame_index)
                 verify_frame_fingerprint(record, frame.pixels, frame_index)
+                recorded_timestamp = record.get("timestamp_seconds")
+                if type(recorded_timestamp) not in (int, float):
+                    raise ValueError(f"Frame {frame_index} has an invalid timestamp")
+                try:
+                    recorded_timestamp = float(recorded_timestamp)
+                except (OverflowError, ValueError) as exc:
+                    raise ValueError(f"Frame {frame_index} has an invalid timestamp") from exc
+                if not math.isfinite(recorded_timestamp) or not math.isfinite(frame.timestamp_seconds):
+                    raise ValueError(f"Frame {frame_index} has a non-finite timestamp")
+                if abs(frame.timestamp_seconds - recorded_timestamp) > 0.001:
+                    raise ValueError(f"Frame {frame_index} timestamp does not match the source video")
                 validated_opponent_boxes(record, width, height)
                 _validate_region_points(record)
 
