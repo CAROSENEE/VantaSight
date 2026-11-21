@@ -232,6 +232,19 @@ Cutoff `0.75`-এ false positive কমলেও recall অর্ধেকে �
 
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
+### M14: dashboard থেকে screenshot ও video input
+
+Dashboard-এর `Choose image or video…` button দিয়ে local PNG/JPG/BMP/WebP screenshot অথবা video বেছে নেওয়া যায়। Analysis শুরুর আগে screenshot-এর dimensions, বা video-র dimensions/FPS/duration দেখায়। Screenshot-এর জন্য এক-frame person-candidate analysis চলে; video-র জন্য আগের frame-step sampled tracking চলে। দুটোতেই ঐচ্ছিক body-region estimate ও frame-center alignment আছে। কাজ শেষ হলে dashboard নতুন report খোলে। Screenshot report-এ temporary ID কেবল ওই ছবির ভেতরের candidate order; এটি tracking নয়।
+
+Screenshot report CLI দিয়ে খুললে source default হিসেবে `data/input/screenshots/`-এ খোঁজা হয়; অন্য path হলে `--image` দিতে হবে. Direct run:
+
+```powershell
+python tools/analyze_image.py "data/input/screenshots/ss-1.png" --estimate-body-regions --measure-alignment --output reports/ss-1.csv --json-output reports/ss-1.json
+python tools/open_dashboard.py reports/ss-1.json
+```
+
+`ss-1.png`-এ বর্তমান local environment-এ detector ও pose estimate চালিয়ে JSON report schema loader দিয়ে যাচাই করা হয়েছে: 1917×1073 screenshot-এ 1টি COCO person candidate এসেছে। এটি detector correctness বা enemy identity-র প্রমাণ নয়। Desktop GUI-তে হাতে click করে layout review এখনো করা হয়নি। নতুন CLI-তে file picker থেকে metadata এবং image/video report reopen flow এই desktop session-এ end-to-end যাচাই বাকি।
+
 ## M7: crosshair-to-region alignment
 
 Frame center-কে default reference ধরে estimate মাপতে:
@@ -259,7 +272,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation ও M13 threshold sensitivity আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity এবং M14 dashboard image/video input আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
 
 ## ভাষার নিয়ম
 

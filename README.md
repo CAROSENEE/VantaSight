@@ -129,7 +129,14 @@ Open the saved report in the separate offline dashboard:
 python tools/open_dashboard.py reports/tracks.json
 ```
 
-The dashboard loads the report and source video from local disk, lets you browse sampled frames, and draws the recorded candidate boxes, temporary track IDs, pose points, and alignment references when present. Use Play samples, Pause, and Stop to review the analyzed frame sequence; playback advances only through sampled frames and does not play every source frame. The **Analyze a local video** panel selects a recording, sets the source-frame sampling interval, and can optionally enable experimental body-region and frame-center alignment estimates. It runs the existing offline tracking command and opens the new report when complete; Cancel stops the run. Its header summarizes analysis throughput, alignment-error distributions, and manual-label detector/pose evaluation CSVs from `reports/` when available; pass `--detector-evaluation` or `--pose-evaluation` to select other files. Pass `--video path\to\source.mp4` when opening a report whose video is stored outside `data/input/videos/`. It does not capture the desktop or interact with a game.
+The dashboard loads the report and its local source media, lets you browse sampled video frames or a single screenshot, and draws recorded candidate boxes, temporary IDs, pose points, and alignment references when present. Use Play samples, Pause, and Stop to review a video's analyzed frame sequence; playback advances only through sampled frames. The **Analyze local media** panel lets you choose an image or recorded video and shows dimensions plus video FPS/duration before running. Videos use the configured source-frame sampling interval; screenshots produce one offline analysis frame. Either can optionally enable experimental body-region and frame-center alignment estimates. The dashboard opens the new report on completion; Cancel stops the run. Its header summarizes throughput, alignment-error distributions, and matching manual-label detector/pose evaluation CSVs from `reports/` when available; pass `--detector-evaluation` or `--pose-evaluation` to select other files. Pass `--image path\to\source.png` or `--video path\to\source.mp4` when opening a report whose source is outside the corresponding input folder. It does not capture the desktop or interact with a game.
+
+Analyze one screenshot directly if needed:
+
+```powershell
+python tools/analyze_image.py "data/input/screenshots/ss-1.png" --estimate-body-regions --measure-alignment --output reports/ss-1.csv --json-output reports/ss-1.json
+python tools/open_dashboard.py reports/ss-1.json
+```
 
 ## Experimental body-region estimate
 

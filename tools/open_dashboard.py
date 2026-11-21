@@ -22,7 +22,9 @@ from vantasight.dashboard.evaluation_summary import load_detector_evaluation, lo
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Open a saved offline VantaSight tracking report.")
     parser.add_argument("report", type=Path, nargs="?", default=Path("reports/tracks.json"))
-    parser.add_argument("--video", type=Path, help="Source video; defaults to data/input/videos/<report source>")
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument("--video", type=Path, help="Source video; defaults to data/input/videos/<report source>")
+    source_group.add_argument("--image", type=Path, help="Source screenshot; defaults to data/input/screenshots/<report source>")
     parser.add_argument("--detector-evaluation", type=Path, help="Optional manual-label detector CSV")
     parser.add_argument("--pose-evaluation", type=Path, help="Optional manual-point pose CSV")
     args = parser.parse_args(argv)
@@ -30,10 +32,17 @@ def main(argv: list[str] | None = None) -> int:
     report_path = args.report.expanduser()
     try:
         report = load_tracking_report(report_path)
-        default_video = Path("data/input/videos") / str(report["source"].get("file_name", ""))
-        video_path = (args.video or default_video).expanduser()
-        if not video_path.is_file():
-            raise ValueError(f"Source video does not exist: {video_path}; pass it with --video")
+        source_is_image = report.get("analysis_type") == "offline_single_image_person_candidate_analysis"
+        if source_is_image and args.video:
+            raise ValueError("This is a screenshot report; pass its source with --image")
+        if not source_is_image and args.image:
+            raise ValueError("This is a video report; pass its source with --video")
+        default_root = Path("data/input/screenshots" if source_is_image else "data/input/videos")
+        default_source = default_root / str(report["source"].get("file_name", ""))
+        source_path = (args.image if source_is_image else args.video) or default_source
+        source_path = source_path.expanduser()
+        if not source_path.is_file():
+            raise ValueError(f"Source media does not exist: {source_path}; pass it with --image or --video")
         frames = report["frames"]
         if not frames:
             raise ValueError("This report has no sampled frames to display")
@@ -41,26 +50,34 @@ def main(argv: list[str] | None = None) -> int:
         pose_eval_path = args.pose_evaluation or Path("reports/pose_region_evaluation.csv")
         detector_evaluation = load_detector_evaluation(detector_eval_path, report["source"]["file_name"])
         pose_evaluation = load_pose_evaluation(pose_eval_path, report["source"]["file_name"])
-        capture = cv2.VideoCapture(str(video_path))
-        if not capture.isOpened():
-            raise ValueError(f"Cannot open source video: {video_path}")
+        source_image = None
+        capture = None
+        if source_is_image:
+            source_image = cv2.imread(str(source_path))
+            if source_image is None:
+                raise ValueError(f"Cannot decode source screenshot: {source_path}")
+        else:
+            capture = cv2.VideoCapture(str(source_path))
+            if not capture.isOpened():
+                raise ValueError(f"Cannot open source video: {source_path}")
     except (ValueError, OSError) as exc:
         parser.exit(2, f"dashboard: error: {exc}\n")
 
     root = tk.Tk()
-    root.title(f"VantaSight Offline Dashboard — {report['source'].get('file_name', video_path.name)}")
+    root.title(f"VantaSight Offline Dashboard — {report['source'].get('file_name', source_path.name)}")
     root.geometry("1280x800")
     root.minsize(900, 600)
 
     summary = report["summary"]
     source = report["source"]
     alignment_summaries = summarize_alignment_errors(report)
+    source_rate = "Screenshot" if source_is_image else f"{source.get('fps', 0):.2f} FPS"
     header = ttk.Frame(root, padding=10)
     header.pack(fill="x")
     ttk.Label(header, text="VantaSight — Offline Analysis", font=("Segoe UI", 16, "bold")).pack(anchor="w")
     summary_text = (
         f"Source: {source.get('file_name')}  |  {source.get('width')}×{source.get('height')}  |  "
-        f"{source.get('fps', 0):.2f} FPS    •    Sampled frames: {summary.get('sampled_frames', 0)}    •    "
+        f"{source_rate}    •    Sampled frames: {summary.get('sampled_frames', 0)}    •    "
         f"Person candidates: {summary.get('candidate_detections', 0)}    •    "
         f"Analysis throughput: {summary.get('sampled_frames_per_second', 0):.2f} sampled frames/s    •    "
         f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms"
@@ -90,7 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         detector_text += f" | F1={metric_text.f1:.3f}" if metric_text.f1 is not None else " | F1=n/a"
     else:
-        detector_text = "Detector evaluation: not available for this video (manual labels required)."
+        detector_text = "Detector evaluation: not available for this source (manual labels required)."
     ttk.Label(header, text=detector_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
     if pose_evaluation:
         pose_text = "Pose-region localization: " + " | ".join(
@@ -122,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     body.add(side_panel, weight=1)
     canvas = tk.Canvas(image_panel, background="#141820", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
-    analysis_controls = ttk.LabelFrame(side_panel, text="Analyze a local video", padding=8)
+    analysis_controls = ttk.LabelFrame(side_panel, text="Analyze local media", padding=8)
     analysis_controls.pack(fill="x", pady=(0, 10))
 
     ttk.Label(side_panel, text="Sampled frames", font=("Segoe UI", 11, "bold")).pack(anchor="w")
@@ -141,18 +158,21 @@ def main(argv: list[str] | None = None) -> int:
     displayed_photo: tk.PhotoImage | None = None
     playback_after_id: str | None = None
     playback_running = False
-    analysis_results: queue.Queue[tuple[int, str, Path, Path]] = queue.Queue()
+    analysis_results: queue.Queue[tuple[int, str, Path, Path, bool]] = queue.Queue()
     analysis_process: dict[str, subprocess.Popen[str] | None] = {"process": None}
     analysis_cancel = threading.Event()
-    reopen_dashboard: tuple[Path, Path] | None = None
+    reopen_dashboard: tuple[Path, Path, bool] | None = None
 
     def show_frame(index: int) -> None:
         nonlocal current_index, displayed_photo
         current_index = max(0, min(index, len(frames) - 1))
         frame_record = frames[current_index]
         frame_index = int(frame_record["frame_index"])
-        capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-        success, image = capture.read()
+        if source_is_image:
+            success, image = True, source_image.copy()
+        else:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            success, image = capture.read()
         if not success:
             canvas.delete("all")
             canvas.create_text(20, 20, anchor="nw", fill="white", text=f"Could not decode source frame {frame_index}")
@@ -187,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
         resized = cv2.resize(image, (display_width, display_height), interpolation=cv2.INTER_AREA)
         encoded_ok, png = cv2.imencode(".png", resized)
         if not encoded_ok:
-            raise RuntimeError("Could not encode the sampled video frame for dashboard display")
+            raise RuntimeError("Could not encode the sampled media frame for dashboard display")
         displayed_photo = tk.PhotoImage(data=png.tobytes(), format="png")
         canvas.delete("all")
         canvas.create_image(available_width // 2, available_height // 2, image=displayed_photo, anchor="center")
@@ -268,13 +288,14 @@ def main(argv: list[str] | None = None) -> int:
                 analysis_process["process"].terminate()
             except OSError:
                 pass
-        capture.release()
+        if capture is not None:
+            capture.release()
         root.destroy()
 
     def poll_analysis() -> None:
         nonlocal reopen_dashboard
         try:
-            return_code, output, selected_video, new_report = analysis_results.get_nowait()
+            return_code, output, selected_media, new_report, selected_is_image = analysis_results.get_nowait()
         except queue.Empty:
             root.after(150, poll_analysis)
             return
@@ -283,8 +304,9 @@ def main(argv: list[str] | None = None) -> int:
         cancel_button.configure(state="disabled")
         if return_code == 0 and new_report.is_file():
             analysis_status.set(f"Analysis complete. Opening {new_report.name}…")
-            reopen_dashboard = (new_report, selected_video)
-            capture.release()
+            reopen_dashboard = (new_report, selected_media, selected_is_image)
+            if capture is not None:
+                capture.release()
             root.destroy()
         elif analysis_cancel.is_set():
             analysis_status.set("Analysis cancelled.")
@@ -297,42 +319,57 @@ def main(argv: list[str] | None = None) -> int:
                 parent=root,
             )
 
-    def analyze_another_video() -> None:
+    def analyze_another_media() -> None:
         selected = filedialog.askopenfilename(
             parent=root,
-            title="Select a recorded video for offline analysis",
-            filetypes=[("Video files", "*.mp4 *.mkv *.mov *.avi *.webm"), ("All files", "*.*")],
+            title="Select a screenshot or recorded video for offline analysis",
+            filetypes=[("Supported media", "*.png *.jpg *.jpeg *.bmp *.webp *.mp4 *.mkv *.mov *.avi *.webm"), ("All files", "*.*")],
         )
         if not selected:
             return
-        video_to_analyze = Path(selected).resolve()
-        frame_step_text = frame_step_entry.get().strip()
-        try:
-            frame_step = int(frame_step_text)
-            if frame_step < 1:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Invalid sampling interval", "Frame step must be a positive whole number.", parent=root)
-            return
+        media_to_analyze = Path(selected).resolve()
+        is_image = media_to_analyze.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
         if alignment_enabled.get() and not pose_enabled.get():
             messagebox.showerror("Alignment setting", "Enable body-region estimation before measuring alignment.", parent=root)
             return
 
+        if is_image:
+            metadata_image = cv2.imread(str(media_to_analyze))
+            if metadata_image is None:
+                messagebox.showerror("Unreadable screenshot", "VantaSight could not decode that image file.", parent=root)
+                return
+            height, width = metadata_image.shape[:2]
+            media_details.set(f"Selected: {media_to_analyze.name} | Screenshot | {width}×{height}")
+        else:
+            metadata_capture = cv2.VideoCapture(str(media_to_analyze))
+            if not metadata_capture.isOpened():
+                messagebox.showerror("Unreadable video", "VantaSight could not open that video file.", parent=root)
+                return
+            width = int(metadata_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(metadata_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = metadata_capture.get(cv2.CAP_PROP_FPS)
+            count = int(metadata_capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            metadata_capture.release()
+            duration = count / fps if fps > 0 else 0
+            media_details.set(f"Selected: {media_to_analyze.name} | {width}×{height} | {fps:.2f} FPS | {duration:.1f}s")
+
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        report_output = (Path("reports") / f"{video_to_analyze.stem}_{stamp}_tracks.json").resolve()
+        report_output = (Path("reports") / f"{media_to_analyze.stem}_{stamp}_{'image' if is_image else 'tracks'}.json").resolve()
         csv_output = report_output.with_suffix(".csv")
-        runner = Path(__file__).resolve().parent / "track_video.py"
-        command = [
-            sys.executable,
-            str(runner),
-            str(video_to_analyze),
-            "--frame-step",
-            str(frame_step),
-            "--output",
-            str(csv_output),
-            "--json-output",
-            str(report_output),
-        ]
+        if is_image:
+            runner = Path(__file__).resolve().parent / "analyze_image.py"
+            command = [sys.executable, str(runner), str(media_to_analyze), "--output", str(csv_output), "--json-output", str(report_output)]
+        else:
+            frame_step_text = frame_step_entry.get().strip()
+            try:
+                frame_step = int(frame_step_text)
+                if frame_step < 1:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Invalid sampling interval", "Frame step must be a positive whole number.", parent=root)
+                return
+            runner = Path(__file__).resolve().parent / "track_video.py"
+            command = [sys.executable, str(runner), str(media_to_analyze), "--frame-step", str(frame_step), "--output", str(csv_output), "--json-output", str(report_output)]
         if pose_enabled.get():
             command.append("--estimate-body-regions")
         if alignment_enabled.get():
@@ -341,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         analysis_cancel.clear()
         analyze_button.configure(state="disabled")
         cancel_button.configure(state="normal")
-        analysis_status.set(f"Analyzing {video_to_analyze.name} offline…")
+        analysis_status.set(f"Analyzing {media_to_analyze.name} offline…")
 
         def run_worker() -> None:
             process: subprocess.Popen[str] | None = None
@@ -372,7 +409,7 @@ def main(argv: list[str] | None = None) -> int:
                         continue
             except OSError as exc:
                 output = str(exc)
-            analysis_results.put((return_code, output, video_to_analyze, report_output))
+            analysis_results.put((return_code, output, media_to_analyze, report_output, is_image))
 
         threading.Thread(target=run_worker, name="vantasight-offline-analysis", daemon=True).start()
         root.after(150, poll_analysis)
@@ -382,7 +419,9 @@ def main(argv: list[str] | None = None) -> int:
         cancel_button.configure(state="disabled")
         analysis_status.set("Stopping offline analysis…")
 
-    ttk.Label(analysis_controls, text="Analyze every N source frames").pack(anchor="w")
+    media_details = tk.StringVar(value="Choose a local screenshot or video to inspect its metadata.")
+    ttk.Label(analysis_controls, textvariable=media_details, wraplength=250).pack(anchor="w", pady=(0, 5))
+    ttk.Label(analysis_controls, text="Video sampling: every N source frames").pack(anchor="w")
     frame_step_entry = ttk.Entry(analysis_controls, width=10)
     frame_step_entry.insert(0, "30")
     frame_step_entry.pack(anchor="w", pady=(2, 5))
@@ -390,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     alignment_enabled = tk.BooleanVar(value=False)
     ttk.Checkbutton(analysis_controls, text="Estimate body regions (slower)", variable=pose_enabled).pack(anchor="w")
     ttk.Checkbutton(analysis_controls, text="Measure frame-center alignment", variable=alignment_enabled).pack(anchor="w")
-    analyze_button = ttk.Button(analysis_controls, text="Choose video and analyze…", command=analyze_another_video)
+    analyze_button = ttk.Button(analysis_controls, text="Choose image or video…", command=analyze_another_media)
     analyze_button.pack(fill="x", pady=(6, 2))
     cancel_button = ttk.Button(analysis_controls, text="Cancel analysis", command=cancel_analysis, state="disabled")
     cancel_button.pack(fill="x")
@@ -413,8 +452,8 @@ def main(argv: list[str] | None = None) -> int:
     root.protocol("WM_DELETE_WINDOW", close_dashboard)
     root.mainloop()
     if reopen_dashboard is not None:
-        next_report, next_video = reopen_dashboard
-        return main([str(next_report), "--video", str(next_video)])
+        next_report, next_source, is_image = reopen_dashboard
+        return main([str(next_report), "--image" if is_image else "--video", str(next_source)])
     return 0
 
 
