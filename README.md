@@ -75,7 +75,7 @@ python -m vantasight "data/input/screenshots/ss-2.png" --detect-persons
 python -m vantasight "data/input/videos/vd-1.mp4" --frame-index 3000 --detect-persons --max-side 2560 --exclude-region 0,620,530,960
 ```
 
-Annotated previews go to `data/previews/` by default. `--max-side` controls internal detector resizing; reported bounding boxes map back to the original input resolution. Per-file exclusion rectangles are stored in the local, Git-ignored `data/annotations/source_regions.json`; the default file is loaded automatically by source filename. For one-off adjustments, repeat `--exclude-region x1,y1,x2,y2`. Region coordinates use source pixels, so each video or screenshot needs its own coordinates. These masks skip candidate boxes whose centers fall inside the marked areas; they do not crop or resize the source file.
+Annotated previews go to `data/previews/` by default. `--max-side` controls internal detector resizing; reported bounding boxes map back to the original input resolution. Add `--preserve-source-resolution` to run detector inference at the input's original pixel dimensions instead of TorchVision's normal resize; this overrides the configured `--max-side` for that input. This can help retain detail around small, distant candidates, but uses more GPU memory, runs more slowly, and can exhaust memory. It does not guarantee better detection; compare only runs with the same resize mode and verify them against manually reviewed labels. The flag is available on the CLI, image/video analysis, tracking, and evaluation commands; AP and threshold-sweep reports record the selected mode. Per-file exclusion rectangles are stored in the local, Git-ignored `data/annotations/source_regions.json`; the default file is loaded automatically by source filename. For one-off adjustments, repeat `--exclude-region x1,y1,x2,y2`. Region coordinates use source pixels, so each video or screenshot needs its own coordinates. These masks skip candidate boxes whose centers fall inside the marked areas; they do not crop or resize the source file.
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the step-by-step roadmap, current progress, and plain-language notes about each component.
 
@@ -156,6 +156,14 @@ Run short-term box association offline and export sampled detections with tempor
 ```powershell
 python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --preview-frame 3000
 ```
+
+For small/distant targets, use source-resolution inference when the GPU has enough memory:
+
+```powershell
+python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --preserve-source-resolution
+```
+
+The JSON report records whether this mode was selected. AP evaluation accepts the same option, and its CSV stores the choice so reports can be compared using matching inference scales.
 
 Add experimental body-region estimates and geometric alignment measurements when desired:
 

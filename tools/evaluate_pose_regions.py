@@ -108,6 +108,7 @@ def main() -> int:
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Run pose inference at original frame dimensions (higher memory use)")
     parser.add_argument("--regions-file", type=Path, default=Path("data/annotations/source_regions.json"))
     parser.add_argument("--output", type=Path, default=Path("reports/pose_region_evaluation.csv"))
     args = parser.parse_args()
@@ -126,6 +127,7 @@ def main() -> int:
             min_size=min(1080, args.max_side),
             keypoint_score_threshold=args.keypoint_score_threshold,
             excluded_regions=regions,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
         rows: list[dict] = []
         localizations = []
@@ -177,6 +179,9 @@ def main() -> int:
                                 "error_normalized": "" if result.error_normalized is None else f"{result.error_normalized:.6f}",
                                 "pose_iou_threshold": args.iou_threshold,
                                 "keypoint_score_threshold": args.keypoint_score_threshold,
+                                "device": str(estimator.device),
+                                "max_side": args.max_side,
+                                "preserve_source_resolution": args.preserve_source_resolution,
                             }
                         )
 
@@ -187,6 +192,7 @@ def main() -> int:
             "label_provenance",
             "ground_truth_x", "ground_truth_y", "estimate_x", "estimate_y", "error_pixels", "error_normalized",
             "pose_iou_threshold", "keypoint_score_threshold",
+            "device", "max_side", "preserve_source_resolution",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)

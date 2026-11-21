@@ -58,6 +58,7 @@ def _detect_and_save(
         min_size=min(1080, args.max_side),
         max_size=args.max_side,
         excluded_regions=(*configured_regions, *(args.exclude_region or ())),
+        preserve_source_resolution=args.preserve_source_resolution,
     )
     detections = detector.detect(pixels)
     print(f"Device: {detector.device}")
@@ -87,6 +88,7 @@ def _estimate_body_regions_and_save(
         min_size=min(1080, args.max_side),
         max_size=args.max_side,
         excluded_regions=(*configured_regions, *(args.exclude_region or ())),
+        preserve_source_resolution=args.preserve_source_resolution,
     )
     observations = estimator.estimate(pixels)
     height, width = pixels.shape[:2]
@@ -227,6 +229,11 @@ def main() -> int:
         type=int,
         default=1920,
         help="Maximum internal detector image side in pixels; output boxes map to source resolution",
+    )
+    parser.add_argument(
+        "--preserve-source-resolution",
+        action="store_true",
+        help="Run vision inference at the input frame's original pixel dimensions (higher memory use)",
     )
     parser.add_argument(
         "--exclude-region",

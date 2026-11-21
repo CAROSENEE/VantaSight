@@ -40,6 +40,7 @@ def main() -> int:
     parser.add_argument("--iou-threshold", type=float, default=0.30)
     parser.add_argument("--max-missed-updates", type=int, default=1)
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Disable model-side resizing for each frame (higher memory use)")
     parser.add_argument("--estimate-body-regions", action="store_true")
     parser.add_argument("--measure-alignment", action="store_true")
     parser.add_argument("--crosshair", type=str, help="Reference point in source pixels as x,y")
@@ -99,6 +100,7 @@ def main() -> int:
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
             excluded_regions=regions,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
         tracker = IoUTracker(
             iou_threshold=args.iou_threshold,
@@ -112,6 +114,7 @@ def main() -> int:
                 max_size=args.max_side,
                 keypoint_score_threshold=args.keypoint_score_threshold,
                 excluded_regions=regions,
+                preserve_source_resolution=args.preserve_source_resolution,
             )
             if args.estimate_body_regions
             else None
@@ -314,6 +317,7 @@ def main() -> int:
                 "iou_threshold": args.iou_threshold,
                 "max_missed_updates": args.max_missed_updates,
                 "device": str(detector.device),
+                "preserve_source_resolution": args.preserve_source_resolution,
                 "body_region_estimation": args.estimate_body_regions,
                 "pose_person_threshold": args.pose_person_threshold if pose_estimator else None,
                 "alignment_measurement": args.measure_alignment,

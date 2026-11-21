@@ -28,6 +28,7 @@ class TorchvisionPersonDetector:
         min_size: int = 1080,
         max_size: int = 1920,
         excluded_regions: Sequence[tuple[int, int, int, int]] = (),
+        preserve_source_resolution: bool = False,
     ) -> None:
         if not 0.0 <= confidence_threshold <= 1.0:
             raise ValueError("confidence_threshold must be between 0 and 1")
@@ -60,6 +61,7 @@ class TorchvisionPersonDetector:
         self.device = torch.device(resolved_device)
         self.confidence_threshold = confidence_threshold
         self.excluded_regions = tuple(excluded_regions)
+        self.preserve_source_resolution = preserve_source_resolution
         weights = FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1
         self._person_class_id = weights.meta["categories"].index("person")
 
@@ -85,6 +87,11 @@ class TorchvisionPersonDetector:
         if image_bgr.ndim != 3 or image_bgr.shape[2] != 3:
             raise ValueError("Expected a 3-channel BGR image")
         height, width = image_bgr.shape[:2]
+        if self.preserve_source_resolution:
+            # TorchVision normally rescales to configured min_size/max_size. For
+            # small distant targets, allow inference at the original pixel size.
+            self._model.transform.min_size = (min(height, width),)
+            self._model.transform.max_size = max(height, width)
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         image_tensor = (
             self._torch.from_numpy(np.ascontiguousarray(rgb))

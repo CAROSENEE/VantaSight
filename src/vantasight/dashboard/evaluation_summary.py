@@ -50,6 +50,9 @@ class ThresholdSweepPoint:
     detector_latency_mean_ms: float | None = None
     sampled_analysis_elapsed_seconds: float | None = None
     sampled_analysis_frames_per_second: float | None = None
+    device: str | None = None
+    max_side: int | None = None
+    preserve_source_resolution: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,7 @@ class AveragePrecisionPoint:
     device: str | None = None
     excluded_region_count: int | None = None
     ap_method: str | None = None
+    preserve_source_resolution: bool | None = None
 
 
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
@@ -180,6 +184,10 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
         has_timing = timing_columns.issubset(reader.fieldnames)
         if bool(timing_columns.intersection(reader.fieldnames)) and not has_timing:
             raise ValueError(f"Threshold sweep CSV has incomplete timing columns: {path}")
+        resize_columns = {"device", "max_side", "preserve_source_resolution"}
+        has_resize_metadata = resize_columns.issubset(reader.fieldnames)
+        if bool(resize_columns.intersection(reader.fieldnames)) and not has_resize_metadata:
+            raise ValueError(f"Threshold sweep CSV has incomplete inference resize metadata: {path}")
         for row in reader:
             if row.get("video") != video_name:
                 continue
@@ -203,6 +211,14 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                         float(row["sampled_analysis_elapsed_seconds"]),
                         float(row["sampled_analysis_frames_per_second"]),
                     )
+                preserve_source_resolution = None
+                resize_metadata = None
+                if has_resize_metadata:
+                    raw_resolution_mode = row["preserve_source_resolution"].strip().lower()
+                    if raw_resolution_mode not in {"true", "false"}:
+                        raise ValueError("preserve_source_resolution must be true or false")
+                    preserve_source_resolution = raw_resolution_mode == "true"
+                    resize_metadata = (row["device"].strip(), int(row["max_side"]), preserve_source_resolution)
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid threshold sweep values in {path}") from exc
             provenance = row.get("label_provenance", "")
@@ -224,6 +240,8 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Invalid label provenance in {path}")
             if provenance == "manually_reviewed" and unreviewed_frames:
                 raise ValueError(f"Manual threshold sweep cannot contain unreviewed frames in {path}")
+            if resize_metadata is not None and (not resize_metadata[0] or resize_metadata[1] < 1):
+                raise ValueError(f"Invalid threshold sweep inference resize metadata in {path}")
             if timing is not None and (
                 any(not math.isfinite(value) or value < 0 for value in (timing[0], timing[2], timing[3], timing[4]))
                 or timing[1] != scored_frames
@@ -237,7 +255,7 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                 raise ValueError(f"Invalid threshold sweep timing metadata in {path}")
             contexts.add((
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
-                provenance, unreviewed_frames, iou_threshold, timing,
+                provenance, unreviewed_frames, iou_threshold, timing, resize_metadata,
             ))
             expected_metrics = calculate_metrics(DetectionCounts(*counts))
             for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
@@ -267,6 +285,9 @@ def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoin
                     detector_latency_mean_ms=timing[2] if timing else None,
                     sampled_analysis_elapsed_seconds=timing[3] if timing else None,
                     sampled_analysis_frames_per_second=timing[4] if timing else None,
+                    device=resize_metadata[0] if resize_metadata else None,
+                    max_side=resize_metadata[1] if resize_metadata else None,
+                    preserve_source_resolution=preserve_source_resolution,
                 )
             )
     if not points:
@@ -313,6 +334,7 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
         has_metadata = metadata_columns.issubset(reader.fieldnames)
         if metadata_columns.intersection(reader.fieldnames) and not has_metadata:
             raise ValueError(f"IoU AP CSV has incomplete model metadata: {path}")
+        has_resolution_metadata = "preserve_source_resolution" in reader.fieldnames
         for row in reader:
             if row.get("video") != video_name:
                 continue
@@ -338,6 +360,12 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                         int(row["excluded_region_count"]),
                         row["ap_method"].strip(),
                     )
+                preserve_source_resolution = None
+                if has_resolution_metadata:
+                    raw_resolution_mode = row["preserve_source_resolution"].strip().lower()
+                    if raw_resolution_mode not in {"true", "false"}:
+                        raise ValueError("preserve_source_resolution must be true or false")
+                    preserve_source_resolution = raw_resolution_mode == "true"
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid IoU AP values in {path}") from exc
             provenance = row.get("label_provenance", "")
@@ -375,6 +403,7 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
             contexts.add((
                 scored_frames, positive_frames, negative_frames, ground_truth_boxes,
                 candidate_detections, mean_ap, provenance, unreviewed_frames, metadata,
+                preserve_source_resolution,
             ))
             points.append(AveragePrecisionPoint(
                 iou_threshold=threshold,
@@ -393,6 +422,7 @@ def load_iou_average_precision(path: Path, video_name: str) -> list[AveragePreci
                 device=metadata[4] if metadata else None,
                 excluded_region_count=metadata[5] if metadata else None,
                 ap_method=metadata[6] if metadata else None,
+                preserve_source_resolution=preserve_source_resolution,
             ))
     if not points:
         return None

@@ -31,6 +31,7 @@ def main() -> int:
     parser.add_argument("--confidence-threshold", type=float, default=0.25)
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Run image inference at original pixel dimensions (higher memory use)")
     parser.add_argument("--output", type=Path, default=Path("reports/screenshot_presence_eval.csv"))
     args = parser.parse_args()
 
@@ -58,6 +59,7 @@ def main() -> int:
             device=args.device,
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
         rows: list[dict] = []
         tp = fp = tn = fn = 0
@@ -105,6 +107,8 @@ def main() -> int:
                     "max_candidate_confidence": max((item.confidence for item in detections), default=""),
                     "confidence_threshold": args.confidence_threshold,
                     "device": str(detector.device),
+                    "max_side": args.max_side,
+                    "preserve_source_resolution": args.preserve_source_resolution,
                 }
             )
 

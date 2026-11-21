@@ -49,6 +49,7 @@ def main() -> int:
     parser.add_argument("--iou-threshold", type=float, default=0.50)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Run each frame at original pixel dimensions (higher memory use)")
     parser.add_argument("--allow-unreviewed-labels", action="store_true")
     parser.add_argument("--regions-file", type=Path, default=Path("data/annotations/source_regions.json"))
     parser.add_argument("--output", type=Path, default=Path("reports/detector_threshold_sweep.csv"))
@@ -76,6 +77,7 @@ def main() -> int:
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
             excluded_regions=regions,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
         model_initialization_seconds = time.perf_counter() - initialization_started
 
@@ -121,6 +123,7 @@ def main() -> int:
             "label_provenance", "unreviewed_scored_frames",
             "model_initialization_seconds", "inference_calls", "detector_latency_mean_ms",
             "sampled_analysis_elapsed_seconds", "sampled_analysis_frames_per_second",
+            "device", "max_side", "preserve_source_resolution",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)
@@ -141,6 +144,9 @@ def main() -> int:
                     "detector_latency_mean_ms": f"{detector_latency_mean_ms:.3f}",
                     "sampled_analysis_elapsed_seconds": f"{sampled_analysis_elapsed_seconds:.6f}",
                     "sampled_analysis_frames_per_second": f"{sampled_analysis_frames_per_second:.6f}",
+                    "device": str(detector.device),
+                    "max_side": args.max_side,
+                    "preserve_source_resolution": args.preserve_source_resolution,
                 })
 
         print(f"Device: {detector.device}")

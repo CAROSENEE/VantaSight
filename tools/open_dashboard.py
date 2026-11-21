@@ -185,6 +185,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"{first.confidence_floor:.2f}, max side {first.max_side}px, device {first.device}, "
                 f"excluded regions {first.excluded_region_count}"
             )
+            if first.preserve_source_resolution is not None:
+                ap_text += (
+                    ", source resolution preserved"
+                    if first.preserve_source_resolution
+                    else ", model-side resize enabled"
+                )
     else:
         ap_text = "IoU AP: not available for this source (manual box labels required)."
     ttk.Label(header, text=ap_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
@@ -242,6 +248,11 @@ def main(argv: list[str] | None = None) -> int:
                 f"mean detector {threshold_sweep[0].detector_latency_mean_ms:.1f} ms, "
                 f"analysis {threshold_sweep[0].sampled_analysis_frames_per_second:.2f} frames/s, "
                 f"model init {threshold_sweep[0].model_initialization_seconds:.2f} s"
+            )
+        if threshold_sweep[0].preserve_source_resolution is not None:
+            sweep_lines[0] += (
+                f", {threshold_sweep[0].device}, max-side setting {threshold_sweep[0].max_side}px, "
+                + ("source resolution preserved" if threshold_sweep[0].preserve_source_resolution else "model-side resize enabled")
             )
         sweep_lines[0] += "):"
         sweep_lines.extend(
@@ -515,6 +526,8 @@ def main(argv: list[str] | None = None) -> int:
             command.append("--estimate-body-regions")
         if alignment_enabled.get():
             command.append("--measure-alignment")
+        if preserve_resolution_enabled.get():
+            command.append("--preserve-source-resolution")
 
         analysis_cancel.clear()
         analyze_button.configure(state="disabled")
@@ -586,8 +599,10 @@ def main(argv: list[str] | None = None) -> int:
     frame_step_entry.pack(anchor="w", pady=(2, 5))
     pose_enabled = tk.BooleanVar(value=False)
     alignment_enabled = tk.BooleanVar(value=False)
+    preserve_resolution_enabled = tk.BooleanVar(value=False)
     ttk.Checkbutton(analysis_controls, text="Estimate body regions (slower)", variable=pose_enabled).pack(anchor="w")
     ttk.Checkbutton(analysis_controls, text="Measure frame-center alignment", variable=alignment_enabled).pack(anchor="w")
+    ttk.Checkbutton(analysis_controls, text="Preserve source resolution (higher memory)", variable=preserve_resolution_enabled).pack(anchor="w")
     analyze_button = ttk.Button(analysis_controls, text="Choose image or video…", command=analyze_another_media)
     analyze_button.pack(fill="x", pady=(6, 2))
     cancel_button = ttk.Button(analysis_controls, text="Cancel analysis", command=cancel_analysis, state="disabled")

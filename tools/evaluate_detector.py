@@ -45,6 +45,7 @@ def main() -> int:
     )
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Evaluate inference at original frame dimensions (higher memory use)")
     parser.add_argument(
         "--allow-unreviewed-labels",
         action="store_true",
@@ -83,6 +84,7 @@ def main() -> int:
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
             excluded_regions=regions,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
 
         rows: list[dict] = []
@@ -118,6 +120,9 @@ def main() -> int:
                         "false_negatives": counts.false_negatives,
                         "confidence_threshold": args.confidence_threshold,
                         "iou_threshold": args.iou_threshold,
+                        "device": str(detector.device),
+                        "max_side": args.max_side,
+                        "preserve_source_resolution": args.preserve_source_resolution,
                     }
                 )
 
@@ -127,6 +132,7 @@ def main() -> int:
             "label_provenance",
             "predicted_boxes", "true_positives", "false_positives", "false_negatives",
             "confidence_threshold", "iou_threshold",
+            "device", "max_side", "preserve_source_resolution",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fieldnames)

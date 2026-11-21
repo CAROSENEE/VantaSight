@@ -58,6 +58,7 @@ class TorchvisionBodyRegionEstimator:
         min_size: int = 1080,
         max_size: int = 1920,
         excluded_regions: Sequence[tuple[int, int, int, int]] = (),
+        preserve_source_resolution: bool = False,
     ) -> None:
         if not 0.0 <= person_confidence_threshold <= 1.0:
             raise ValueError("person_confidence_threshold must be between 0 and 1")
@@ -92,6 +93,7 @@ class TorchvisionBodyRegionEstimator:
         self.person_confidence_threshold = person_confidence_threshold
         self.keypoint_score_threshold = keypoint_score_threshold
         self.excluded_regions = tuple(excluded_regions)
+        self.preserve_source_resolution = preserve_source_resolution
         self._weights = KeypointRCNN_ResNet50_FPN_Weights.COCO_V1
         self.keypoint_names = tuple(self._weights.meta["keypoint_names"])
 
@@ -117,6 +119,9 @@ class TorchvisionBodyRegionEstimator:
         if image_bgr.ndim != 3 or image_bgr.shape[2] != 3:
             raise ValueError("Expected a 3-channel BGR image")
         height, width = image_bgr.shape[:2]
+        if self.preserve_source_resolution:
+            self._model.transform.min_size = (min(height, width),)
+            self._model.transform.max_size = max(height, width)
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         image_tensor = (
             self._torch.from_numpy(np.ascontiguousarray(rgb))

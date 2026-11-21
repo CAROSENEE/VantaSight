@@ -26,6 +26,7 @@ def main() -> int:
     parser.add_argument("--confidence-threshold", type=float, default=0.25)
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Disable model-side resizing for this image (higher memory use)")
     parser.add_argument("--estimate-body-regions", action="store_true")
     parser.add_argument("--measure-alignment", action="store_true")
     parser.add_argument("--keypoint-score-threshold", type=float, default=0.0)
@@ -66,6 +67,7 @@ def main() -> int:
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
             excluded_regions=excluded_regions,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
         pose_estimator = (
             TorchvisionBodyRegionEstimator(
@@ -75,6 +77,7 @@ def main() -> int:
                 max_size=args.max_side,
                 keypoint_score_threshold=args.keypoint_score_threshold,
                 excluded_regions=excluded_regions,
+                preserve_source_resolution=args.preserve_source_resolution,
             )
             if args.estimate_body_regions
             else None
@@ -189,6 +192,7 @@ def main() -> int:
             "settings": {
                 "confidence_threshold": args.confidence_threshold,
                 "device": str(detector.device),
+                "preserve_source_resolution": args.preserve_source_resolution,
                 "body_region_estimation": args.estimate_body_regions,
                 "pose_person_threshold": args.pose_person_threshold if pose_estimator else None,
                 "alignment_measurement": args.measure_alignment,

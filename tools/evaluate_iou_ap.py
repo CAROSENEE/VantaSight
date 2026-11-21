@@ -45,6 +45,7 @@ def main() -> int:
     parser.add_argument("--expected-frames", type=parse_frame_indexes)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--max-side", type=int, default=1920)
+    parser.add_argument("--preserve-source-resolution", action="store_true", help="Run each frame at original pixel dimensions (higher memory use)")
     parser.add_argument("--allow-unreviewed-labels", action="store_true")
     parser.add_argument("--regions-file", type=Path, default=Path("data/annotations/source_regions.json"))
     parser.add_argument("--output", type=Path, default=Path("reports/detector_iou_ap.csv"))
@@ -68,6 +69,7 @@ def main() -> int:
             min_size=min(1080, args.max_side),
             max_size=args.max_side,
             excluded_regions=regions,
+            preserve_source_resolution=args.preserve_source_resolution,
         )
 
         samples: list[tuple[list[tuple[float, tuple[int, int, int, int]]], list[tuple[int, int, int, int]]]] = []
@@ -110,7 +112,7 @@ def main() -> int:
             "candidate_detections", "iou_threshold", "average_precision_101_point",
             "mean_ap_over_reported_iou_thresholds", "label_provenance", "unreviewed_scored_frames",
             "model_architecture", "model_weights", "confidence_floor", "max_side", "device",
-            "excluded_region_count", "ap_method",
+            "preserve_source_resolution", "excluded_region_count", "ap_method",
         ]
         with output.open("w", newline="", encoding="utf-8") as destination:
             writer = csv.DictWriter(destination, fieldnames=fields)
@@ -132,6 +134,7 @@ def main() -> int:
                     "model_weights": "COCO_V1",
                     "confidence_floor": "0.0",
                     "max_side": args.max_side,
+                    "preserve_source_resolution": args.preserve_source_resolution,
                     "device": str(detector.device),
                     "excluded_region_count": len(regions),
                     "ap_method": "101_point_interpolated_greedy_one_to_one",
