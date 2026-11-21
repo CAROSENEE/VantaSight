@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import math
+from pathlib import Path, PureWindowsPath
 from typing import Any
+
+
+def _finite_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def load_tracking_report(path: Path) -> dict[str, Any]:
@@ -14,24 +19,71 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
         report = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Cannot read tracking report {path}: {exc}") from exc
-    if not isinstance(report, dict) or report.get("schema_version") != 1:
+    if (
+        not isinstance(report, dict)
+        or type(report.get("schema_version")) is not int
+        or report["schema_version"] != 1
+    ):
         raise ValueError("Unsupported or invalid tracking report schema")
     source = report.get("source")
     summary = report.get("summary")
     frames = report.get("frames")
     if not isinstance(source, dict) or not isinstance(summary, dict) or not isinstance(frames, list):
         raise ValueError("Tracking report must contain source, summary, and frames")
+    file_name = source.get("file_name")
+    if (
+        not isinstance(file_name, str)
+        or not file_name
+        or Path(file_name).name != file_name
+        or PureWindowsPath(file_name).name != file_name
+    ):
+        raise ValueError("Source file_name must be a simple file name without a path")
+    for dimension in ("width", "height"):
+        if type(source.get(dimension)) is not int or source[dimension] < 1:
+            raise ValueError(f"Source {dimension} must be a positive integer")
+    if not _finite_number(source.get("fps")) or source["fps"] < 0:
+        raise ValueError("Source fps must be a finite nonnegative number")
+
+    previous_frame_index = -1
     for frame in frames:
         if not isinstance(frame, dict) or not isinstance(frame.get("detections"), list):
             raise ValueError("Each report frame must contain a detections list")
+        if type(frame.get("frame_index")) is not int or frame["frame_index"] < 0:
+            raise ValueError("Each report frame must have a nonnegative integer frame_index")
+        if frame["frame_index"] <= previous_frame_index:
+            raise ValueError("Report frames must be ordered by strictly increasing frame_index")
+        previous_frame_index = frame["frame_index"]
+        if not _finite_number(frame.get("timestamp_seconds")) or frame["timestamp_seconds"] < 0:
+            raise ValueError("Each report frame must have a finite nonnegative timestamp")
+        if frame.get("detection_count") != len(frame["detections"]):
+            raise ValueError("detection_count must match the frame detections list")
         for detection in frame["detections"]:
             if not isinstance(detection, dict):
                 raise ValueError("Each frame detection must be an object")
             box = detection.get("box_xyxy")
-            if not isinstance(box, list) or len(box) != 4 or not all(
-                isinstance(value, (int, float)) for value in box
-            ):
+            if not isinstance(box, list) or len(box) != 4 or not all(_finite_number(value) for value in box):
                 raise ValueError("Each frame detection must contain a four-coordinate box_xyxy")
+            x1, y1, x2, y2 = box
+            if not (0 <= x1 < x2 <= source["width"] and 0 <= y1 < y2 <= source["height"]):
+                raise ValueError("Detection box coordinates must form a valid box inside the source frame")
             if "body_regions" in detection and not isinstance(detection["body_regions"], list):
                 raise ValueError("Detection body_regions must be a list")
+            for region in detection.get("body_regions", []):
+                if not isinstance(region, dict):
+                    raise ValueError("Each body region must be an object")
+                point = region.get("center_xy")
+                if not isinstance(point, list) or len(point) != 2 or not all(_finite_number(v) for v in point):
+                    raise ValueError("Each body region must have a finite center_xy point")
+                if not (0 <= point[0] <= source["width"] and 0 <= point[1] <= source["height"]):
+                    raise ValueError("Body-region centers must lie inside the source frame")
+                if not _finite_number(region.get("mean_keypoint_score")):
+                    raise ValueError("Body-region mean_keypoint_score must be finite")
+                alignment = region.get("alignment")
+                if alignment is not None:
+                    if not isinstance(alignment, dict):
+                        raise ValueError("Body-region alignment must be an object")
+                    if not _finite_number(alignment.get("distance_pixels")) or not _finite_number(
+                        alignment.get("distance_normalized")
+                    ):
+                        raise ValueError("Alignment distances must be finite numbers")
     return report

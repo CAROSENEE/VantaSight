@@ -11,12 +11,15 @@ import cv2
 import numpy as np
 
 from vantasight.dashboard import load_tracking_report
+from vantasight.dashboard.evaluation_summary import load_detector_evaluation, load_pose_evaluation
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Open a saved offline VantaSight tracking report.")
     parser.add_argument("report", type=Path, nargs="?", default=Path("reports/tracks.json"))
     parser.add_argument("--video", type=Path, help="Source video; defaults to data/input/videos/<report source>")
+    parser.add_argument("--detector-evaluation", type=Path, help="Optional manual-label detector CSV")
+    parser.add_argument("--pose-evaluation", type=Path, help="Optional manual-point pose CSV")
     args = parser.parse_args()
 
     report_path = args.report.expanduser()
@@ -29,6 +32,10 @@ def main() -> int:
         frames = report["frames"]
         if not frames:
             raise ValueError("This report has no sampled frames to display")
+        detector_eval_path = args.detector_evaluation or Path("reports/detector_evaluation.csv")
+        pose_eval_path = args.pose_evaluation or Path("reports/pose_region_evaluation.csv")
+        detector_evaluation = load_detector_evaluation(detector_eval_path, report["source"]["file_name"])
+        pose_evaluation = load_pose_evaluation(pose_eval_path, report["source"]["file_name"])
         capture = cv2.VideoCapture(str(video_path))
         if not capture.isOpened():
             raise ValueError(f"Cannot open source video: {video_path}")
@@ -59,6 +66,37 @@ def main() -> int:
         text="Offline COCO person candidates only. Boxes and temporary IDs do not verify enemy, team, or player identity.",
         foreground="#9a4d00",
     ).pack(anchor="w", pady=(4, 0))
+    if detector_evaluation:
+        metric_text = detector_evaluation
+        detector_text = (
+            f"Manual-label detector evaluation ({metric_text.scored_frames} frames): "
+            f"TP={metric_text.counts.true_positives} FP={metric_text.counts.false_positives} "
+            f"FN={metric_text.counts.false_negatives}"
+        )
+        detector_text += (
+            f" | precision={metric_text.precision:.3f}"
+            if metric_text.precision is not None
+            else " | precision=n/a"
+        )
+        detector_text += (
+            f" | recall={metric_text.recall:.3f}" if metric_text.recall is not None else " | recall=n/a"
+        )
+        detector_text += f" | F1={metric_text.f1:.3f}" if metric_text.f1 is not None else " | F1=n/a"
+    else:
+        detector_text = "Detector evaluation: not available for this video (manual labels required)."
+    ttk.Label(header, text=detector_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
+    if pose_evaluation:
+        pose_text = "Pose-region localization: " + " | ".join(
+            f"{item.region_name} {item.estimated_points}/{item.annotated_points} coverage "
+            f"({item.coverage:.2f}), median {item.median_error_pixels:.1f}px / "
+            f"{item.median_error_normalized:.5f} normalized"
+            if item.median_error_pixels is not None
+            else f"{item.region_name} {item.estimated_points}/{item.annotated_points} coverage ({item.coverage:.2f}), median n/a"
+            for item in pose_evaluation
+        )
+    else:
+        pose_text = "Pose-region evaluation: not available (manual region points required)."
+    ttk.Label(header, text=pose_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
 
     body = ttk.Panedwindow(root, orient="horizontal")
     body.pack(fill="both", expand=True, padx=10, pady=(0, 10))

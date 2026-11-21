@@ -4,7 +4,7 @@
 
 VantaSight is a computer-vision research project. The first target is Valorant footage; the input and analytics pipeline should remain reusable for other FPS or online games later. It aims to measure candidate detections, visible body-region estimates, tracking quality, and crosshair alignment. It does not control a game or automate player input.
 
-The input foundation and frame preview are implemented. An optional baseline person-candidate detector is available for offline screenshots and selected video frames; it is a research baseline and does not identify enemies or teams.
+VantaSight analyzes recorded screenshots and video offline. The current prototype includes a COCO person-candidate detector, experimental body-region estimates, temporary box tracking, crosshair-distance measurements, CSV/JSON export, a separate report dashboard, and manual-label evaluation tools. It does not determine enemy/team identity reliably; model accuracy on the supplied footage still requires manual annotations and evaluation.
 
 ## Requirements
 
@@ -129,7 +129,7 @@ Open the saved report in the separate offline dashboard:
 python tools/open_dashboard.py reports/tracks.json
 ```
 
-The dashboard loads the report and source video from local disk, lets you browse sampled frames, and draws the recorded candidate boxes and temporary track IDs. Pass `--video path\to\source.mp4` when the video is stored outside `data/input/videos/`. It does not capture the desktop or interact with a game.
+The dashboard loads the report and source video from local disk, lets you browse sampled frames, and draws the recorded candidate boxes, temporary track IDs, pose points, and alignment references when present. It also reads the default detector and pose evaluation CSVs from `reports/` when available; pass `--detector-evaluation` or `--pose-evaluation` to select other files. Pass `--video path\to\source.mp4` when the video is stored outside `data/input/videos/`. It does not capture the desktop or interact with a game.
 
 ## Experimental body-region estimate
 
