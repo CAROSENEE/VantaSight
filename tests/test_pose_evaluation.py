@@ -34,6 +34,7 @@ class PoseEvaluationTests(unittest.TestCase):
             "video": "vd-1.mp4",
             "frame_index": 3000,
             "status": "opponent_visible",
+            "reviewed_manually": True,
             "opponent_boxes_xyxy": [[10, 20, 30, 60]],
             "opponent_body_regions_xy": [{"box_index": 0, "points": {"head": [20, 25]}}],
         }
@@ -44,12 +45,31 @@ class PoseEvaluationTests(unittest.TestCase):
         finally:
             path.unlink(missing_ok=True)
 
+    def test_rejects_unreviewed_region_annotations_by_default(self) -> None:
+        path = Path("reports/.test_pose_annotations.jsonl")
+        record = {
+            "video": "vd-1.mp4",
+            "frame_index": 3000,
+            "status": "opponent_visible",
+            "opponent_boxes_xyxy": [[10, 20, 30, 60]],
+            "opponent_body_regions_xy": [{"box_index": 0, "points": {"head": [20, 25]}}],
+        }
+        try:
+            path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Unreviewed annotation"):
+                _load_region_annotations(path, "vd-1.mp4")
+            rows = _load_region_annotations(path, "vd-1.mp4", allow_unreviewed=True)
+            self.assertEqual(rows[0]["_label_provenance"], "unreviewed_exploratory")
+        finally:
+            path.unlink(missing_ok=True)
+
     def test_rejects_body_point_outside_manual_opponent_box(self) -> None:
         path = Path("reports/.test_pose_annotations.jsonl")
         record = {
             "video": "vd-1.mp4",
             "frame_index": 3000,
             "status": "opponent_visible",
+            "reviewed_manually": True,
             "opponent_boxes_xyxy": [[10, 20, 30, 60]],
             "opponent_body_regions_xy": [{"box_index": 0, "points": {"head": [35, 25]}}],
         }

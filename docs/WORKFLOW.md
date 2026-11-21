@@ -218,6 +218,12 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,60
 python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
 ```
 
+Evaluator default-এ শুধু interactive annotation tool-এর manually reviewed row গ্রহণ করে। পুরোনো/প্রাথমিক provisional file দিয়ে কেবল exploratory comparison করতে চাইলে স্পষ্টভাবে `--allow-unreviewed-labels` দাও; output CSV-তে `unreviewed_exploratory` provenance ও terminal-এ warning থাকবে। উদাহরণ:
+
+```powershell
+python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_provisional_review.jsonl --allow-unreviewed-labels --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_provisional_eval.csv
+```
+
 ### M13: confidence-threshold sensitivity
 
 একই 8টি provisional scored frame-এ শুধু confidence cutoff বদলে evaluation করা হয়েছে:
@@ -276,6 +282,10 @@ Tool প্রতি screenshot-এর candidate count ও সর্বোচ্
 
 Screenshot ও video analysis JSON report-এ সব returned person-candidate-এর detector score-এর count, min, mean, median, p95 ও max যোগ হয়েছে। কোনো candidate না থাকলে count `0`, অন্য সব পরিসংখ্যান `null` থাকে। Dashboard header median/p95 score দেখায়; report loader distribution-এর মান ও total candidate count সামঞ্জস্যপূর্ণ কি না যাচাই করে। এগুলো threshold-পেরোনো candidate score-এর বর্ণনামূলক পরিসংখ্যান—enemy identity, calibrated probability, hit probability বা detection accuracy নয়। Local CUDA smoke run-এ `vd-1`-এর 3 sampled frame-এ 17 candidate-এর median score `0.431`, p95 `0.978`, min `0.250`, max `0.978` পাওয়া গেছে; analysis throughput ছিল `0.890` sampled frame/s। `ss-1`-এ 1 candidate-এর score `0.286`। দুই report-ই schema loader-এ যাচাই হয়েছে। অতি ছোট run-এর throughput hardware benchmark নয়। 32 unit test pass, compileall ও diff check clean।
 
+### M19: evaluation-এর আগে annotation provenance gate
+
+Detector ও pose evaluator এখন default-এ কেবল interactive annotation tool দিয়ে হাতে review করে save করা row গ্রহণ করে (`reviewed_manually: true`, provisional note ছাড়া)। Assistant-এর provisional label বা marker-বিহীন পুরোনো JSONL default-এ ground truth হিসেবে চলবে না। কেবল exploratory comparison-এর জন্য `--allow-unreviewed-labels` দিতে হবে; output-এ `unreviewed_exploratory` provenance লেখা হবে এবং warning দেখাবে। এতে পুরোনো `vd-1_provisional_review.jsonl` হারায় না, কিন্তু সেটি user-verified বলে ভুল উপস্থাপন হয় না। যাচাইয়ে default run provisional file reject করেছে এবং কোনো CSV লেখেনি; explicit exploratory run 8 scored row লিখেছে, প্রত্যেকটিতে `unreviewed_exploratory`, metric আগের provisional ফলের সঙ্গে মিলে `TP=3, FP=24, FN=1` হয়েছে। 39 unit test pass, compileall ও diff check clean।
+
 
 ## M7: crosshair-to-region alignment
 
@@ -304,7 +314,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow এবং M16 video analysis pause/resume আছে। পরের কাজ হলো annotation window দিয়ে ওই 12টি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution এবং M19 annotation provenance gate আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 

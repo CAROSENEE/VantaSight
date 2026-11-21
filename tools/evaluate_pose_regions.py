@@ -9,6 +9,7 @@ from pathlib import Path
 
 from vantasight.analytics import (
     associate_pose_observations,
+    annotation_provenance,
     compare_body_region_points,
     summarize_region_localizations,
 )
@@ -19,7 +20,7 @@ from vantasight.vision.body_region_estimator import TorchvisionBodyRegionEstimat
 _REGIONS = {"head", "chest", "lower_torso", "legs"}
 
 
-def _load_region_annotations(path: Path, video_name: str) -> list[dict]:
+def _load_region_annotations(path: Path, video_name: str, *, allow_unreviewed: bool = False) -> list[dict]:
     if not path.is_file():
         raise FileNotFoundError(f"Annotation file not found: {path}")
     records: list[dict] = []
@@ -36,10 +37,14 @@ def _load_region_annotations(path: Path, video_name: str) -> list[dict]:
                 raise ValueError(f"Expected a JSON object at {path}:{line_number}")
             if record.get("video") != video_name:
                 continue
+            provenance = annotation_provenance(
+                record, allow_unreviewed=allow_unreviewed, source=str(path), line_number=line_number
+            )
             frame_index = record.get("frame_index")
             if type(frame_index) is not int or frame_index < 0 or frame_index in seen_frames:
                 raise ValueError(f"Invalid or duplicate frame index at {path}:{line_number}")
             seen_frames.add(frame_index)
+            record["_label_provenance"] = provenance
             if record.get("status") != "opponent_visible":
                 continue
             boxes = record.get("opponent_boxes_xyxy")
@@ -96,6 +101,11 @@ def main() -> int:
     )
     parser.add_argument("--iou-threshold", type=float, default=0.10)
     parser.add_argument("--keypoint-score-threshold", type=float, default=0.0)
+    parser.add_argument(
+        "--allow-unreviewed-labels",
+        action="store_true",
+        help="Allow provisional/legacy labels for exploratory measurements and mark their provenance in the CSV",
+    )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--max-side", type=int, default=1920)
     parser.add_argument("--regions-file", type=Path, default=Path("data/annotations/source_regions.json"))
@@ -106,7 +116,9 @@ def main() -> int:
 
     video = args.video.expanduser()
     try:
-        records = _load_region_annotations(args.annotations.expanduser(), video.name)
+        records = _load_region_annotations(
+            args.annotations.expanduser(), video.name, allow_unreviewed=args.allow_unreviewed_labels
+        )
         regions = _load_excluded_regions(args.regions_file.expanduser(), video.name)
         estimator = TorchvisionBodyRegionEstimator(
             device=args.device,
@@ -155,6 +167,7 @@ def main() -> int:
                                 "opponent_box_index": box_index,
                                 "region": result.region_name,
                                 "pose_matched": box_index in matches,
+                                "label_provenance": record["_label_provenance"],
                                 "ground_truth_x": result.ground_truth_xy[0],
                                 "ground_truth_y": result.ground_truth_xy[1],
                                 "estimate_x": "" if result.estimate_xy is None else result.estimate_xy[0],
@@ -170,6 +183,7 @@ def main() -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         fields = [
             "video", "frame_index", "timestamp_seconds", "opponent_box_index", "region", "pose_matched",
+            "label_provenance",
             "ground_truth_x", "ground_truth_y", "estimate_x", "estimate_y", "error_pixels", "error_normalized",
             "pose_iou_threshold", "keypoint_score_threshold",
         ]
@@ -180,6 +194,10 @@ def main() -> int:
 
         print(f"Device: {estimator.device}")
         print(f"Labeled region points: {len(localizations)}; target boxes without a matched pose: {unmatched_targets}")
+        unreviewed_frames = sum(record["_label_provenance"] != "manually_reviewed" for record in records)
+        print(f"Unreviewed exploratory frames: {unreviewed_frames}")
+        if unreviewed_frames:
+            print("WARNING: These measurements use unreviewed labels and are not a manual ground-truth benchmark.")
         for summary in summarize_region_localizations(localizations):
             coverage = "n/a" if summary.coverage is None else f"{summary.coverage:.3f}"
             median = "n/a" if summary.median_error_pixels is None else f"{summary.median_error_pixels:.1f}px"

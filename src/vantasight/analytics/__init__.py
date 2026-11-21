@@ -5,6 +5,7 @@ from vantasight.analytics.alignment import (
     center_crosshair,
     measure_alignment,
 )
+from vantasight.analytics.annotation_provenance import annotation_provenance
 from vantasight.analytics.detection_evaluation import (
     DetectionCounts,
     DetectionMetrics,
@@ -29,6 +30,7 @@ from vantasight.analytics.tracking_report import write_tracking_report
 
 __all__ = [
     "AlignmentMeasurement",
+    "annotation_provenance",
     "DetectionCounts",
     "DetectionMetrics",
     "RegionLocalization",

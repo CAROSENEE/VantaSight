@@ -7,13 +7,13 @@ import csv
 import json
 from pathlib import Path
 
-from vantasight.analytics import DetectionCounts, calculate_metrics, match_boxes
+from vantasight.analytics import DetectionCounts, annotation_provenance, calculate_metrics, match_boxes
 from vantasight.cli import _load_excluded_regions
 from vantasight.input import VideoReader
 from vantasight.vision import TorchvisionPersonDetector
 
 
-def _read_annotations(path: Path, video_name: str) -> list[dict]:
+def _read_annotations(path: Path, video_name: str, *, allow_unreviewed: bool = False) -> list[dict]:
     if not path.is_file():
         raise FileNotFoundError(f"Annotation file not found: {path}")
 
@@ -31,6 +31,9 @@ def _read_annotations(path: Path, video_name: str) -> list[dict]:
                 raise ValueError(f"Expected an object at {path}:{line_number}")
             if record.get("video") != video_name:
                 continue
+            provenance = annotation_provenance(
+                record, allow_unreviewed=allow_unreviewed, source=str(path), line_number=line_number
+            )
 
             frame_index = record.get("frame_index")
             if type(frame_index) is not int or frame_index < 0:
@@ -38,6 +41,7 @@ def _read_annotations(path: Path, video_name: str) -> list[dict]:
             if frame_index in seen_frames:
                 raise ValueError(f"Duplicate annotation for frame {frame_index} in {path}")
             seen_frames.add(frame_index)
+            record["_label_provenance"] = provenance
 
             status = record.get("status")
             if status not in {"opponent_visible", "no_opponent_visible", "uncertain"}:
@@ -96,6 +100,11 @@ def main() -> int:
     parser.add_argument("--device", default="auto", help="Inference device: auto, cpu, or cuda:0")
     parser.add_argument("--max-side", type=int, default=1920)
     parser.add_argument(
+        "--allow-unreviewed-labels",
+        action="store_true",
+        help="Allow provisional/legacy labels for exploratory metrics and mark their provenance in the CSV",
+    )
+    parser.add_argument(
         "--regions-file",
         type=Path,
         default=Path("data/annotations/source_regions.json"),
@@ -118,7 +127,7 @@ def main() -> int:
     annotation_path = args.annotations.expanduser()
     output = args.output.expanduser()
     try:
-        records = _read_annotations(annotation_path, video.name)
+        records = _read_annotations(annotation_path, video.name, allow_unreviewed=args.allow_unreviewed_labels)
         regions = _load_excluded_regions(args.regions_file, video.name)
         detector = TorchvisionPersonDetector(
             confidence_threshold=args.confidence_threshold,
@@ -152,6 +161,7 @@ def main() -> int:
                         "frame_index": frame_index,
                         "timestamp_seconds": f"{frame.timestamp_seconds:.6f}",
                         "label": record["status"],
+                        "label_provenance": record["_label_provenance"],
                         "ground_truth_boxes": len(ground_truth),
                         "predicted_boxes": len(predictions),
                         "true_positives": counts.true_positives,
@@ -165,6 +175,7 @@ def main() -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         fieldnames = [
             "video", "frame_index", "timestamp_seconds", "label", "ground_truth_boxes",
+            "label_provenance",
             "predicted_boxes", "true_positives", "false_positives", "false_negatives",
             "confidence_threshold", "iou_threshold",
         ]
@@ -177,12 +188,16 @@ def main() -> int:
         precision, recall, f1 = metrics.precision, metrics.recall, metrics.f1
         print(f"Device: {detector.device}")
         print(f"Scored frames: {len(rows)} (uncertain frames excluded)")
+        unreviewed_frames = sum(row["label_provenance"] != "manually_reviewed" for row in rows)
+        print(f"Unreviewed exploratory frames: {unreviewed_frames}")
         print(f"TP={total_tp} FP={total_fp} FN={total_fn}")
         print(f"Precision: {precision:.3f}" if precision is not None else "Precision: n/a")
         print(f"Recall: {recall:.3f}" if recall is not None else "Recall: n/a")
         print(f"F1: {f1:.3f}" if f1 is not None else "F1: n/a")
         print(f"Per-frame CSV: {output.resolve()}")
-        print("These metrics describe only the manually labeled frames and this confidence/IoU setting.")
+        print("These metrics describe only the labeled frames and this confidence/IoU setting.")
+        if unreviewed_frames:
+            print("WARNING: Some labels are unreviewed; these exploratory metrics are not a manual ground-truth benchmark.")
         return 0
     except (FileNotFoundError, IndexError, OSError, ValueError, RuntimeError) as exc:
         parser.exit(2, f"evaluation: error: {exc}\n")
