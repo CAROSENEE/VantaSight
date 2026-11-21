@@ -89,6 +89,8 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,
 
 To manually verify the current provisional sample, pass it with `--prefill` and save to a separate file:
 
+On Windows, after setting up `.venv` and placing the local video in `data/input/videos/vd-1.mp4`, you can double-click `tools/start_vd1_annotation.bat` to launch the same 12-frame review. If an earlier annotation window is already open, close it with `q` first to avoid duplicate sessions.
+
 ```powershell
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --prefill data/annotations/vd-1_provisional_review.jsonl --output data/annotations/vd-1_user_verified.jsonl
 ```
