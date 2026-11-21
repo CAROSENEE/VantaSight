@@ -684,3 +684,7 @@ Windows shell browser-কে foreground-এ না আনলে launcher এখ�
 ### M100: review gallery JavaScript syntax check
 
 Current `tools/review_gallery_template.html`-এর inline script temporary `.js` file-এ নিয়ে `node --check` চালিয়েছি; syntax check পাস। Check শেষে temporary file সরানো হয়েছে। এটি শুধু parse/syntax যাচাই—browser DOM event, canvas interaction, localStorage বা download behavior runtime-এ যাচাই করে না।
+
+### M101: review gallery খোলা ও annotation status যাচাই
+
+Gallery directory-তে `index.html`, manifest, এবং ১২টি extracted frame আছে। Manifest-এ `labels_saved: false`; canonical `data/annotations/vd-1_user_verified.jsonl` ফাইলও নেই। তাই video annotation বা video metric তৈরি হয়নি। Browser window ব্যবহারকারীর সামনে দৃশ্যমান হয়েছে কি না এই environment থেকে নিশ্চিত করা যায়নি: browser access host unavailable ছিল এবং CUA বর্তমান browser URL যাচাই করতে পারেনি। Window খোলা হয়েছে বলে ধরা হবে না। পরের বাস্তব ধাপ হলো Windows-এ `tools/start_vd1_review_gallery.bat` চালিয়ে local HTML page দেখা; এরপর user নিজে frame review ও save করলে তবেই JSONL import এবং evaluation চলবে।
