@@ -278,8 +278,8 @@ def main() -> int:
             parser.error("--output requires --frame-index for video input")
         if args.pose_output is not None and args.frame_index is None:
             parser.error("--pose-output requires --frame-index for video input")
-        if args.output is not None and not args.detect_persons:
-            parser.error("--output requires --detect-persons")
+        if args.output is not None and not args.detect_persons and args.estimate_body_regions:
+            parser.error("--output cannot be used for pose-only video analysis; use --pose-output")
         if args.pose_output is not None and not args.estimate_body_regions:
             parser.error("--pose-output requires --estimate-body-regions")
         if args.measure_alignment and not args.estimate_body_regions:
