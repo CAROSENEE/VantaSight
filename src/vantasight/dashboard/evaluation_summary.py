@@ -30,6 +30,19 @@ class PoseRegionSummary:
     median_error_normalized: float | None
 
 
+@dataclass(frozen=True)
+class ThresholdSweepPoint:
+    confidence_threshold: float
+    true_positives: int
+    false_positives: int
+    false_negatives: int
+    precision: float | None
+    recall: float | None
+    f1: float | None
+    scored_frames: int
+    label_provenance: str
+
+
 def load_detector_evaluation(path: Path, video_name: str) -> DetectorEvaluationSummary | None:
     """Aggregate per-frame TP/FP/FN for one source video from its evaluator CSV."""
 
@@ -113,3 +126,71 @@ def load_pose_evaluation(path: Path, video_name: str) -> list[PoseRegionSummary]
             )
         )
     return summaries
+
+
+def load_threshold_sweep(path: Path, video_name: str) -> list[ThresholdSweepPoint] | None:
+    """Load and validate confidence-sweep metrics for one source video."""
+    if not path.is_file():
+        return None
+    points: list[ThresholdSweepPoint] = []
+    with path.open("r", encoding="utf-8-sig", newline="") as source:
+        reader = csv.DictReader(source)
+        required = {
+            "video", "confidence_threshold", "scored_frames", "true_positives", "false_positives",
+            "false_negatives", "precision", "recall", "f1", "label_provenance",
+            "unreviewed_scored_frames",
+        }
+        if reader.fieldnames is None or not required.issubset(reader.fieldnames):
+            raise ValueError(f"Threshold sweep CSV is missing required columns: {path}")
+        for row in reader:
+            if row.get("video") != video_name:
+                continue
+            try:
+                threshold = float(row["confidence_threshold"])
+                scored_frames = int(row["scored_frames"])
+                counts = [int(row[key]) for key in ("true_positives", "false_positives", "false_negatives")]
+                unreviewed_frames = int(row["unreviewed_scored_frames"])
+                raw_metrics = [row[name].strip() for name in ("precision", "recall", "f1")]
+                metrics = [float(value) if value else None for value in raw_metrics]
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid threshold sweep values in {path}") from exc
+            provenance = row.get("label_provenance", "")
+            if not math.isfinite(threshold) or not 0 <= threshold <= 1:
+                raise ValueError(f"Invalid confidence threshold in {path}")
+            if scored_frames < 1 or any(value < 0 for value in counts):
+                raise ValueError(f"Invalid threshold sweep counts in {path}")
+            if not 0 <= unreviewed_frames <= scored_frames:
+                raise ValueError(f"Invalid unreviewed frame count in {path}")
+            if provenance not in {"manually_reviewed", "unreviewed_exploratory"}:
+                raise ValueError(f"Invalid label provenance in {path}")
+            if provenance == "manually_reviewed" and unreviewed_frames:
+                raise ValueError(f"Manual threshold sweep cannot contain unreviewed frames in {path}")
+            expected_metrics = calculate_metrics(DetectionCounts(*counts))
+            for actual, expected in zip(metrics, (expected_metrics.precision, expected_metrics.recall, expected_metrics.f1)):
+                if actual is None and expected is None:
+                    continue
+                if actual is None or expected is None:
+                    raise ValueError(f"Threshold sweep metric does not match counts in {path}")
+                if not math.isfinite(actual) or not 0 <= actual <= 1 or not math.isclose(actual, expected, abs_tol=1e-9):
+                    raise ValueError(f"Threshold sweep metric does not match counts in {path}")
+            points.append(
+                ThresholdSweepPoint(
+                    confidence_threshold=threshold,
+                    true_positives=counts[0],
+                    false_positives=counts[1],
+                    false_negatives=counts[2],
+                    precision=metrics[0],
+                    recall=metrics[1],
+                    f1=metrics[2],
+                    scored_frames=scored_frames,
+                    label_provenance=provenance,
+                )
+            )
+    if not points:
+        return None
+    points.sort(key=lambda point: point.confidence_threshold)
+    if len({point.confidence_threshold for point in points}) != len(points):
+        raise ValueError(f"Duplicate confidence threshold in {path}")
+    if len({point.scored_frames for point in points}) != 1 or len({point.label_provenance for point in points}) != 1:
+        raise ValueError(f"Inconsistent threshold sweep sample or provenance in {path}")
+    return points

@@ -16,7 +16,11 @@ import cv2
 import numpy as np
 
 from vantasight.dashboard import load_tracking_report, summarize_alignment_errors
-from vantasight.dashboard.evaluation_summary import load_detector_evaluation, load_pose_evaluation
+from vantasight.dashboard.evaluation_summary import (
+    load_detector_evaluation,
+    load_pose_evaluation,
+    load_threshold_sweep,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     source_group.add_argument("--image", type=Path, help="Source screenshot; defaults to data/input/screenshots/<report source>")
     parser.add_argument("--detector-evaluation", type=Path, help="Optional manual-label detector CSV")
     parser.add_argument("--pose-evaluation", type=Path, help="Optional manual-point pose CSV")
+    parser.add_argument("--threshold-sweep", type=Path, help="Optional confidence-threshold sweep CSV")
     args = parser.parse_args(argv)
 
     report_path = args.report.expanduser()
@@ -35,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
         source_is_image = report.get("analysis_type") == "offline_single_image_person_candidate_analysis"
         if source_is_image and args.video:
             raise ValueError("This is a screenshot report; pass its source with --image")
+        if source_is_image and args.threshold_sweep:
+            raise ValueError("Confidence threshold sweeps require a video report")
         if not source_is_image and args.image:
             raise ValueError("This is a video report; pass its source with --video")
         default_root = Path("data/input/screenshots" if source_is_image else "data/input/videos")
@@ -50,6 +57,11 @@ def main(argv: list[str] | None = None) -> int:
         pose_eval_path = args.pose_evaluation or Path("reports/pose_region_evaluation.csv")
         detector_evaluation = load_detector_evaluation(detector_eval_path, report["source"]["file_name"])
         pose_evaluation = load_pose_evaluation(pose_eval_path, report["source"]["file_name"])
+        threshold_sweep = (
+            load_threshold_sweep(args.threshold_sweep.expanduser(), report["source"]["file_name"])
+            if args.threshold_sweep
+            else None
+        )
         source_image = None
         capture = None
         if source_is_image:
@@ -148,6 +160,25 @@ def main(argv: list[str] | None = None) -> int:
     else:
         pose_text = "Pose-region evaluation: not available (manual region points required)."
     ttk.Label(header, text=pose_text, wraplength=1150).pack(anchor="w", pady=(4, 0))
+    if threshold_sweep:
+        format_metric = lambda value: "n/a" if value is None else f"{value:.2f}"
+        sweep_entries = [
+            f"{point.confidence_threshold:.2f} P={format_metric(point.precision)} "
+            f"R={format_metric(point.recall)} F1={format_metric(point.f1)} "
+            f"[{point.true_positives}/{point.false_positives}/{point.false_negatives}]"
+            for point in threshold_sweep
+        ]
+        sweep_lines = [
+            "Confidence sweep "
+            f"({threshold_sweep[0].label_provenance}, {threshold_sweep[0].scored_frames} scored frames):"
+        ]
+        sweep_lines.extend(
+            "  |  ".join(sweep_entries[index:index + 5])
+            for index in range(0, len(sweep_entries), 5)
+        )
+        ttk.Label(header, text="\n".join(sweep_lines), wraplength=1150, justify="left").pack(
+            anchor="w", pady=(4, 0)
+        )
     if alignment_summaries:
         alignment_text = "Geometric alignment error: " + " | ".join(
             f"{item['region_name']} n={item['measurements']}, median={item['median_error_pixels']:.1f}px "

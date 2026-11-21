@@ -102,7 +102,7 @@ def main() -> int:
         provenance = "unreviewed_exploratory" if unreviewed_frames else "manually_reviewed"
         output.parent.mkdir(parents=True, exist_ok=True)
         fields = [
-            "confidence_threshold", "scored_frames", "true_positives", "false_positives",
+            "video", "confidence_threshold", "scored_frames", "true_positives", "false_positives",
             "false_negatives", "precision", "recall", "f1", "iou_threshold",
             "label_provenance", "unreviewed_scored_frames",
         ]
@@ -112,6 +112,7 @@ def main() -> int:
             for result in results:
                 writer.writerow({
                     **result,
+                    "video": video.name,
                     "scored_frames": len(samples),
                     "iou_threshold": args.iou_threshold,
                     "label_provenance": provenance,

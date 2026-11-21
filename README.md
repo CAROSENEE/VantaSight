@@ -113,6 +113,12 @@ python tools/evaluate_threshold_sweep.py "data/input/videos/vd-1.mp4" data/annot
 
 The default sweep covers confidence `0.25` through `0.95` in `0.05` increments. The evaluator requires manually reviewed annotations unless `--allow-unreviewed-labels` is explicitly passed for exploratory analysis. It reuses detections across cutoffs, so each labeled frame runs through the model once.
 
+Load a saved sweep beside the matching video report in the offline dashboard with:
+
+```powershell
+python tools/open_dashboard.py reports/tracks.json --threshold-sweep reports/vd-1_threshold_sweep.csv
+```
+
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
 
 By default, detector and pose evaluators require records saved from the interactive annotation tool, which marks each manually reviewed row. For an explicitly exploratory run on provisional or legacy rows, pass `--allow-unreviewed-labels`; the output labels that provenance and warns that the metrics are not a reviewed ground-truth benchmark.
