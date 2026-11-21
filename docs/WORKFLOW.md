@@ -327,7 +327,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary এবং M24 report validation আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow, M12 provisional evaluation, M13 threshold sensitivity, M14 dashboard image/video input, M15 provisional-box review flow, M16 video analysis pause/resume, M17 screenshot presence evaluation, M18 confidence distribution, M19 annotation provenance gate, M20 full-clip coarse tracking, M21 indexed sampling, M22 body-region heatmap response summary, M23 temporary track observation summary, M24 report validation, M25 dashboard summary wrapping এবং M26 offline-boundary audit আছে। পরের কাজ হলো annotation window দিয়ে 12টি video frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-reviewed label ও বৈচিত্র্যময় sample না পাওয়া পর্যন্ত detector score final accuracy নয়।
 
 ## ভাষার নিয়ম
 
@@ -352,3 +352,7 @@ Dashboard report loader এখন M22 body-region response summary এবং M23
 ### M25: dashboard summary header wrapping
 
 Dashboard-এর এক লাইনের summary-তে M22/M23 যোগ হওয়ার পর metrics সরু window-তে কেটে যেতে পারত। Summary-কে source/run stats, confidence, region response ও tracking আলাদা লাইনে সাজিয়ে 1200px wrap limit দেওয়া হয়েছে। এতে dashboard-এর default 1280px window-তে দীর্ঘ raw heatmap summary পড়া সহজ হওয়ার কথা; Windows UI-তে সরাসরি visual QA এখনও বাকি।
+
+### M26: offline-only boundary code review
+
+`src/` ও `tools/`-এ input/capture API পর্যালোচনা করে দেখা হয়েছে video reader ও dashboard-এর `cv2.VideoCapture` নির্বাচিত file path খোলে; screen capture, game-process/memory access, injected overlay, mouse/keyboard game-input automation বা socket/request-based live stream handling পাওয়া যায়নি। `cv2.waitKey` কেবল offline annotation window-এর label key পড়তে ব্যবহৃত। Model checkpoint প্রথমবার TorchVision থেকে নামতে পারে—একবার cache হলে footage analysis selected local file-এ চলে। এটি source-code search ও path review, formal security audit নয়।
