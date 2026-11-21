@@ -8,7 +8,7 @@ from pathlib import Path
 
 import cv2
 
-from vantasight.input import VideoReader, frame_sha256
+from vantasight.input import VideoFrame, VideoReader, frame_sha256
 
 
 LABELS = {
@@ -94,6 +94,38 @@ def _draw_box(image, box: tuple[int, int, int, int], scale_x: float, scale_y: fl
         (40, 230, 80),
         2,
     )
+
+
+def _build_annotation_record(
+    frame: VideoFrame,
+    video_name: str,
+    status: str,
+    boxes: list[tuple[int, int, int, int]],
+    region_points_by_box: dict[int, dict[str, tuple[int, int]]],
+    suggestion: dict | None,
+) -> dict:
+    """Create a manually confirmed annotation row tied to its decoded source frame."""
+    source_height, source_width = frame.pixels.shape[:2]
+    return {
+        "video": video_name,
+        "frame_index": frame.index,
+        "timestamp_seconds": round(frame.timestamp_seconds, 6),
+        "source_width": source_width,
+        "source_height": source_height,
+        "source_frame_sha256": frame_sha256(frame.pixels),
+        "status": status,
+        "opponent_boxes_xyxy": [list(box) for box in boxes],
+        "reviewed_manually": True,
+        "provisional_prefill_used": suggestion is not None,
+        "opponent_body_regions_xy": [
+            {
+                "box_index": box_index,
+                "points": {name: list(point) for name, point in points.items()},
+            }
+            for box_index, points in sorted(region_points_by_box.items())
+            if points
+        ],
+    }
 
 
 def _annotate_one(
@@ -295,26 +327,9 @@ def _annotate_one(
                 if status == "no_opponent_visible" and boxes:
                     print(f"Frame {frame.index}: clear boxes before labeling no opponent.")
                     continue
-                result = {
-                    "video": video_name,
-                    "frame_index": frame.index,
-                    "timestamp_seconds": round(frame.timestamp_seconds, 6),
-                    "source_width": source_width,
-                    "source_height": source_height,
-                    "source_frame_sha256": frame_sha256(frame.pixels),
-                    "status": status,
-                    "opponent_boxes_xyxy": [list(box) for box in boxes],
-                    "reviewed_manually": True,
-                    "provisional_prefill_used": suggestion is not None,
-                    "opponent_body_regions_xy": [
-                        {
-                            "box_index": box_index,
-                            "points": {name: list(point) for name, point in points.items()},
-                        }
-                        for box_index, points in sorted(region_points_by_box.items())
-                        if points
-                    ],
-                }
+                result = _build_annotation_record(
+                    frame, video_name, status, boxes, region_points_by_box, suggestion
+                )
                 break
             elif key == ord("q"):
                 break
