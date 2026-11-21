@@ -16,6 +16,9 @@ if not exist "data\input\videos\vd-1.mp4" (
     exit /b 1
 )
 
+echo Starting a blank manual review. No provisional boxes will be loaded.
+echo Look for a window titled "VantaSight annotation - vd-1.mp4 frame ...".
+echo If the window does not appear, keep this console open and read any error below.
 ".venv\Scripts\python.exe" "tools\annotate_video_frames.py" "data\input\videos\vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output "data\annotations\vd-1_user_verified.jsonl" --keep-on-top
 
 if errorlevel 1 (

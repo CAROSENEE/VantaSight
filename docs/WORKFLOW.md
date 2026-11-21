@@ -320,7 +320,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M69)
+## বর্তমান অবস্থান (M70)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -330,6 +330,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M67-এ desktop-এর আগে থেকে খোলা dashboard foreground-এ এনে দেখা হয়েছে: Previous/Next/Play samples/Pause/Stop controls, custom crosshair field এবং candidate-only warning দৃশ্যমান। কিন্তু window-টি পুরোনো `vd-1_dashboard_tracks.json` (59 sampled frame, 188 candidate) খুলেছে; এতে AP/threshold panel `unreviewed_exploratory` হিসেবে দেখানো। বর্তমান launcher-এর dense report এখনও চোখে দেখে খোলা হয়নি, এবং click করে playback frame পরিবর্তনও নিশ্চিত হয়নি। তাই এটি partial layout QA, playback/launcher pass নয়।
 - M68-এ launcher-এ নির্ধারিত dense report ও বর্তমান local video-র SHA-256 মেলানো হয়েছে: `3917b7d5…` দুই পাশেই একই; report-এ 236 sampled frame ও 816 person candidate আছে। Viewer source mismatch-এ report reject করবে না—এটুকু নিশ্চিত, UI launch/playback বা detection accuracy নয়।
 - M69-এ `reports/VantaSight Dashboard Review.lnk`-এর পুরোনো target পাওয়া গেছে: এটি `m50_tracks.json` ও unverified evaluation CSV খুলত। Local shortcut-টি এখন `tools/start_vd1_dashboard.bat` চালায়, যা dense report ব্যবহার করে। `.lnk` Git-ignored, তাই এটি শুধু এই PC-তে বদলেছে; tracked batch launcher-ই GitHub-এ আছে। Shortcut থেকে launch চেষ্টা করা হলেও নতুন window CUA-তে targetable হয়নি, তাই UI launch এখনো অসম্পূর্ণভাবে যাচাইকৃত।
+- M70-এ annotation batch launcher চালুর আগে blank review ও প্রত্যাশিত window title prefix console-এ জানায়; ভুল হলে console খোলা রেখে error পড়তে বলে। এতে পরে annotation শুরু করলে কী window খুঁজতে হবে বোঝা যাবে। Annotation tool চালানো হয়নি।
 - Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
 - পরবর্তী gate: corrected launcher দিয়ে dense report-এর visible window নিশ্চিত করা এবং playback interaction যাচাই করা; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
 
@@ -553,3 +554,7 @@ PowerShell দিয়ে `reports/vd-1_dashboard_tracks_dense.json`-এর `sourc
 ### M69: local dashboard shortcut সংশোধন
 
 Ignored `reports/VantaSight Dashboard Review.lnk` COM properties পড়ে দেখা যায় এটি `m50_tracks.json` এবং provisional threshold/AP CSV-তে point করছিল। Shortcut-এর target `tools/start_vd1_dashboard.bat`, arguments ফাঁকা এবং working directory repository root করা হয়েছে। আবার shortcut পড়ে তিনটি value verify করেছি। Batch launcher Git-tracked এবং dense report খোলে; `.lnk` local-only, তাই GitHub-এ commit হয়নি। Shortcut double-click করে নতুন dashboard window targetable কি না নিশ্চিত করতে পারিনি; launch attempt-এর background process বন্ধ করেছি।
+
+### M70: annotation launcher-এর startup নির্দেশনা
+
+`tools/start_vd1_annotation.bat` এখন `vd-1` input ও virtual environment যাচাইয়ের পর জানায় যে review ফাঁকা থেকে শুরু হবে, provisional box আসবে না, এবং expected window title prefix কী। Error হলে console বন্ধ না করে পড়তে বলে। README-তেও এই আচরণ লেখা হয়েছে। এতে GUI সত্যিই খুলেছে—এমন দাবি নয়; user annotation পরে করবেন, তাই এই ধাপে tool launch বা label save করা হয়নি।
