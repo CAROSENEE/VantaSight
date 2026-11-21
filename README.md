@@ -174,7 +174,7 @@ Use `--crosshair x,y` to set a different reference in source-image pixels. Pose 
 
 The frame step is in source frames. Unsampled video frames are skipped with indexed seeks while recorded frame indexes and timestamps remain tied to the original video. Use `--start-frame` and exclusive `--stop-frame` to analyze a segment. Results go to `reports/tracks.csv` and the structured `reports/tracks.json`; use `--output` and `--json-output` to choose other paths. The JSON report includes video metadata, analysis settings, per-frame detections, temporary IDs, image-plane velocity, runtime statistics, and descriptive temporary-track observation counts and observed spans. These spans cover sampled observations only and do not prove continuous presence or identity. An optional preview goes to `data/previews/`. IDs associate boxes only, can fragment when detections disappear or change shape, and do not identify players, teams, or enemies. Velocity is measured in source-image pixels per second, not game-world speed.
 
-Open a saved report in the separate offline dashboard:
+Open a saved report in the separate offline dashboard. Its window title includes both the source filename and report name so you can distinguish different analyses of the same video:
 
 ```powershell
 python tools/open_dashboard.py reports/tracks.json

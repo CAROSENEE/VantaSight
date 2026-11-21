@@ -101,7 +101,10 @@ def main(argv: list[str] | None = None) -> int:
     root = tk.Tk()
     root.state("normal")
     root.deiconify()
-    root.title(f"VantaSight Offline Dashboard — {report['source'].get('file_name', source_path.name)}")
+    root.title(
+        f"VantaSight Offline Dashboard — {report['source'].get('file_name', source_path.name)} "
+        f"— {report_path.stem}"
+    )
     root.geometry("1280x800")
     root.minsize(900, 600)
     root.lift()
