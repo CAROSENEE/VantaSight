@@ -42,7 +42,7 @@
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-Enemy box হাতে label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` যোগ করা হয়েছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হবে। Annotation GUI-নির্ভর; এই সেশনে key/mouse দিয়ে পাঁচটি frame label করা হয়নি, তাই ground-truth box ও metric এখনো তৈরি হয়নি। Body-region estimation-এর experimental model ও preview আছে, কিন্তু সেটিও labeled ground truth দিয়ে যাচাই হয়নি। Tracker, alignment calculation ও dashboard এখনো তৈরি হয়নি।
+Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` আছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হয়। `vd-1`-এর পাঁচটি নির্বাচিত frame visual review করে local `data/annotations/vd-1_provisional_review.jsonl` বানানো হয়েছে; এতে প্রতিটি row-তে `assistant_visual_provisional_user_review_needed` note আছে, তাই এগুলো user-verified ground truth নয়। 55s frame-টি uncertain রাখা হয়েছে। এই চারটি নিশ্চিত frame-এ প্রাথমিক run detector-এর `TP=2, FP=7, FN=0`, precision `0.222`, recall `1.000`, F1 `0.364` দিয়েছে। Sample খুব ছোট ও label provisional—এই metric কেবল পরের data-collection ধাপ ঠিক করতে কাজে লাগবে। Body-region estimate এখনো কোনো manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -51,12 +51,12 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | label ও metric tool তৈরি; পাঁচটি frame-এর ground-truth label বাকি |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | চার frame-এর provisional visual metric আছে; user-verified labels ও বড় sample বাকি |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
 | 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay ও manual-evaluation summary-সহ tracking dashboard যোগ হয়েছে; Windows-এ UI visual review বাকি |
-| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector ও pose-region evaluator আছে; representative frame label ও বাস্তব metric বাকি |
+| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Evaluator ও সীমাবদ্ধতা আছে; provisional metric হয়েছে, user-verified representative labels ও pose-region metric বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
 
@@ -207,6 +207,17 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 
 বর্তমান dashboard-এর `Analyze a local video` panel-এ video বেছে নিয়ে প্রতি কত source frame পর analysis হবে তা নির্ধারণ করা যায়। ঐচ্ছিকভাবে body-region estimate ও frame-center alignment চালানো যায়; alignment নির্বাচন করতে body-region estimate-ও চালু থাকতে হবে। Analysis background process-এ চলে, `Cancel analysis` দিয়ে থামানো যায়, এবং সফল হলে নতুন JSON report নিজে থেকে dashboard-এ খোলে। CSV/JSON output timestamp-সহ নাম নিয়ে ignored `reports/` folder-এ লেখা হয়। এই workflow নির্বাচিত local recording পড়ে; live capture বা game control করে না। GUI flow এই environment-এ হাতে যাচাই করা যায়নি—তোমার desktop-এ নতুন video দিয়ে যাচাই দরকার।
 
+### M12: প্রথম provisional video evaluation
+
+Frame `600`, `3000`, `4200`, `5400`, `6600`-এর local preview/source frame দেখে প্রথম চারটি label করা হয়েছে (5s ও 35s-এ sightline-এ opponent নেই; 25s ও 45s-এ opponent দেখা যায়), আর 55s frame effect/outline-এর কারণে uncertain রাখা হয়েছে। Positive box: frame 3000 `[1247,505,1350,726]`, frame 5400 `[1085,675,1175,880]`; coordinates 2560×1440 original frame-এ। Annotation ও CSV Git-ignored local data। Confidence `0.25`, IoU `0.50`-এ 4 scored frame থেকে `TP=2, FP=7, FN=0`, precision `0.222`, recall `1.000`, F1 `0.364` হয়েছে। এটি provisional visual review, user-verified benchmark নয়। Box-এর সীমানা ও label-গুলো annotation window-তে user যাচাই/সংশোধন করলে এরপর আলাদা `vd-1_user_verified.jsonl` file দিয়ে evaluator rerun করতে হবে।
+
+User-verified copy বানাতে:
+
+```powershell
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 600,3000,4200,5400,6600 --output data/annotations/vd-1_user_verified.jsonl
+python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
+```
+
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
 ## M7: crosshair-to-region alignment
@@ -236,7 +247,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 CSV/JSON export ও offline dashboard, M9 evaluation tools, M10 sampled-frame playback এবং M11 dashboard video-run workflow আছে। এখন GUI flow স্থানীয় desktop-এ নতুন video দিয়ে যাচাই করা, তারপর representative gameplay frame label করে evaluator চালানো বাকি। নির্দিষ্ট sample video label করার command ও frame বাছাই পরের ধাপে লেখা হবে। Label ছাড়া detector বা pose accuracy দাবি করা যাবে না।
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation, M8 dashboard, M9 evaluation tools, M10 sampled-frame playback, M11 dashboard video-run workflow এবং M12 provisional evaluation আছে। পরের কাজ হলো annotation window দিয়ে ওই পাঁচটি frame user-verify করে আলাদা output file-এ রাখা, evaluator পুনরায় চালানো, তারপর আরও বিভিন্ন সময়ের positive/negative sample যোগ করা। Body-region evaluator চালাতে visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে। User-verified label ও বড়/বৈচিত্র্যময় sample না পাওয়া পর্যন্ত এই detector score চূড়ান্ত accuracy নয়।
 
 ## ভাষার নিয়ম
 
