@@ -159,6 +159,17 @@ Track sampled candidate boxes in an offline video with [the tracking tool](tools
 - Frame indices and timestamps are represented in the video input API
 - No game-process access, overlays injected into a game, input automation, or aim control
 
+## Run the project checks
+
+From the repository root, run the unit tests and compile check:
+
+```powershell
+python -m unittest discover -v
+python -m compileall -q src tools tests
+```
+
+The unit tests cover geometry, box matching, pose-region evaluation, tracking behavior, JSON report validation, and dashboard evaluation summaries. They do not replace evaluation against manually labeled gameplay frames.
+
 ## Research limitations
 
 Detection and body-region estimates must be evaluated on representative footage. Model confidence is not hit probability, and alignment distance is only a geometric measurement. See [the project specification](Valorant_Visual_Analytics_Codex_Spec.md) for the research goals and evaluation plan.
