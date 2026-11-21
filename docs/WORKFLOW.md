@@ -262,6 +262,17 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,60
 Dashboard-এ video analysis চলাকালে `Pause video analysis` চাপলে থামবে, `Resume video analysis` চাপলে আবার চলবে, আর `Cancel analysis` পুরো run বন্ধ করবে। Pauseটি video-এর sampled-frame boundary-তে কার্যকর; paused সময়ে model inference চলে না। JSON report-এর `analysis_paused_seconds`-এ user-এর pause time থাকে; `analysis_elapsed_seconds` ও analysis throughput হিসাব থেকে ওই অপেক্ষার সময় বাদ যায়। Screenshot analysis এক-frame atomic inference হওয়ায় pause button সক্রিয় হয় না। GUI হাতে চালিয়ে button যাচাই করা এখনো বাকি।
 `vd-1.mp4`-এর 3 sampled frame (`0–60`, step 30) দিয়ে local CUDA smoke run-এ pause sentinel 21.31s রাখা হয়েছিল। Run শেষে 3 frame complete হয়েছে; report-এ paused `21.31s`, active elapsed `4.04s`, throughput `0.742 sampled frame/s` ছিল—pause সময় বাদ পড়েছে। এটি pause accounting-এর implementation check; 3 frame-এর throughput performance benchmark নয়। `25` unit test pass, `compileall` ও `git diff --check` clean. CUA app inventory-তে Tkinter dashboard window expose হয়নি, তাই button-গুলোর visual/manual interaction যাচাই বাকি।
 
+### M17: user-labeled screenshot presence evaluation
+
+`data/annotations/screenshot_presence.csv`-এর user-labeled yes/no তথ্যের সঙ্গে প্রতিটি screenshot-এ অন্তত একটি person candidate পাওয়া গেছে কি না তুলতে:
+
+```powershell
+python tools/evaluate_screenshot_presence.py --confidence-threshold 0.25
+```
+
+Tool প্রতি screenshot-এর candidate count ও সর্বোচ্চ score-সহ ignored `reports/screenshot_presence_eval.csv` লেখে এবং TP/FP/TN/FN, accuracy, precision, recall, specificity, F1 দেখায়। বর্তমান দুই screenshot-এ local CUDA run-এ `ss-1`-এ candidate পাওয়া গেছে এবং `ss-2`-এও একটি false candidate পাওয়া গেছে: `TP=1, FP=1, TN=0, FN=0`; accuracy `0.500`, precision `0.500`, recall `1.000`, specificity `0.000`, F1 `0.667`। `n=2`-এর pilot। এটি box localization বা সাধারণ gameplay accuracy যাচাই করে না। `ss-2`-এর false positive detector-এর বর্তমান দুর্বলতা দেখায়। আরও screenshot label এবং user-verified video sample দরকার।
+
+
 ## M7: crosshair-to-region alignment
 
 Frame center-কে default reference ধরে estimate মাপতে:

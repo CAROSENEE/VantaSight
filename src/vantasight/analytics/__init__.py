@@ -13,6 +13,11 @@ from vantasight.analytics.detection_evaluation import (
     match_boxes,
 )
 from vantasight.analytics.pose_association import associate_pose_observations
+from vantasight.analytics.presence_evaluation import (
+    PresenceCounts,
+    PresenceMetrics,
+    calculate_presence_metrics,
+)
 from vantasight.analytics.pose_evaluation import (
     RegionLocalization,
     RegionLocalizationSummary,
@@ -27,9 +32,12 @@ __all__ = [
     "DetectionMetrics",
     "RegionLocalization",
     "RegionLocalizationSummary",
+    "PresenceCounts",
+    "PresenceMetrics",
     "box_iou",
     "associate_pose_observations",
     "calculate_metrics",
+    "calculate_presence_metrics",
     "center_crosshair",
     "compare_body_region_points",
     "match_boxes",

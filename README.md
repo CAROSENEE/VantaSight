@@ -105,6 +105,14 @@ python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" --confidence-thre
 
 The evaluator reports per-frame true positives, false positives, false negatives, precision, and recall. Uncertain frames are skipped. It requires manual annotations and writes its CSV under the Git-ignored `reports/` folder.
 
+Evaluate screenshot-level candidate presence against the manually labeled screenshots:
+
+```powershell
+python tools/evaluate_screenshot_presence.py --confidence-threshold 0.25
+```
+
+This compares whether any person candidate was returned with the user-labeled enemy-visible yes/no value; it does not evaluate box overlap, enemy identity, tracking, or aim accuracy. The current two-screenshot result is only an exploratory pilot and must not be generalized to gameplay footage.
+
 If you marked body-region points, compare the COCO pose model against them with:
 
 ```powershell
