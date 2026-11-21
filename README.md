@@ -188,7 +188,7 @@ For `vd-1`, create a denser dashboard report: at 120 FPS it samples every 30 sou
 .\.venv\Scripts\python.exe tools\track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --preserve-source-resolution --output "reports/vd-1_dashboard_tracks_dense.csv" --json-output "reports/vd-1_dashboard_tracks_dense.json"
 ```
 
-On Windows, double-click `tools/start_vd1_dashboard.bat` to open that local `vd-1` report. If local confidence-sweep or IoU/AP CSVs are present, the launcher loads them too; otherwise the tracking dashboard still opens. The launcher checks that the virtual environment, source video, and dense tracking JSON exist. If it is missing, the launcher prints the command above. Source-resolution analysis uses more GPU memory and time; it is still an offline sample and can miss appearances shorter than the 0.25-second interval. Inputs and generated reports stay local and are ignored by Git.
+On Windows, double-click `tools/start_vd1_dashboard.bat` to open that local `vd-1` tracking report. The launcher intentionally does not load the older provisional confidence-sweep or IoU/AP files because their labels were never user-verified. The tracking report shows model candidates, not validated enemy detections. The launcher checks that the virtual environment, source video, and dense tracking JSON exist. If it is missing, it prints the command above. Source-resolution analysis uses more GPU memory and time; it is still an offline sample and can miss appearances shorter than the 0.25-second interval. Inputs and generated reports stay local and are ignored by Git.
 
 To see how tall the detector's candidate boxes are relative to the source frame, summarize any saved tracking report:
 
