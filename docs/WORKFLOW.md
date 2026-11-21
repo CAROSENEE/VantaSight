@@ -2,6 +2,8 @@
 
 এটি VantaSight তৈরির ধাপে ধাপে কাজের তালিকা। প্রতিটি ধাপ শুরুর আগে কী করতে যাচ্ছি তা জানাব। ধাপ শেষ হলে কী বদলেছে, কেন দরকার, কীভাবে ব্যবহার করতে হবে এবং কোনো সীমাবদ্ধতা আছে কি না—সহজ ভাষায় বুঝিয়ে দেব। কোনো কাজ যাচাই করা না গেলে সেটিও পরিষ্কার করে বলব।
 
+**Annotation status correction (2026-11-21):** `vd-1`-এর interactive annotation window user দেখেননি বা label confirm করেননি। তাই `vd-1_provisional_review.jsonl` এবং তা থেকে আগে লেখা precision/recall/F1-কে নির্ভরযোগ্য review বা evaluation result হিসেবে প্রত্যাহার করা হলো। এগুলো provisional/unverified; কোনো validated video ground truth নেই। `vd-1_user_verified.jsonl` তৈরি হয়নি। User পরে annotation করবেন বলেছেন—ততদিন annotation ও তার ওপর নির্ভরশীল evaluation স্থগিত।
+
 ## প্রকল্পের লক্ষ্য
 
 প্রথমে Valorant-এর নিজের screenshot বা recorded gameplay video বিশ্লেষণ করে দৃশ্যমান তথ্য নিয়ে গবেষণা করা: character candidate শনাক্ত করা, দৃশ্যমান body-region অনুমান করা, পরপর frame-এ detection track করা, এবং crosshair reference থেকে target region-এর দূরত্ব মাপা। ভবিষ্যতে অন্য FPS বা online game-এ নেওয়ার উপযোগী করে input ও analytics-এর সাধারণ অংশগুলো game-specific অংশ থেকে আলাদা রাখা হবে। প্রকল্পটি game input পাঠাবে না, aim নড়াবে না, fire করবে না, game memory পড়বে না বা game process-এ প্রবেশ করবে না। প্রথম সংস্করণ শুধু offline footage বিশ্লেষণ করবে।
@@ -42,7 +44,7 @@
 - Detector-এর weight source, license note ও known limitation `docs/MODEL_CARDS.md`-এ লেখা আছে।
 - Screenshot-এর user-provided positive/negative label `data/annotations/screenshot_presence.csv`-এ রাখা হয়েছে; annotation data Git ignore করা।
 
-Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` আছে। Frame preview ছোট করে window-তে দেখালেও box original video pixel coordinate-এ save হয়। `vd-1`-এর 12টি frame visually review করে local `data/annotations/vd-1_provisional_review.jsonl` বানানো হয়েছে; এতে প্রতিটি row-তে `assistant_visual_provisional_user_review_needed` note আছে, তাই এগুলো user-verified ground truth নয়। 15s, 30s, 40s ও 55s frame uncertain রাখা হয়েছে; বাকিগুলোতে 10s, 20s, 25s ও 45s-এ opponent visible এবং 0s, 5s, 35s ও 50s-এ sightline-এ opponent visible নয় বলে provisional label হয়েছে। এই 8টি নিশ্চিত frame-এ detector `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194` দিয়েছে (`confidence 0.25`, `IoU 0.50`)। 20s-এর visible target-এ oversized candidate box-এর কারণে IoU threshold পাস হয়নি। Sample ছোট ও label provisional—metric-টি কেবল বর্তমান COCO baseline-এর দুর্বলতা/পরের data-collection প্রয়োজন বোঝায়। Body-region estimate এখনো কোনো manual point label দিয়ে যাচাই হয়নি।
+Enemy box label করার interactive local tool `tools/annotate_video_frames.py` এবং label থেকে precision/recall হিসাবের tool `tools/evaluate_detector.py` আছে। Annotation tool user-এর desktop-এ খোলা ও user দিয়ে frame label নিশ্চিত করা—দুটিই এখনো হয়নি। Local `vd-1_provisional_review.jsonl` এবং এটি থেকে আগে হিসাব করা `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194` ফল প্রত্যাহার করা হয়েছে; এগুলো verified ground truth বা নির্ভরযোগ্য metric নয়। কোনো `vd-1_user_verified.jsonl` নেই। User annotation করতে প্রস্তুত হলে window চালিয়ে label যাচাইয়ের পরেই evaluator চালানো হবে। Body-region estimate-ও manual point label দিয়ে যাচাই হয়নি।
 
 ## কাজের roadmap
 
@@ -51,12 +53,12 @@ Enemy box label করার interactive local tool `tools/annotate_video_frames
 | 1. Input foundation | Python package, screenshot/video reader, metadata | Image ও video load করার ভিত্তি | `vd-1.mp4` দিয়ে runtime-এ যাচাই হয়েছে |
 | 2. Frame preview | Video থেকে নির্দিষ্ট frame বের করা ও preview image save করা | বাস্তব footage-এর নির্দিষ্ট frame দেখা | Frame 3540 সফলভাবে বের ও দেখা হয়েছে |
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
-| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | চার frame-এর provisional visual metric আছে; user-verified labels ও বড় sample বাকি |
+| 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | Annotation window user-এর কাছে খোলেনি; verified video label বা ব্যবহারযোগ্য video metric নেই |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN inference frame 3000-এ দেখা হয়েছে; overlay false candidate-ও region পেয়েছে, label দিয়ে যাচাই বাকি |
 | 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; 59-frame coarse sample-এ 127 candidate track-এর 96টি এক observation-এ শেষ হয়েছে; continuity review বাকি |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | `ss-1` ও `vd-1` frame 3000-এ runtime check হয়েছে; geometry-only, region label দিয়ে যাচাই বাকি |
 | 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export, body-region/alignment overlay, detector/pose summary, confidence sweep ও IoU/AP curve-সহ dashboard আছে; Windows launcher যোগ হয়েছে, পূর্ণ UI visual review বাকি |
-| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector, screenshot-presence, pose ও AP evaluator আছে; provisional result আছে, user-verified representative labels এবং pose-region evaluation বাকি |
+| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Evaluator code আছে; screenshot label আলাদা, কিন্তু video ground truth/valid video metric ও pose-region evaluation বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
 
@@ -207,14 +209,14 @@ Dashboard-এ `Play samples`, `Pause` ও `Stop` control যোগ হয়েছ�
 
 বর্তমান dashboard-এর `Analyze a local video` panel-এ video বেছে নিয়ে প্রতি কত source frame পর analysis হবে তা নির্ধারণ করা যায়। ঐচ্ছিকভাবে body-region estimate ও frame-center alignment চালানো যায়; alignment নির্বাচন করতে body-region estimate-ও চালু থাকতে হবে। Analysis background process-এ চলে, `Cancel analysis` দিয়ে থামানো যায়, এবং সফল হলে নতুন JSON report নিজে থেকে dashboard-এ খোলে। CSV/JSON output timestamp-সহ নাম নিয়ে ignored `reports/` folder-এ লেখা হয়। এই workflow নির্বাচিত local recording পড়ে; live capture বা game control করে না। GUI flow এই environment-এ হাতে যাচাই করা যায়নি—তোমার desktop-এ নতুন video দিয়ে যাচাই দরকার।
 
-### M12: provisional video evaluation
+### M12: video annotation — এখনো সম্পন্ন হয়নি
 
-Frame `0, 600, 1200, 1800, 2400, 3000, 3600, 4200, 4800, 5400, 6000, 6600`—প্রতি 5s-এ একটি—local preview/source frame দেখে review করা হয়েছে। 10s, 20s, 25s ও 45s positive; 0s, 5s, 35s ও 50s negative; 15s, 30s, 40s ও 55s uncertain রাখা হয়েছে। Positive box-গুলো original 2560×1440 frame coordinate-এ: frame 1200 `[1575,195,1760,625]`, 2400 `[1195,710,1267,866]`, 3000 `[1247,505,1350,726]`, 5400 `[1085,675,1175,880]`। Annotation ও CSV Git-ignored local data। Confidence `0.25`, IoU `0.50`-এ 8 scored frame থেকে `TP=3, FP=24, FN=1`, precision `0.111`, recall `0.750`, F1 `0.194` হয়েছে। Frame 2400-এ person candidate-এর box এত বড় ছিল যে visible target-এর overlap IoU `0.50`-এ পৌঁছায়নি; তাই সেটি miss হিসেবে গণনা হয়েছে। এটি assistant-এর provisional visual review, user-verified benchmark নয়। Box ও উপস্থিতি-label user annotation window-তে যাচাই/সংশোধন করে আলাদা `vd-1_user_verified.jsonl` file দিয়ে evaluator rerun করতে হবে।
+আগে `vd-1`-এর 12 frame-এর জন্য provisional row এবং সেগুলো ব্যবহার করে একটি detector metric নথিভুক্ত করা হয়েছিল। User annotation window দেখেননি এবং কোনো label confirm করেননি—তাই ওই row ও derived metric প্রত্যাহার করা হলো; detector performance বোঝাতে এগুলো ব্যবহার করা যাবে না। Interactive annotation tool-এর অস্তিত্ব/CLI নির্দেশনা যাচাই করা মানে annotation করা নয়। User পরে করবেন বলেছেন, তাই আপাতত কোনো annotation window চালানো বা video evaluator চালানো হবে না। পরে user প্রস্তুত হলে provisional prefill ছাড়াই frameগুলো নতুন করে annotate করতে হবে; user নিজে save করা verified file ছাড়া evaluation চলবে না.
 
-User-verified copy বানাতে:
+User পরে প্রস্তুত হলে scratch থেকে নতুন annotation শুরু করতে:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --prefill data/annotations/vd-1_provisional_review.jsonl --output data/annotations/vd-1_user_verified.jsonl
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
 python tools/evaluate_detector.py "data/input/videos/vd-1.mp4" data/annotations/vd-1_user_verified.jsonl --expected-frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --confidence-threshold 0.25 --iou-threshold 0.50 --output reports/vd-1_user_verified_eval.csv
 ```
 
@@ -258,7 +260,7 @@ Annotation tool-এ `--prefill` যোগ হয়েছে। এটি provision
 `vd-1`-এর 12টি sample যাচাই করতে:
 
 ```powershell
-python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --prefill data/annotations/vd-1_provisional_review.jsonl --output data/annotations/vd-1_user_verified.jsonl
+python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --frames 0,600,1200,1800,2400,3000,3600,4200,4800,5400,6000,6600 --output data/annotations/vd-1_user_verified.jsonl
 ```
 
 একটি করে frame ভালোভাবে দেখে status ও box নিশ্চিত করে Enter দাও। `q` দিলে ইতিমধ্যে save হওয়া row-গুলো থাকবে; একই command পুনরায় চালালে সেগুলো skip হবে। Output Git-ignored। এই review window এখনো user-এর হাতে চালানো বাকি।
