@@ -192,6 +192,14 @@ For `vd-1`, create a denser dashboard report: at 120 FPS it samples every 30 sou
 
 On Windows, double-click `tools/start_vd1_dashboard.bat` to open that local `vd-1` report. If local confidence-sweep or IoU/AP CSVs are present, the launcher loads them too; otherwise the tracking dashboard still opens. The launcher checks that the virtual environment, source video, and dense tracking JSON exist. If it is missing, the launcher prints the command above. Source-resolution analysis uses more GPU memory and time; it is still an offline sample and can miss appearances shorter than the 0.25-second interval. Inputs and generated reports stay local and are ignored by Git.
 
+To see how tall the detector's candidate boxes are relative to the source frame, summarize any saved tracking report:
+
+```powershell
+python tools/summarize_candidate_sizes.py reports/vd-1_dashboard_tracks_dense.json --output reports/vd-1_candidate_size_by_frame.csv
+```
+
+The CSV has one row per sampled frame, including frames with no candidate. It groups predicted box heights as tiny `<2%`, small `2–6%`, medium `6–16%`, and large `>=16%` of source-frame height. These are model candidate sizes only; they do not identify enemies or measure small-enemy recall. The report and CSV remain local and are ignored by Git.
+
 Analyze one screenshot directly if needed:
 
 ```powershell

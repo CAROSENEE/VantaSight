@@ -318,11 +318,12 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M64)
+## বর্তমান অবস্থান (M65)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
 - M64-এ dashboard-এর জন্য প্রতি 30 source frame (120 FPS-এ 0.25s) পরপর source-resolution `vd-1` report তৈরি হয়েছে; launcher এখন এই dense report খোলে। এতে ছোট/স্বল্পস্থায়ী উপস্থিতি দেখা যাওয়ার sampling chance আগের 1s sample-এর চেয়ে বেশি, তবে 0.25s-এর চেয়ে ছোট event বাদ পড়তে পারে।
+- M65-এ dense report থেকে প্রতি frame-এর person-candidate box height group করার CSV tool যোগ হয়েছে; এটি annotation ছাড়াই review-এর candidate shortlist দেয়, কিন্তু recall/ground truth নয়।
 - M62-এর playback layout fix এবং M63-এর dashboard crosshair field-এর visual QA অসম্পূর্ণ। Computer-use window list dashboard দেখিয়েছে, কিন্তু window minimized; controls, field, playback বা layout চোখে দেখে যাচাই হয়নি।
 - Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
 - পরবর্তী gate: dashboard দৃশ্যমান হলে playback controls ও crosshair field যাচাই; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
@@ -527,3 +528,7 @@ M63 যাচাই: সংশ্লিষ্ট তিনটি Python file `co
 ### M64: dense source-resolution dashboard report
 
 `tools/start_vd1_dashboard.bat` এখন `reports/vd-1_dashboard_tracks_dense.json` খোলে; report না থাকলে `.venv` command-এ `--frame-step 30 --preserve-source-resolution` দেখায়। README-তে একই generation command যোগ হয়েছে। `vd-1.mp4`-এ default confidence `0.25`, IoU `0.30`, `cuda:0`, source resolution `2560×1440` রেখে 236 sampled frame (`0` থেকে `7050`, প্রতি 30 source frame) চালিয়ে 816 COCO person-candidate detection পাওয়া গেছে; 27 sampled frame-এ candidate ছিল না। Analysis throughput `1.351 sampled frame/s`, detector latency mean `255.0ms`, p95 `287.6ms`; 386 temporary box tracks-এর মধ্যে 256 single-observation track, observed-span p95 `1.75s`, max `7.0s`। এগুলো sampling-এ পাওয়া generic person candidate—27টি frame-এ enemy ছিল না বা কোনো track একই player—এমন প্রমাণ নয়। পুরোনো 1-second report-এর সঙ্গে count/metric সরাসরি তুলনীয় নয়, কারণ sampling density ও inference resolution আলাদা। Dense report `reports/`-এ local ignored; GitHub-এ code/docs-ই push হবে। Dashboard-এর visual playback verification ও user-verified manual video annotation এখনো বাকি।
+
+### M65: candidate box height summary
+
+`tools/summarize_candidate_sizes.py` validated tracking JSON নেয় এবং sampled frame-পিছু CSV row লেখে। Box height-কে source frame height-এর শতাংশ ধরে `tiny (<2%)`, `small (2–6%)`, `medium (6–16%)`, `large (≥16%)` group করা হয়; zero-candidate frame-ও CSV-তে থাকে। এটি predicted person-candidate box-গুলোর আকার দেখায়, enemy identity, true target size বা recall নয়। `vd-1_dashboard_tracks_dense.json`-এ চালালে 236 row/816 candidate পাওয়া গেছে: tiny `0`, small `36`, medium `210`, large `570`; 27 frame-এ candidate ছিল না। এই 36 small box manual review-এর জন্য খুঁজে দেখা যেতে পারে, কিন্তু সেগুলো enemy বা সঠিক detection—এমন প্রমাণ নেই। Script `compileall` ও CLI help-এ যাচাই, এবং dense local report-এ actual CSV লেখা হয়েছে। CSV `reports/`-এ local ignored; manual video annotation ও dashboard visual QA এখনো বাকি।
