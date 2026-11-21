@@ -289,7 +289,7 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M76)
+## বর্তমান অবস্থান (M77)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
@@ -549,3 +549,7 @@ Code update-এর পর `.venv\Scripts\python.exe tools\open_dashboard.py repo
 ### M76: GitHub-এ সীমিত demo preview যোগ
 
 `ss-1`, `ss-2` ও `vd-1` frame 3000-এর detector preview থেকে তিনটি JPEG বানিয়ে `docs/assets/`-এ রাখা হয়েছে; মোট আকার প্রায় 0.9 MB। `vd-1` copy-তে per-source webcam rectangle কালো করে ঢেকে দেওয়া হয়েছে, কিন্তু model-এর আগে থেকে আঁকা green candidate box-গুলো অপরিবর্তিত আছে—তাই webcam-সংলগ্ন box-ও verified target নয়। README-তে পাশাপাশি screenshot-গুলো এবং video-frame preview দেখানো হয়েছে, আর caption-এ in-game character candidate ও `ss-2` arm/weapon false-positive-র উদাহরণ ব্যাখ্যা করা হয়েছে। সব preview model output; manual annotation বা detector accuracy-র প্রমাণ নয়। `git diff --check` ও image content/size review করা হয়েছে; test চালানো হয়নি। Raw video বা local annotation/evaluation data যোগ করা হয়নি।
+
+### M77: dashboard verification-এর বর্তমান machine state
+
+এই ধাপের শুরুতে PowerShell process inventory-তে কোনো `python`/`pythonw` process পাওয়া যায়নি, তাই M75-এ চালানো dense-report window/process এখন আর live নয়। Computer Use-এর `list_windows` native pipe connection error দিয়ে ব্যর্থ হয়েছে; একবার retry এবং kernel reset করে পুনরায় চালানোর পরও একই error এসেছে। UI-তে click/input বা নতুন launch করা হয়নি। আগের stale dashboard screenshot-এ unverified AP/threshold ফল ছিল; সেগুলো ব্যবহারযোগ্য নয়। পরের dashboard attempt-এর আগে Computer Use pipe সচল হতে হবে, তারপর `tools/start_vd1_dashboard.bat` দিয়ে নতুন dense-report window খুলে তার title/report label, no-evaluation panel, sampled-frame controls ও Next/Play আচরণ চোখে দেখে যাচাই করতে হবে। বর্তমান machine-এ dashboard UI QA pending; video annotation-ও user পরে করবেন বলেছেন।
