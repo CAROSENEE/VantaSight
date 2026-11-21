@@ -107,6 +107,14 @@ python tools/track_video.py "data/input/videos/vd-1.mp4" --frame-step 30 --previ
 
 The frame step is in source frames. Use `--start-frame` and exclusive `--stop-frame` to analyze a segment. Results go to `reports/tracks.csv` and the structured `reports/tracks.json`; use `--output` and `--json-output` to choose other paths. The JSON report includes video metadata, analysis settings, per-frame detections, temporary IDs, image-plane velocity, and a runtime summary. An optional preview goes to `data/previews/`. IDs associate boxes only, can fragment when detections disappear or change shape, and do not identify players, teams, or enemies. Velocity is measured in source-image pixels per second, not game-world speed.
 
+Open the saved report in the separate offline dashboard:
+
+```powershell
+python tools/open_dashboard.py reports/tracks.json
+```
+
+The dashboard loads the report and source video from local disk, lets you browse sampled frames, and draws the recorded candidate boxes and temporary track IDs. Pass `--video path\to\source.mp4` when the video is stored outside `data/input/videos/`. It does not capture the desktop or interact with a game.
+
 ## Experimental body-region estimate
 
 The optional COCO Keypoint R-CNN experiment can be run on a screenshot or one selected video frame:

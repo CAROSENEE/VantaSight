@@ -53,10 +53,10 @@ Enemy box হাতে label করার interactive local tool `tools/annotate
 | 3. প্রাথমিক detection | COCO pretrained person-candidate model; confidence ও bounding box দেখানো | Model কোন জিনিস শনাক্ত করছে তা পর্যালোচনা | প্রথম inference ও per-source mask হয়েছে; false positive বাকি |
 | 4. Dataset review | বাস্তবসম্মত clip-এ false positive ও missed detection হাতে পর্যালোচনা | Detector উপযোগী কি না তার প্রাথমিক প্রমাণ | label ও metric tool তৈরি; পাঁচটি frame-এর ground-truth label বাকি |
 | 5. Body-region পরীক্ষা | Pose/region model চেষ্টা করা ও অনিশ্চয়তা দেখানো | Score ও uncertainty-সহ region estimate | COCO Keypoint R-CNN-এর প্রথম inference হয়েছে; 45s-এর ছোট opponent miss, accuracy যাচাই বাকি |
-| 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker ও CSV export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
+| 6. Tracking | একাধিক frame-এর detection মিলিয়ে temporary ID দেওয়া | Track কতটা ধারাবাহিক তা দেখা | IoU tracker, CSV/JSON export আছে; ছোট segment-এ চালানো হয়েছে, detector miss-এ track ভেঙেছে |
 | 7. Alignment metrics | Crosshair reference সেট করা এবং pixel/normalized distance হিসাব | জ্যামিতিক alignment measurement | math module, CLI ও unit tests আছে; `ss-1`-এ runtime check হয়েছে |
-| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | Tracking-এর CSV ও structured JSON export যোগ হয়েছে; dashboard বাকি |
-| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | শুরু হয়নি |
+| 8. Export ও dashboard | CSV/JSON এবং আলাদা analysis preview/dashboard | ব্যবহারযোগ্য research prototype | CSV/JSON export ও local report dashboard যোগ হয়েছে; Windows-এ UI visual review বাকি |
+| 9. Evaluation ও documentation | Annotated sample-এ metric মাপা, limitation লেখা | পুনরায় যাচাইযোগ্য ফল ও setup guide | Detector box evaluator আছে; representative frame হাতে label ও pose-region evaluation বাকি |
 
 প্রতিটি পরের ধাপ আগের ধাপের ফলের ওপর ভিত্তি করে হবে। কোনো model বাস্তব footage-এ দুর্বল ফল দিলে সেটা স্পষ্টভাবে জানানো হবে; প্রয়োজন হলে model, data বা পদ্ধতি বদলে আবার মাপা হবে।
 
@@ -173,6 +173,16 @@ python tools/track_video.py "data/input/videos/vd-1.mp4" --start-frame 3000 --st
 
 একই run থেকে `reports/tracks.json`-এ structured report-ও তৈরি হয়। এতে video metadata, ব্যবহৃত threshold ও sampling settings, per-frame candidate detection/box/temporary ID/velocity এবং run summary থাকে। `--json-output` দিয়ে অন্য path বেছে নেওয়া যায়। JSON schema-র `schema_version` ভবিষ্যৎ পরিবর্তন চিহ্নিত করবে। CSV ও JSON-ই ignored `reports/` folder-এ থাকে।
 
+### M8: আলাদা offline dashboard
+
+Saved JSON report ও তার source video দেখতে:
+
+```powershell
+python tools/open_dashboard.py reports/tracks.json
+```
+
+Dashboard sampled frame-এর তালিকা দেয়; frame নির্বাচন করলে local video থেকে ওই frame পড়ে JSON report-এর candidate box/temporary ID আঁকে। পাশে timestamp, detector score, box coordinate ও image-plane velocity দেখা যায়। অন্য folder-এর video হলে `--video path\to\clip.mp4` দাও। Dashboard live screen/game capture করে না। এই environment থেকে Windows window-তে click করে visual review করা যায়নি; স্থানীয় desktop-এ চালিয়ে UI layout দেখে নিতে হবে।
+
 25.0–25.5s sample-এ visible opponent মাত্র 2টি sampled frame পর্যন্ত একই ID পেয়েছে, এরপর detector তাকে miss করেছে। First-person/overlay false candidate-ও track হয়। IoU tracker দ্রুত movement, box-shape পরিবর্তন ও missed detection-এ ID fragment করতে পারে; ফলে এটি baseline association experiment, validated tracking নয়।
 
 ## M7: crosshair-to-region alignment
@@ -202,7 +212,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 
 ## পরের কাজের জন্য যা দরকার
 
-M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking এবং M7 alignment calculation আছে। M8-এ tracking-এর CSV ও JSON export যোগ হয়েছে; পরের code ধাপ আলাদা offline dashboard/preview। Detector ও pose model-এর বাস্তব accuracy যাচাইয়ের জন্য GUI-তে হাতে annotation এখনও দরকার; সেই ধাপে representative frame label করে evaluator চালাব। Label ছাড়া accuracy দাবি করা যাবে না.
+M1–M3-এর baseline, M5 body-region experiment, M6 sampled tracking, M7 alignment calculation এবং M8 CSV/JSON export ও offline dashboard আছে। পরের বড় ধাপ M9 evaluation: GUI-তে representative gameplay frame-এর opponent box হাতে label করে detector evaluator চালানো। Pose-region estimate যাচাইয়ের label format ও metric-ও যোগ করতে হবে। Label ছাড়া detector, pose বা tracking accuracy দাবি করা যাবে না।
 
 ## ভাষার নিয়ম
 
