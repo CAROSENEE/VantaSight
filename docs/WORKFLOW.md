@@ -320,12 +320,13 @@ python -m vantasight "data/input/screenshots/ss-1.png" --estimate-body-regions -
 
 Folder-গুলো খালি থাকলেও Git-এ দেখানোর জন্য ছোট `.gitkeep` placeholder file রাখা আছে। এগুলোতে ছবি বা ভিডিও থাকে না।
 
-## বর্তমান অবস্থান (M65)
+## বর্তমান অবস্থান (M66)
 
 - Offline input, person-candidate detection, পরীক্ষামূলক body-region estimate, temporary tracking, alignment calculation, CSV/JSON export, dashboard, এবং manual-label evaluation tools কোডে আছে। এগুলো Valorant footage-এ ব্যবহার করা হয়েছে; detector ফল verified enemy identity বা gameplay accuracy নয়।
 - M63-এ screenshot ও video analysis path-এ custom crosshair reference যোগ হয়েছে। CLI compile/help এবং বাস্তব `ss-1` ও `vd-1` inference-এ coordinate report-এ সংরক্ষিত হয়েছে।
 - M64-এ dashboard-এর জন্য প্রতি 30 source frame (120 FPS-এ 0.25s) পরপর source-resolution `vd-1` report তৈরি হয়েছে; launcher এখন এই dense report খোলে। এতে ছোট/স্বল্পস্থায়ী উপস্থিতি দেখা যাওয়ার sampling chance আগের 1s sample-এর চেয়ে বেশি, তবে 0.25s-এর চেয়ে ছোট event বাদ পড়তে পারে।
 - M65-এ dense report থেকে প্রতি frame-এর person-candidate box height group করার CSV tool যোগ হয়েছে; এটি annotation ছাড়াই review-এর candidate shortlist দেয়, কিন্তু recall/ground truth নয়।
+- M66-এ Windows annotation launcher ও README command থেকে unverified provisional-box prefill সরানো হয়েছে; পরের user review scratch থেকে শুরু হবে।
 - M62-এর playback layout fix এবং M63-এর dashboard crosshair field-এর visual QA অসম্পূর্ণ। Computer-use window list dashboard দেখিয়েছে, কিন্তু window minimized; controls, field, playback বা layout চোখে দেখে যাচাই হয়নি।
 - Video manual annotation এখনো করা হয়নি। User বলেছেন এটি পরে করবেন; `vd-1_provisional_review.jsonl` unreviewed, আর `vd-1_user_verified.jsonl` নেই। Provisional label দিয়ে final detector/pose benchmark দাবি করা যাবে না।
 - পরবর্তী gate: dashboard দৃশ্যমান হলে playback controls ও crosshair field যাচাই; user annotation করতে প্রস্তুত হলে 12 sampled frame হাতে review করে verified output তৈরি; এরপর evaluator ও বৈচিত্র্যময় positive/negative sample-এ metric পুনরায় চালানো। Body-region evaluation-এর জন্য visible opponent-এর box-এর ভেতরে head/chest/lower-torso/legs point-ও label করতে হবে।
@@ -429,7 +430,7 @@ Annotation viewer প্রথমে frame render করে; zoom/pan, mouse dra
 
 ### M41: Windows-এ এক ক্লিকে annotation চালু
 
-`tools/start_vd1_annotation.bat` যোগ হয়েছে। এটি repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে provisional box suggestion-সহ `vd-1_user_verified.jsonl`-এ চালায়। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। README-তে double-click workflow যোগ হয়েছে। Launcher চালানোর পর process-এ frame 0-এর window title ও responsiveness দেখা গিয়েছিল, কিন্তু CUA window inventory Python HighGUI window-টি দেখায়নি। পরে user জানিয়েছেন annotation window তাঁর সামনে দেখা যায়নি; তাই আগের process check-কে window দৃশ্যমান ছিল বা annotation সম্পন্ন হয়েছে—এমন প্রমাণ ধরা যাবে না। M49-এ launcher-এর জন্য annotation window সবসময় উপরে রাখার option যোগ হয়েছে, তবে Explorer থেকে visible launch ও user review এখনও যাচাই হয়নি।
+`tools/start_vd1_annotation.bat` repository root-এ গিয়ে `.venv` ও `vd-1.mp4` আছে কি না দেখে, তারপর 12-frame review-কে `vd-1_user_verified.jsonl`-এ চালায়। আগের সংস্করণে unverified provisional box prefill হতো; M66-এ সেটি বাদ দেওয়া হয়েছে। Missing setup/input হলে console-এ error দেখিয়ে থামে; review tool শেষ হলে console খোলা থাকে, যাতে error/summary দেখা যায়। Launcher-এর process check কখনোই annotation window user দেখেছেন—এমন প্রমাণ ছিল না; user নিশ্চিত করেছেন window দেখা যায়নি। GUI window user-এর desktop-এ দৃশ্যমান কি না এখনো verify করা হয়নি।
 
 ### M42: IoU-ভিত্তিক 101-point AP
 
@@ -447,7 +448,7 @@ AP report dashboard-এ load হলে AP@IoU point-গুলো একটি re
 
 ### M45: annotation completion status পুনরায় যাচাই
 
-User নিশ্চিত করেছেন যে annotation window দেখা যায়নি; তাই annotation সম্পন্ন হয়েছে বলে আগের কোনো ইঙ্গিত সঠিক নয়। Local `data/annotations/`-এ `vd-1_provisional_review.jsonl` আছে, কিন্তু `vd-1_user_verified.jsonl` নেই। Provisional label-গুলো unreviewed; এগুলো user-verified ground truth নয়। একটি responsive Python process বা window title থাকলেই user GUI দেখেছেন বা label দিয়েছেন—এটা নিশ্চিত হয় না। 12টি frame interactive window-তে user নিজে review করে save না করা পর্যন্ত annotation ও তার ওপর নির্ভরশীল benchmark pending থাকবে। পরের ধাপ: launcher-এর বদলে annotation tool foreground-এ দেখা যাচ্ছে কি না user-এর screen-এ নিশ্চিত করে তারপর frame review শুরু করা।
+User নিশ্চিত করেছেন যে annotation window দেখা যায়নি; তাই annotation সম্পন্ন হয়েছে বলে আগের কোনো ইঙ্গিত সঠিক নয়। Local `data/annotations/`-এ `vd-1_provisional_review.jsonl` আছে, কিন্তু `vd-1_user_verified.jsonl` নেই। Provisional label-গুলো unreviewed; এগুলো user-verified ground truth নয়। একটি responsive Python process বা window title থাকলেই user GUI দেখেছেন বা label দিয়েছেন—এটা নিশ্চিত হয় না। 12টি frame user নিজে review করে save না করা পর্যন্ত annotation ও তার ওপর নির্ভরশীল benchmark pending থাকবে। User annotation পরে করবেন বলেছেন।
 
 ### M46: ছোট target-এর জন্য source-resolution inference
 
@@ -534,3 +535,7 @@ M63 যাচাই: সংশ্লিষ্ট তিনটি Python file `co
 ### M65: candidate box height summary
 
 `tools/summarize_candidate_sizes.py` validated tracking JSON নেয় এবং sampled frame-পিছু CSV row লেখে। Box height-কে source frame height-এর শতাংশ ধরে `tiny (<2%)`, `small (2–6%)`, `medium (6–16%)`, `large (≥16%)` group করা হয়; zero-candidate frame-ও CSV-তে থাকে। এটি predicted person-candidate box-গুলোর আকার দেখায়, enemy identity, true target size বা recall নয়। `vd-1_dashboard_tracks_dense.json`-এ চালালে 236 row/816 candidate পাওয়া গেছে: tiny `0`, small `36`, medium `210`, large `570`; 27 frame-এ candidate ছিল না। এই 36 small box manual review-এর জন্য খুঁজে দেখা যেতে পারে, কিন্তু সেগুলো enemy বা সঠিক detection—এমন প্রমাণ নেই। Script `compileall` ও CLI help-এ যাচাই, এবং dense local report-এ actual CSV লেখা হয়েছে। CSV `reports/`-এ local ignored; manual video annotation ও dashboard visual QA এখনো বাকি।
+
+### M66: annotation launcher থেকে unverified prefill সরানো
+
+আগের Windows launcher provisional JSONL থেকে box suggestion annotation window-তে ভরত। User জানান window-টি তিনি দেখেননি; সেই label-গুলো user-confirmed নয়, তাই suggestion দিয়ে নতুন review প্রভাবিত হতে পারে। Launcher ও README-র `vd-1` command থেকে `--prefill` সরানো হয়েছে—পরে annotation চালালে frame scratch থেকে শুরু হবে এবং output `vd-1_user_verified.jsonl`-এ যাবে। এখন কোনো GUI launch বা annotation করা হয়নি। README ও batch command-এ পুরোনো `vd-1_provisional_review.jsonl` path আর থাকা উচিত নয়; পরের ব্যবহারকারী চালানোর আগে launcher-এর visual accessibility আলাদাভাবে যাচাই প্রয়োজন।
