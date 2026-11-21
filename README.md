@@ -122,7 +122,7 @@ If the OpenCV annotation window is difficult to find, export a standalone browse
 python tools/export_review_gallery.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv --output-dir data/previews/vd-1_review_gallery
 ```
 
-On Windows, double-click `tools/start_vd1_review_gallery.bat` to open `data/previews/vd-1_review_gallery/index.html` in your default browser. If the gallery has not been exported yet, the launcher prints the export command. Review each frame and save it yourself, then choose **Download reviewed JSONL**. Move the downloaded `vd-1_user_verified.jsonl` into `data/annotations/` before running evaluation. The page stores saved rows in browser local storage when available; export before closing if the page reports that browser storage is unavailable. It does not access a live display, send game inputs, or use the network.
+On Windows, double-click `tools/start_vd1_review_gallery.bat` to open `data/previews/vd-1_review_gallery/index.html` in your default browser. If the gallery has not been exported yet, the launcher prints the export command. Review each frame and save it yourself, then choose **Download reviewed JSONL**. Optionally, select an opponent box and mark approximate head, chest, lower-torso, or legs centers for the body-region experiment. Move the downloaded `vd-1_user_verified.jsonl` into `data/annotations/` before running evaluation. The page stores saved rows in browser local storage when available; export before closing if the page reports that browser storage is unavailable. It does not access a live display, send game inputs, or use the network.
 
 After labeling, calculate offline detection metrics with:
 

@@ -16,6 +16,7 @@
     button[aria-pressed="true"] { border-color: #60c5b2; box-shadow: inset 0 0 0 1px #60c5b2; }
     button.primary { background: #176e5f; border-color: #47b69f; }
     button:disabled { opacity: .45; cursor: default; }
+    select { border: 1px solid #617080; border-radius: 6px; padding: 9px; background: #202a36; color: #f4f7fa; font: inherit; }
     .frame-wrap { position: relative; width: min(100%, 1280px); margin: 14px auto; line-height: 0; background: #080b0f; }
     #frame-image { display: block; width: 100%; height: auto; }
     #box-canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
@@ -41,6 +42,15 @@
     <button id="export">Download reviewed JSONL</button>
     <span id="progress" class="progress"></span>
   </div>
+  <div class="toolbar" aria-label="Optional body-region points">
+    <label for="box-select">Opponent box for points</label>
+    <select id="box-select" aria-label="Opponent box for body-region points"></select>
+    <button id="region-head" data-region="head" aria-pressed="false">Head center</button>
+    <button id="region-chest" data-region="chest" aria-pressed="false">Chest center</button>
+    <button id="region-lower-torso" data-region="lower_torso" aria-pressed="false">Lower torso center</button>
+    <button id="region-legs" data-region="legs" aria-pressed="false">Legs center</button>
+    <button id="clear-points">Clear region points</button>
+  </div>
   <div id="frame-title"></div>
   <div class="frame-wrap">
     <img id="frame-image" alt="Original-resolution recorded gameplay frame">
@@ -48,7 +58,7 @@
   </div>
   <div id="message" class="status" role="status"></div>
   <section class="instructions">
-    <strong>Offline manual review:</strong> inspect only the recorded gameplay scene. Draw one box around each visible in-world opponent, then select <kbd>Y</kbd> and save. Select <kbd>N</kbd> when none is visible; select <kbd>U</kbd> when you cannot decide. Do not label teammates, the streamer inset, first-person hands/weapons, HUD, or replay silhouettes. Click an image to draw; coordinates are saved in original source pixels. Nothing is sent over the network.
+    <strong>Offline manual review:</strong> inspect only the recorded gameplay scene. Draw one box around each visible in-world opponent, then select <kbd>Y</kbd> and save. Select <kbd>N</kbd> when none is visible; select <kbd>U</kbd> when you cannot decide. Do not label teammates, the streamer inset, first-person hands/weapons, HUD, or replay silhouettes. Click-drag on the image to draw boxes. Optional: choose an opponent box, select a region, then click its center. Region points are approximate visual centers, not anatomical or hitbox labels. Coordinates are saved in original source pixels. Nothing is sent over the network.
     <p class="muted">Review frames are sampled from the exact video fingerprint shown above. This page does not show detector proposals. Export downloads a JSONL file only after you explicitly save reviewed frames.</p>
   </section>
 </main>
@@ -61,6 +71,10 @@ const storageKey = `vantasight-review:${dataset.source_video}:${dataset.source_s
 let current = 0;
 let status = null;
 let boxes = [];
+let bodyPointsByBox = {};
+let selectedBoxIndex = -1;
+let activeRegion = null;
+let pendingRegionPoint = false;
 let dragStart = null;
 let dragEnd = null;
 let persistentStorage = true;
@@ -81,6 +95,9 @@ const buttons = {
   no_opponent_visible: document.getElementById("none"),
   uncertain: document.getElementById("uncertain"),
 };
+const regionButtons = [...document.querySelectorAll("[data-region]")];
+const regionColors = { head: "#ffbe00", chest: "#00b4ff", lower_torso: "#c080ff", legs: "#ff50b4" };
+const boxSelect = document.getElementById("box-select");
 
 function currentFrame() { return frames[current]; }
 
@@ -110,10 +127,37 @@ function draw() {
     context.fillStyle = "#54f09a";
     context.strokeRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
     context.fillText(`Opponent ${index + 1}`, box[0] + 4, Math.max(20, box[1] - 5));
+    for (const [name, point] of Object.entries(bodyPointsByBox[index] || {})) {
+      context.fillStyle = regionColors[name] || "#ffffff";
+      context.beginPath();
+      context.arc(point[0], point[1], Math.max(7, scale * 3), 0, Math.PI * 2);
+      context.fill();
+      context.fillText(name, point[0] + 8, point[1] - 8);
+    }
   });
   if (dragStart && dragEnd) {
     context.strokeStyle = "#ffd166";
     context.strokeRect(dragStart[0], dragStart[1], dragEnd[0] - dragStart[0], dragEnd[1] - dragStart[1]);
+  }
+}
+
+function updateBoxSelect() {
+  boxSelect.replaceChildren();
+  boxes.forEach((_, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = `Opponent ${index + 1}`;
+    boxSelect.append(option);
+  });
+  if (!boxes.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Draw an opponent box first";
+    boxSelect.append(option);
+    selectedBoxIndex = -1;
+  } else {
+    selectedBoxIndex = Math.max(0, Math.min(selectedBoxIndex, boxes.length - 1));
+    boxSelect.value = String(selectedBoxIndex);
   }
 }
 
@@ -135,6 +179,16 @@ function loadFrame(index) {
   dirty = false;
   status = saved?.status || null;
   boxes = saved ? saved.opponent_boxes_xyxy.map(box => [...box]) : [];
+  bodyPointsByBox = {};
+  for (const target of saved?.opponent_body_regions_xy || []) {
+    bodyPointsByBox[target.box_index] = Object.fromEntries(
+      Object.entries(target.points).map(([name, point]) => [name, [...point]])
+    );
+  }
+  selectedBoxIndex = boxes.length ? 0 : -1;
+  activeRegion = null;
+  for (const button of regionButtons) button.setAttribute("aria-pressed", "false");
+  updateBoxSelect();
   for (const [name, button] of Object.entries(buttons)) {
     button.setAttribute("aria-pressed", String(name === status));
   }
@@ -166,6 +220,11 @@ function pointerPosition(event) {
 canvas.addEventListener("pointerdown", event => {
   if (event.button !== 0) return;
   canvas.setPointerCapture(event.pointerId);
+  if (activeRegion) {
+    if (selectedBoxIndex < 0) { message.textContent = "Draw and select an opponent box before marking a region point."; return; }
+    pendingRegionPoint = true;
+    return;
+  }
   dragStart = pointerPosition(event);
   dragEnd = dragStart;
   draw();
@@ -176,6 +235,23 @@ canvas.addEventListener("pointermove", event => {
   draw();
 });
 canvas.addEventListener("pointerup", event => {
+  if (pendingRegionPoint) {
+    const point = pointerPosition(event);
+    const box = boxes[selectedBoxIndex];
+    const [x1, y1, x2, y2] = box;
+    pendingRegionPoint = false;
+    if (point[0] < x1 || point[0] > x2 || point[1] < y1 || point[1] > y2) {
+      message.textContent = "Region point must be inside the selected opponent box.";
+      return;
+    }
+    bodyPointsByBox[selectedBoxIndex] ||= {};
+    bodyPointsByBox[selectedBoxIndex][activeRegion] = point;
+    dirty = true;
+    message.textContent = `Marked ${activeRegion} center for opponent ${selectedBoxIndex + 1}. Save the frame to keep it.`;
+    updateProgress();
+    draw();
+    return;
+  }
   if (!dragStart) return;
   const end = pointerPosition(event);
   const x1 = Math.min(dragStart[0], end[0]);
@@ -184,12 +260,20 @@ canvas.addEventListener("pointerup", event => {
   const y2 = Math.max(dragStart[1], end[1]);
   if (x2 - x1 >= 4 && y2 - y1 >= 4) {
     boxes.push([x1, y1, x2, y2]);
+    selectedBoxIndex = boxes.length - 1;
+    updateBoxSelect();
     status = "opponent_visible";
     dirty = true;
     for (const [name, button] of Object.entries(buttons)) {
       button.setAttribute("aria-pressed", String(name === status));
     }
   }
+  dragStart = null;
+  dragEnd = null;
+  draw();
+});
+canvas.addEventListener("pointercancel", () => {
+  pendingRegionPoint = false;
   dragStart = null;
   dragEnd = null;
   draw();
@@ -206,6 +290,15 @@ function saveFrame() {
     message.textContent = "Clear boxes before saving N or U.";
     return;
   }
+  for (const [boxIndex, points] of Object.entries(bodyPointsByBox)) {
+    const [x1, y1, x2, y2] = boxes[Number(boxIndex)] || [];
+    for (const [name, point] of Object.entries(points)) {
+      if (!regionColors[name] || point[0] < x1 || point[0] > x2 || point[1] < y1 || point[1] > y2) {
+        message.textContent = "A body-region point is invalid or outside its opponent box.";
+        return;
+      }
+    }
+  }
   labels[String(frame.frame_index)] = {
     video: dataset.source_video,
     frame_index: frame.frame_index,
@@ -217,7 +310,9 @@ function saveFrame() {
     opponent_boxes_xyxy: boxes.map(box => [...box]),
     reviewed_manually: true,
     provisional_prefill_used: false,
-    opponent_body_regions_xy: [],
+    opponent_body_regions_xy: Object.entries(bodyPointsByBox)
+      .filter(([, points]) => Object.keys(points).length > 0)
+      .map(([boxIndex, points]) => ({ box_index: Number(boxIndex), points })),
   };
   saveState();
   dirty = false;
@@ -228,11 +323,25 @@ function saveFrame() {
 
 document.getElementById("previous").addEventListener("click", () => loadFrame(current - 1));
 document.getElementById("next").addEventListener("click", () => loadFrame(current + 1));
+boxSelect.addEventListener("change", () => { selectedBoxIndex = Number(boxSelect.value); });
+regionButtons.forEach(button => button.addEventListener("click", () => {
+  activeRegion = activeRegion === button.dataset.region ? null : button.dataset.region;
+  for (const item of regionButtons) item.setAttribute("aria-pressed", String(item.dataset.region === activeRegion));
+  message.textContent = activeRegion
+    ? `Click the ${activeRegion} center inside the selected opponent box. Click the active region button again to return to box mode.`
+    : "Box mode: click-drag to draw opponent boxes.";
+}));
+document.getElementById("clear-points").addEventListener("click", () => {
+  if (Object.keys(bodyPointsByBox).length) dirty = true;
+  bodyPointsByBox = {};
+  updateProgress();
+  draw();
+});
 buttons.opponent_visible.addEventListener("click", () => setStatus("opponent_visible"));
 buttons.no_opponent_visible.addEventListener("click", () => setStatus("no_opponent_visible"));
 buttons.uncertain.addEventListener("click", () => setStatus("uncertain"));
-document.getElementById("undo").addEventListener("click", () => { if (boxes.length) dirty = true; boxes.pop(); draw(); updateProgress(); });
-document.getElementById("clear").addEventListener("click", () => { if (boxes.length) dirty = true; boxes = []; draw(); updateProgress(); });
+document.getElementById("undo").addEventListener("click", () => { if (boxes.length) { dirty = true; boxes.pop(); delete bodyPointsByBox[boxes.length]; selectedBoxIndex = Math.min(selectedBoxIndex, boxes.length - 1); updateBoxSelect(); } draw(); updateProgress(); });
+document.getElementById("clear").addEventListener("click", () => { if (boxes.length) dirty = true; boxes = []; bodyPointsByBox = {}; updateBoxSelect(); draw(); updateProgress(); });
 document.getElementById("save").addEventListener("click", saveFrame);
 document.getElementById("export").addEventListener("click", () => {
   if (dirty) { message.textContent = "Save or discard the current frame edits before exporting."; return; }

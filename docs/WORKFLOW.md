@@ -650,3 +650,7 @@ Windows-এ gallery হাতে খোলার জন্য `tools/start_vd1_r
 ### M92: review page-এ unsaved edit রক্ষা
 
 Save-এর আগে অন্য frame-এ যাওয়া বা page বন্ধ করলে box/status edit হারানোর ঝুঁকি ছিল। এখন frame navigation-এ discard confirmation আসে, unsaved edit থাকা অবস্থায় JSONL export থামে, progress-এ current edit দেখা যায় এবং page বন্ধের আগেও browser সতর্ক করে। `Save frame`-ই label store করার একমাত্র action; auto-generated label নেই। Browser interaction QA এখনো user-এর local browser-এ করা বাকি।
+
+### M93: browser review-তে optional body-region point label
+
+ভিডিও pose-region evaluator opponent box-এর ভেতরে per-region manual center point চায়। Browser fallback-এ box/status label ছিল, কিন্তু point mode ছিল না। এখন reviewer box নির্বাচন করে ঐচ্ছিকভাবে head, chest, lower-torso, ও legs center mark করতে পারেন; points box-এর ভেতরে না হলে save হবে না এবং JSONL-এ evaluator-এর `opponent_body_regions_xy` schema-তে যাবে। এগুলো approximate visible-image center, game hitbox বা anatomical ground truth নয়। UI interaction ও evaluator integration runtime-এ এখনো যাচাই করা হয়নি।
