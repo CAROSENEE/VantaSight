@@ -16,7 +16,7 @@ from vantasight.analytics import (
     write_tracking_report,
 )
 from vantasight.cli import IMAGE_SUFFIXES, _load_excluded_regions
-from vantasight.input import load_image
+from vantasight.input import file_sha256, load_image
 from vantasight.vision import TorchvisionBodyRegionEstimator, TorchvisionPersonDetector
 
 
@@ -60,6 +60,7 @@ def main() -> int:
     try:
         image = load_image(image_path)
         height, width = image.pixels.shape[:2]
+        source_sha256 = file_sha256(image.path)
         excluded_regions = _load_excluded_regions(args.regions_file.expanduser(), image.path.name)
         detector = TorchvisionPersonDetector(
             confidence_threshold=args.confidence_threshold,
@@ -172,6 +173,8 @@ def main() -> int:
             )
 
         elapsed = time.perf_counter() - started_at
+        if file_sha256(image.path) != source_sha256:
+            raise RuntimeError("Source screenshot changed during analysis; refusing to write a mismatched report")
         report = {
             "schema_version": 1,
             "analysis_type": "offline_single_image_person_candidate_analysis",
@@ -183,6 +186,7 @@ def main() -> int:
             ],
             "source": {
                 "file_name": image.path.name,
+                "source_sha256": source_sha256,
                 "width": width,
                 "height": height,
                 "fps": 0.0,

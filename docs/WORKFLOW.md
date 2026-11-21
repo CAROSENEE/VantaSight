@@ -454,3 +454,7 @@ Threshold sweep-এ প্রতিটি হাতে চিহ্নিত opp
 ### M49: annotation window সামনে ও দৃশ্যমান রাখা
 
 Windows annotation launcher এখন `--keep-on-top` পাঠায়; OpenCV review window অন্য window-এর পেছনে চাপা পড়া ঠেকাতে topmost রাখা হয়। যারা launcher ব্যবহার করছেন না, তারা annotation command-এও এই flag দিতে পারেন। এটি শুধু annotation window-এর UI stacking বদলায়—খেলার screen capture বা game interaction যোগ করে না। Flag ছাড়া annotation tool-এর আগের আচরণ থাকে। Compile ও CLI help check করা হয়েছে; user-এর desktop-এ Explorer থেকে window দেখা যাচ্ছে কি না এখনও হাতে নিশ্চিত করা বাকি, এবং annotation সম্পন্ন হয়েছে বলা যাবে না।
+
+### M50: report-এর source file fingerprint
+
+নতুন screenshot ও video tracking JSON report-এ source file-এর SHA-256 যোগ হয়েছে। Hash streaming 1 MiB block-এ পড়ে; বড় media একবারে memory-তে ওঠে না। Analysis-এর আগে ও পরে hash মেলানো হয়, চলার সময় source বদলালে report লেখা বন্ধ হয়। Dashboard খোলার সময় report hash-এর সঙ্গে নির্বাচিত local source file মেলে; mismatch হলে stale detection overlay ভুল footage-এ দেখানোর বদলে স্পষ্ট error দেয়। Hash-বিহীন পুরোনো report compatibility-র জন্য চলে। File hash video analysis timing-এ যোগ হয় না, তবে analysis start ও dashboard open-এ সম্পূর্ণ file একবার করে পড়া হয়; বড় file-এ অতিরিক্ত I/O সময় লাগতে পারে। Compile এবং পুরোনো/new JSON report loader check pass করেছে; dashboard-এর Windows visual window-তে check দেখা এখনও যাচাই হয়নি।

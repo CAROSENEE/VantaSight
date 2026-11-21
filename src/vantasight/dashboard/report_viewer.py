@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path, PureWindowsPath
+import re
 import statistics
 from typing import Any
 
@@ -59,6 +60,11 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
     for dimension in ("width", "height"):
         if type(source.get(dimension)) is not int or source[dimension] < 1:
             raise ValueError(f"Source {dimension} must be a positive integer")
+    source_sha256 = source.get("source_sha256")
+    if source_sha256 is not None and (
+        not isinstance(source_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", source_sha256) is None
+    ):
+        raise ValueError("Source source_sha256 must be a lowercase 64-character SHA-256 digest")
     if not _finite_number(source.get("fps")) or source["fps"] < 0:
         raise ValueError("Source fps must be a finite nonnegative number")
     for field in ("sampled_frames", "candidate_detections"):

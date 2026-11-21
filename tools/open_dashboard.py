@@ -22,6 +22,7 @@ from vantasight.dashboard.evaluation_summary import (
     load_pose_evaluation,
     load_threshold_sweep,
 )
+from vantasight.input import file_sha256
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,6 +53,14 @@ def main(argv: list[str] | None = None) -> int:
         source_path = source_path.expanduser()
         if not source_path.is_file():
             raise ValueError(f"Source media does not exist: {source_path}; pass it with --image or --video")
+        expected_source_sha256 = report["source"].get("source_sha256")
+        if expected_source_sha256 is not None:
+            actual_source_sha256 = file_sha256(source_path)
+            if actual_source_sha256 != expected_source_sha256:
+                raise ValueError(
+                    f"Source media fingerprint mismatch for {source_path}. "
+                    "This report was generated from different file contents."
+                )
         frames = report["frames"]
         if not frames:
             raise ValueError("This report has no sampled frames to display")

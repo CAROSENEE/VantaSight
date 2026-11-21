@@ -19,7 +19,7 @@ from vantasight.analytics import (
     summarize_distribution,
     write_tracking_report,
 )
-from vantasight.input import VideoReader
+from vantasight.input import VideoReader, file_sha256
 from vantasight.tracking import IoUTracker
 from vantasight.vision.body_region_estimator import TorchvisionBodyRegionEstimator
 from vantasight.vision import TorchvisionPersonDetector
@@ -93,6 +93,7 @@ def main() -> int:
     if output.resolve() == json_output.resolve():
         parser.error("--output and --json-output must use different file paths")
     try:
+        source_sha256 = file_sha256(video)
         regions = _load_excluded_regions(args.regions_file.expanduser(), video.name)
         detector = TorchvisionPersonDetector(
             confidence_threshold=args.confidence_threshold,
@@ -292,6 +293,8 @@ def main() -> int:
             if pose_latencies_ms
             else None
         )
+        if file_sha256(video) != source_sha256:
+            raise RuntimeError("Source video changed during analysis; refusing to write a mismatched report")
         report = {
             "schema_version": 1,
             "analysis_type": "offline_sampled_person_candidate_tracking",
@@ -303,6 +306,7 @@ def main() -> int:
             ],
             "source": {
                 "file_name": video.name,
+                "source_sha256": source_sha256,
                 "width": reader.info.width,
                 "height": reader.info.height,
                 "fps": reader.info.fps,
