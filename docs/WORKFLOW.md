@@ -822,3 +822,7 @@ Dashboard-এর **Analyze local media** panel-এ video sampling field আগ�
 ### M134: tracking report-এর sampling metadata validation
 
 Dashboard header এখন report-এর `settings.frame_step` পড়ে sample interval দেখায়। `load_tracking_report`-এ optional `settings` section object কি না এবং `frame_step` থাকলে positive integer কি না যাচাই যোগ হয়েছে, যাতে malformed value নীরবে UI থেকে বাদ না পড়ে। Legacy report-এ পুরো settings section বা `frame_step` field না থাকলে আগের মতো load হওয়া চলবে। `report_viewer.py` ও `open_dashboard.py` `.venv`-এর Python দিয়ে `py_compile`-এ pass করেছে; `git diff --check` পরিষ্কার। Dashboard UI runtime বা full report-loading suite চালানো হয়নি।
+
+### M135: LinkedIn progress post-এর খসড়া
+
+বর্তমান বাস্তব milestone ধরে ইংরেজিতে LinkedIn post draft যোগ হয়েছে। এতে recorded-media pipeline, FPS অনুযায়ী sampling, baseline person detection/tracking, screenshot pilot এবং সীমাবদ্ধতা লেখা আছে; দুই screenshot-এর ছোট pilot-কে gameplay accuracy বলা হয়নি এবং `vd-1` video labels pending বলা হয়েছে। পোস্টের প্রথম line-এ `VantaSight` আছে। সঙ্গে `ss-1`/`ss-2` candidate preview পাশাপাশি ব্যবহারের পরামর্শ, dashboard/gallery-এর ঐচ্ছিক ছবি, এবং player/account identifiers শেয়ার করার আগে blur করার নোট আছে। এটি শুধু draft; LinkedIn-এ publish করা হয়নি। `git diff --check` দিয়ে whitespace যাচাই করা হবে; code বা evaluation বদলানো হয়নি.
