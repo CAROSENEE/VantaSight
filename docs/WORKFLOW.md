@@ -742,3 +742,7 @@ README-র দুই command বর্তমান user-labeled screenshot-এ `
 ### M114: নতুন screenshot label যোগ করার নিয়ম
 
 README-তে নতুন screenshot-কে পরের `ss-N` ID দেওয়া, মানুষ দিয়ে gameplay scene-এর visible-enemy yes/no label নিশ্চিত করা, PowerShell দিয়ে file SHA-256 বের করা এবং সেই hash `screenshot_presence.csv`-এ রাখার ধাপ যোগ হয়েছে। HUD/replay, teammate, webcam inset বা first-person হাত/অস্ত্রকে opponent হিসেবে label করা যাবে না; সন্দেহ হলে row যোগ না করে review বাকি রাখতে হবে। Presence label-কে box/body-region ground truth হিসেবে ধরা যাবে না। Documentation update; নতুন screenshot বা label যোগ করা হয়নি।
+
+### M115: duplicate screenshot sample reject করা
+
+Screenshot preflight এখন আলাদা `ss-N` ID-তে একই source SHA-256 পেলে detector initialize করার আগেই error দেয়। এতে একই image accidental duplicate row হিসেবে রেখে presence metrics-এর sample count কৃত্রিমভাবে বাড়ানো যাবে না। `ss-1` ও `ss-2`-এর hash আলাদা; valid two-image dataset দিয়ে evaluator চালিয়ে আগের `TP=1, FP=1, TN=0, FN=0` ফল পাওয়া গেছে। Duplicate-row error path আলাদা করে চালানো হয়নি এবং test suite চালানো হয়নি।

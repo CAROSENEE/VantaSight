@@ -79,6 +79,7 @@ def main() -> int:
             tuple[str, bool, Path, str, tuple[tuple[int, int, int, int], ...]]
         ] = []
         seen_ids: set[str] = set()
+        seen_source_hashes: dict[str, str] = {}
         for line_number, record in enumerate(records, start=2):
             asset_id = (record.get("asset_id") or "").strip()
             if not asset_id or asset_id in seen_ids:
@@ -109,6 +110,12 @@ def main() -> int:
                     f"Screenshot source fingerprint mismatch for {asset_id}: "
                     f"label={label_sha256}, file={source_sha256}"
                 )
+            if source_sha256 in seen_source_hashes:
+                raise ValueError(
+                    f"Duplicate screenshot content for {asset_id} and "
+                    f"{seen_source_hashes[source_sha256]}: identical source_sha256"
+                )
+            seen_source_hashes[source_sha256] = asset_id
             exclusions = _load_excluded_regions(regions_path, image_path.name)
             validated_records.append((asset_id, visible, image_path, source_sha256, exclusions))
 
