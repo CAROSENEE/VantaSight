@@ -778,3 +778,7 @@ Browser review থেকে JSONL download করার পর command-এ স�
 ### M123: gallery-তে ১২-frame coverage ও label স্তর বোঝানো
 
 Review page-এর instruction-এ এখন স্পষ্ট যে shortlist-এর সব ১২টি frame-এ `Y`, `N`, বা `U` দিয়ে row save করতে হবে; uncertain frame metric থেকে বাদ গেলেও coverage-এর জন্য তার reviewed row দরকার। Visible opponent-এর box detector/tracking evaluation-এ লাগে; body-region points optional এবং pose/region evaluation চাইলে দিতে হয়। JSONL download-এর পর Windows importer launcher-এর নামও page-এ দেখায়। `data/previews/vd-1_review_gallery/` regenerate করে ১২টি frame export হয়েছে। Chrome-এ refreshed local gallery দেখে নতুন নির্দেশনা, importer নাম এবং `0/12 frames saved` counter যাচাই করা হয়েছে। কোনো label বা box save করা হয়নি; human annotation ও video evaluation pending।
+
+### M124: shortlist-এ model miss ও enemy absence আলাদা করে বোঝানো
+
+`reports/vd-1_manual_review_shortlist.csv`-এ ছয়টি time bin-এর প্রতিটিতে একটি smallest-candidate frame ও একটি zero-candidate frame আছে। Zero model candidate হলো detector output-এর অবস্থা, enemy অনুপস্থিতির ground truth নয়। Gallery ও README-তে এই পার্থক্য যোগ করা হয়েছে, যাতে reviewer gameplay frame দেখে `Y`/`N`/`U` দেন এবং visible opponent থাকলেও detector miss করলে `Y` দিয়ে box label করতে পারেন। Regenerated gallery Chrome-এ refresh করে sampling note ও `0/12 frames saved` দেখা হয়েছে; কোনো label save করা হয়নি। ১২টি sample-এর balance একটি ছোট review set; পুরো 59-second video-এর representative accuracy দাবি করার জন্য যথেষ্ট নয়।

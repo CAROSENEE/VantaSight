@@ -118,6 +118,8 @@ python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-c
 python tools/annotate_video_frames.py "data/input/videos/vd-1.mp4" --shortlist-csv reports/vd-1_manual_review_shortlist.csv
 ```
 
+The vd-1 shortlist samples model-candidate and zero-candidate frames across six time bins. A frame with zero model candidates is not a negative enemy label; review the actual recorded scene and mark `Y`, `N`, or `U` based on what is visible. This includes missed detections for evaluation.
+
 No `vd-1` video annotations have been verified; the old provisional labels were removed. The `--dry-run` option checks the shortlist fingerprint and decodes every selected frame without opening a window or writing labels. Start the interactive tool only when you are ready to inspect the actual annotation window and label frames yourself. Each unsaved frame starts blank; previously saved manual rows are skipped. On Windows, after setting up `.venv` and placing the local video in `data/input/videos/vd-1.mp4`, you can double-click `tools/start_vd1_annotation.bat` to launch the 12-frame review; it performs this preflight first. If the shortlist CSV is missing but the dense tracking report exists, the launcher creates the CSV automatically; if the report is missing, it prints the command to generate it. The console names the expected window title prefix (`VantaSight annotation - vd-1.mp4 frame`) and stays open if the tool reports an error. The launcher keeps the annotation window above other windows to make it easier to find. If an earlier annotation window is already open, close it with `q` first to avoid duplicate sessions. For direct command-line use, add `--keep-on-top` if the window opens behind other applications.
 
 ```powershell
