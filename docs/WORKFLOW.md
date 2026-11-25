@@ -838,3 +838,7 @@ M136-এ browser gallery-তে বদলানোর পরও vd-1 launcher ge
 ### M138: browser gallery-কে নতুন tab-এ খোলা
 
 Review launcher আগে browser-কে current tab ব্যবহার করতে বলত, তারপর topmost Tk info dialog দেখাত। এতে page অন্য tab-কে সরিয়ে দিতে বা dialog-এর পেছনে ঢেকে যেতে পারত। এখন launcher নতুন browser tab চায়; সফল হলে blocking info dialog দেখায় না, আর browser launch ব্যর্থ হলেই local HTML path-সহ error dialog দেখায়। এতে gallery সামনে দেখা সহজ হবে এবং বর্তমান tab অক্ষত থাকবে বলে লক্ষ্য করা হয়েছে। `.venv`-এ `py_compile`, `--help`, ও `git diff --check` পাস করেছে; live browser UI runtime user activity-র কারণে এখনো করা হয়নি।
+
+### M139: vd-1 shortlist-এর visual readiness review
+
+১২টি gallery frame-এর manifest, source-video fingerprint ও `labels_saved: false` অবস্থা আবার যাচাই করেছি। মূল gameplay frame-গুলো visually দেখেছি: frame 3030 (25.25s)-এ ছোট একটি in-world agent স্পষ্ট দেখা যায়; frame 1080 (9s)-এ post-kill/transition-এর character এবং frame 3840 (32s)-এ visual effect-এর কারণে উপস্থিতি অস্পষ্ট। এগুলো assistant-এর visual observation মাত্র—কোনো annotation row, box, বা verified ground-truth label তৈরি হয়নি; detector metric চালানোর জন্যও ব্যবহার করা যাবে না। এই run-এ CUA browser host unavailable ছিল, তাই gallery-কে desktop-এ সামনে খুলে দেখা যায়নি। পরবর্তী annotation ধাপ হলো gallery-তে সব frame দেখে Y/N/U ও visible opponent box review/save করা; user review provenance gate পূরণ করার মতো label না হওয়া পর্যন্ত video evaluation pending থাকবে.
