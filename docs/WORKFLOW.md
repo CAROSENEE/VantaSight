@@ -704,3 +704,7 @@ Gallery directory-তে `index.html`, manifest, এবং ১২টি extracte
 ### M105: offline review gallery দৃশ্যমানভাবে খোলা
 
 Edge-এ local `data/previews/vd-1_review_gallery/index.html` খুলে accessibility tree ও screenshot-এ `VantaSight Offline Frame Review`, `vd-1.mp4`, SHA-256 এবং প্রথম frame দেখা গেছে। Progress counter তখন `0/12 frames saved`; annotation button-এ কোনো action নেওয়া হয়নি, তাই কোনো label তৈরি বা save হয়নি। এটি শুধু gallery window দৃশ্যমান হওয়ার প্রমাণ, browser storage persistence বা review workflow সম্পন্ন হওয়ার নয়। পরের ধাপ হলো user-এর হাতে frame review করে save ও JSONL export করা।
+
+### M106: ১২-frame contact sheet
+
+Gallery খুলতে সমস্যা হলে সব review sample এক নজরে দেখার জন্য manifest-এর frame image থেকে `data/previews/vd-1_review_gallery/contact_sheet.jpg` তৈরি হয়েছে। এতে ৩×৪ বিন্যাসে প্রতিটি frame-এর index ও timestamp আছে। Source frame-গুলো ২৫% মাপে দেখানো; ছোট opponent যাচাই বা box/point আঁকার জন্য এটি যথেষ্ট detail নয়—সেই কাজ original-resolution interactive gallery-তেই করতে হবে। Sheet-এ কোনো model proposal বা annotation নেই, এবং এটি Git-ignored local preview। তৈরি হওয়ার পর দেখা হয়েছে; এতে কোনো frame label করা বা JSONL export করা হয়নি।
