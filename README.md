@@ -143,7 +143,7 @@ On Windows, double-click `tools/start_vd1_review_gallery.bat`. It checks the loc
 python tools/import_review_annotations.py "data/input/videos/vd-1.mp4" "<download-folder>/vd-1_user_verified.jsonl" --shortlist-csv reports/vd-1_manual_review_shortlist.csv
 ```
 
-On Windows, you can double-click `tools/import_vd1_review_labels.bat` instead. Select the downloaded `.jsonl` file in the dialog; the same validation runs before labels are copied to `data/annotations/vd-1_user_verified.jsonl`. The helper does not create labels and reports an error rather than overwrite an existing output.
+On Windows, you can double-click `tools/import_review_labels.bat` instead. Select the downloaded `.jsonl` file in the dialog; the helper reads its numbered video ID, then validates against that local video and its matching shortlist before copying labels to `data/annotations/<video>_user_verified.jsonl`. The helper does not create labels and reports an error rather than overwrite an existing output. The old `tools/import_vd1_review_labels.bat` name remains as a compatibility launcher.
 
 The importer checks manual-review provenance, exact shortlist coverage, video/frame fingerprints, decoded timestamps, dimensions, box bounds, and optional body points. It refuses to overwrite an existing output unless `--replace` is explicitly passed. The page stores saved rows in browser local storage when available; export before closing if the page reports that browser storage is unavailable. It does not access a live display, send game inputs, or use the network.
 

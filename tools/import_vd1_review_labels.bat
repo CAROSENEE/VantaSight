@@ -10,9 +10,8 @@ if not exist "%PYTHON%" (
     exit /b 1
 )
 
-echo Select the downloaded, human-reviewed vd-1 JSONL file in the dialog.
-echo The importer validates the video and every sampled frame before saving.
-"%PYTHON%" "tools\import_vd1_review_labels.py"
+echo This legacy launcher now uses the serial-aware review-label importer.
+"%PYTHON%" "tools\import_review_labels.py"
 if errorlevel 1 (
     echo.
     echo Import did not complete. Read the dialog or error above.
