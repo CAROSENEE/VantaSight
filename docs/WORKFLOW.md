@@ -817,4 +817,8 @@ Source FPS ও sampled-frame count আগে দেখালেও report কো
 
 ### M133: dashboard media analysis-এ FPS-aware sampling suggestion
 
-Dashboard-এর **Analyze local media** panel-এ video sampling field আগে স্থির `30` দিয়ে শুরু হতো, যা source FPS অনুযায়ী সময়ের ব্যবধান বদলে দিত। এখন local video নির্বাচন করলে FPS metadata দিয়ে প্রায় 4 sample/second-এর frame step বের হয়, media details-এ seconds/sample দেখায়, এবং editable entry-তে suggestion বসায়। ব্যবহারকারী চাইলে analysis শুরুর আগে step বদলাতে পারেন; screenshot inference-এ এই setting প্রযোজ্য নয়। Invalid/zero FPS হলে error dialog দেখিয়ে analysis শুরু হয় না। Python syntax check ও `git diff --check` প্রয়োজন; dashboard UI-তে নতুন আচরণ এখনো runtime-এ যাচাই করা হয়নি।
+Dashboard-এর **Analyze local media** panel-এ video sampling field আগে স্থির `30` দিয়ে শুরু হতো, যা source FPS অনুযায়ী সময়ের ব্যবধান বদলে দিত। এখন local video নির্বাচন করলে FPS metadata দিয়ে প্রায় 4 sample/second-এর frame step বের হয়, media details-এ seconds/sample দেখায়, এবং editable entry-তে suggestion বসায়। ব্যবহারকারী চাইলে analysis শুরুর আগে step বদলাতে পারেন; screenshot inference-এ এই setting প্রযোজ্য নয়। Invalid/zero FPS হলে error dialog দেখিয়ে analysis শুরু হয় না। Python syntax ও `git diff --check` pass করেছে; dashboard UI-তে নতুন আচরণ এখনো runtime-এ যাচাই করা হয়নি।
+
+### M134: tracking report-এর sampling metadata validation
+
+Dashboard header এখন report-এর `settings.frame_step` পড়ে sample interval দেখায়। `load_tracking_report`-এ optional `settings` section object কি না এবং `frame_step` থাকলে positive integer কি না যাচাই যোগ হয়েছে, যাতে malformed value নীরবে UI থেকে বাদ না পড়ে। Legacy report-এ পুরো settings section বা `frame_step` field না থাকলে আগের মতো load হওয়া চলবে। `report_viewer.py` ও `open_dashboard.py` `.venv`-এর Python দিয়ে `py_compile`-এ pass করেছে; `git diff --check` পরিষ্কার। Dashboard UI runtime বা full report-loading suite চালানো হয়নি।

@@ -67,6 +67,13 @@ def load_tracking_report(path: Path) -> dict[str, Any]:
         raise ValueError("Source source_sha256 must be a lowercase 64-character SHA-256 digest")
     if not _finite_number(source.get("fps")) or source["fps"] < 0:
         raise ValueError("Source fps must be a finite nonnegative number")
+    settings = report.get("settings")
+    if settings is not None and not isinstance(settings, dict):
+        raise ValueError("Tracking report settings must be an object when present")
+    if isinstance(settings, dict) and "frame_step" in settings:
+        frame_step = settings["frame_step"]
+        if type(frame_step) is not int or frame_step < 1:
+            raise ValueError("Settings frame_step must be a positive integer")
     for field in ("sampled_frames", "candidate_detections"):
         if type(summary.get(field)) is not int or summary[field] < 0:
             raise ValueError(f"Summary {field} must be a nonnegative integer")
