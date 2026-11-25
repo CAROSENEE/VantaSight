@@ -594,9 +594,10 @@ Dashboard-এ কোনো sampled frame-এ detection না থাকলে de
 
 দুটি source screenshot, `screenshot_presence.csv`-এর user-provided yes/no label, এবং HUD exclusion-region configuration repository-তে যোগ হয়েছে। GitHub clone-এ default screenshot evaluator তাই original sample input পাবে। 212,593,238-byte `vd-1.mp4`-কে `.gitattributes`-এ `*.mp4` Git LFS দিয়ে track করেছি; commit `ed8c3cf` push হয়েছে এবং `git lfs push origin main` exit code 0 দিয়েছে। M85-এ fresh clone থেকে fetch তখন আটকে গিয়েছিল; M95-এ পরে সফলভাবে যাচাই হয়েছে। নতুন video annotation file commit হয়নি।
 
-### M86: manual annotation window খোলা
+### M86: annotation window launch attempt — visibility unconfirmed
 
-User annotation window দেখতে পাননি বলে আগের `--dry-run`-কে annotation হিসেবে ধরা হয়নি; এটি শুধু frame preflight ছিল। এবার project `.venv`-এর OpenCV WIN32 GUI দিয়ে `tools/annotate_video_frames.py` চালিয়ে actual window খুলেছি। Window title `VantaSight annotation - vd-1.mp4 frame 540`; ১২-frame shortlist-এর প্রথম frame দেখানো হচ্ছে। Annotation output file এখনো তৈরি হয়নি, কোনো frame label/box-ও save হয়নি। User frame নিজে দেখে `y` (opponent দেখা যায়), `n` (দেখা যায় না), অথবা `u` (অনিশ্চিত) বেছে নেবেন; `Enter` দিয়ে save/পরের frame, `q` দিয়ে বাকি review থামানো যায়। Box আঁকতে frame-এর ওপর left-drag করতে হয়। User review শেষ হওয়ার আগে কোনো video benchmark নেই।
+`tools/annotate_video_frames.py` project `.venv`-এর OpenCV WIN32 GUI দিয়ে চালানোর চেষ্টা করা হয়েছিল এবং tool-side record-এ window title `VantaSight annotation - vd-1.mp4 frame 540` লেখা হয়েছিল। কিন্তু এটি user-এর desktop-এ annotation window দেখা গিয়েছিল—তার প্রমাণ নয়। User নিশ্চিত করেছেন যে তিনি annotation window দেখেননি এবং annotation করেননি; তাই আগের “actual window খুলেছি” দাবিটি অতিরিক্ত নিশ্চিত ছিল, সেটি প্রত্যাহার করা হলো। কোনো frame label/box user-confirmed বা save হয়নি; `vd-1_user_verified.jsonl` নেই। User নিজে window দেখতে ও frame যাচাই করতে পারার আগে video annotation/evaluation সম্পন্ন নয়।
+
 
 ### M87: screenshot presence pilot পুনরায় চালানো
 
@@ -701,10 +702,15 @@ Gallery directory-তে `index.html`, manifest, এবং ১২টি extracte
 
 `tools/track_video.py`-তে `--predict-after-missed-updates` দিয়ে `vd-1` আবার চালিয়েছি। JSON report-এ source SHA-256 `3917b7d5…`, `settings.predict_after_missed_updates: true`, 236 sampled frame, 816 detection, 391 temporary track ও 257 single-observation track লেখা হয়েছে। Run প্রায় 139.0 সেকেন্ডে শেষ হয়েছে (1.698 sampled frame/s); ফলাফল `reports/vd-1_motion_predicted_tracks_optin.json` এবং CSV-তে local আছে, Git-ignored। এটা CLI ও report-setting-এর runtime confirmation, tracker accuracy বা improvement-এর evidence নয়। Video label এখনো নেই; test suite চালানো হয়নি।
 
-### M105: offline review gallery দৃশ্যমানভাবে খোলা
+### M105: browser review gallery tool-side preview — user visibility unconfirmed
 
-Edge-এ local `data/previews/vd-1_review_gallery/index.html` খুলে accessibility tree ও screenshot-এ `VantaSight Offline Frame Review`, `vd-1.mp4`, SHA-256 এবং প্রথম frame দেখা গেছে। Progress counter তখন `0/12 frames saved`; annotation button-এ কোনো action নেওয়া হয়নি, তাই কোনো label তৈরি বা save হয়নি। এটি শুধু gallery window দৃশ্যমান হওয়ার প্রমাণ, browser storage persistence বা review workflow সম্পন্ন হওয়ার নয়। পরের ধাপ হলো user-এর হাতে frame review করে save ও JSONL export করা।
+আগের tool-side browser observation-এ local `data/previews/vd-1_review_gallery/index.html`-এর `VantaSight Offline Frame Review`, `vd-1.mp4`, SHA-256 ও প্রথম frame দেখা গিয়েছিল; counter ছিল `0/12 frames saved` এবং কোনো annotation action নেওয়া হয়নি। এটি OpenCV annotation window নয়, এবং user-এর নিজের desktop-এ gallery দৃশ্যমান ছিল—এটিও নিশ্চিত করে না। User জানিয়েছেন annotation window-ও দেখেননি, annotation-ও করেননি। তাই আগের শিরোনামের “দৃশ্যমানভাবে খোলা” কথাটি user-visible success হিসেবে ধরা যাবে না। কোনো label তৈরি বা save হয়নি।
+
 
 ### M106: ১২-frame contact sheet
 
 Gallery খুলতে সমস্যা হলে সব review sample এক নজরে দেখার জন্য manifest-এর frame image থেকে `data/previews/vd-1_review_gallery/contact_sheet.jpg` তৈরি হয়েছে। এতে ৩×৪ বিন্যাসে প্রতিটি frame-এর index ও timestamp আছে। Source frame-গুলো ২৫% মাপে দেখানো; ছোট opponent যাচাই বা box/point আঁকার জন্য এটি যথেষ্ট detail নয়—সেই কাজ original-resolution interactive gallery-তেই করতে হবে। Sheet-এ কোনো model proposal বা annotation নেই, এবং এটি Git-ignored local preview। তৈরি হওয়ার পর দেখা হয়েছে; এতে কোনো frame label করা বা JSONL export করা হয়নি।
+
+### M107: annotation অবস্থার user correction
+
+User স্পষ্ট করেছেন যে annotation করা হয়নি এবং annotation window দেখা যায়নি। M86-এর “actual window খুলেছি” বক্তব্যটি user-visible প্রমাণ ছাড়া লেখা হয়েছিল, তাই সেটি প্রত্যাহার করা হয়েছে। M105-এর browser gallery preview আলাদা ঘটনা; সেটিও user-এর কাছে window দেখা বা review সম্পন্ন হওয়ার প্রমাণ নয়। `vd-1_user_verified.jsonl` না থাকায় video-annotation gate pending; user frame-গুলো নিজে review করে label save/verify না করা পর্যন্ত কোনো video metric তৈরি বা দাবি করা হবে না.
