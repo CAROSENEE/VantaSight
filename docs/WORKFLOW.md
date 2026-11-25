@@ -738,3 +738,7 @@ README-র দুই command বর্তমান user-labeled screenshot-এ `
 ### M113: screenshot labels-কে source image hash-এ বাঁধা
 
 `data/annotations/screenshot_presence.csv`-এ `ss-1` ও `ss-2`-এর SHA-256 যোগ হয়েছে। Hash-গুলো বর্তমান PNG file থেকে গণনা করে পূর্ববর্তী report hash-এর সঙ্গে মিলিয়ে নেওয়া হয়েছে; enemy-presence label বদলানো হয়নি। `evaluate_screenshot_presence.py` এখন সব label, screenshot hash ও exclusion-region config model initialize করার আগেই যাচাই করে; mismatch হলে inference শুরু হয় না। বৈধ labels দিয়ে evaluator পুনরায় চালিয়ে `TP=1, FP=1, TN=0, FN=0` পাওয়া গেছে এবং output SHA-গুলো source file-এর সঙ্গে মিলেছে। এতে normal path যাচাই হয়েছে; mismatch error path আলাদা করে চালিয়ে দেখা হয়নি এবং test suite চালানো হয়নি। README-তে provenance gate লেখা হয়েছে।
+
+### M114: নতুন screenshot label যোগ করার নিয়ম
+
+README-তে নতুন screenshot-কে পরের `ss-N` ID দেওয়া, মানুষ দিয়ে gameplay scene-এর visible-enemy yes/no label নিশ্চিত করা, PowerShell দিয়ে file SHA-256 বের করা এবং সেই hash `screenshot_presence.csv`-এ রাখার ধাপ যোগ হয়েছে। HUD/replay, teammate, webcam inset বা first-person হাত/অস্ত্রকে opponent হিসেবে label করা যাবে না; সন্দেহ হলে row যোগ না করে review বাকি রাখতে হবে। Presence label-কে box/body-region ground truth হিসেবে ধরা যাবে না। Documentation update; নতুন screenshot বা label যোগ করা হয়নি।

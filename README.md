@@ -189,6 +189,14 @@ python tools/evaluate_screenshot_presence.py --thresholds $sweepThresholds --dev
 
 These commands reproduce the two inference modes and threshold sweeps summarized above and write local CSV reports; `reports/` is Git-ignored. This compares whether any person candidate was returned with the user-labeled enemy-visible yes/no value; it does not evaluate box overlap, enemy identity, tracking, or aim accuracy. `--thresholds` evaluates several cutoffs from one inference pass and writes one row per screenshot and threshold, including the source image SHA-256. The current two-screenshot result is only an exploratory pilot and must not be generalized to gameplay footage.
 
+To extend the screenshot pilot, assign the next `ss-N` filename and add its row to `data/annotations/screenshot_presence.csv` only after a person has reviewed the actual gameplay scene. Set `visible_in_game_enemy` to `true` only when an in-world opponent is visible; HUD/replay silhouettes, teammates, the webcam inset, and first-person hands/weapons do not count. If the frame is unclear, leave it out until it can be reviewed. On Windows, compute the exact image fingerprint with:
+
+```powershell
+(Get-FileHash "data/input/screenshots/ss-3.png" -Algorithm SHA256).Hash.ToLowerInvariant()
+```
+
+Copy that value into the row's `source_sha256` column. This is a presence label only; it does not define opponent boxes or body-region points.
+
 If you marked body-region points, compare the COCO pose model against them with:
 
 ```powershell
