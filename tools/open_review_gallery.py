@@ -8,6 +8,9 @@ import sys
 import webbrowser
 from pathlib import Path
 
+from vantasight.input import VideoReader
+from vantasight.input.sampling import frame_step_for_sample_rate
+
 
 def main() -> int:
     try:
@@ -51,9 +54,18 @@ def main() -> int:
 
     if not shortlist.is_file():
         if not report.is_file():
+            try:
+                with VideoReader(video) as reader:
+                    if reader.info is None:
+                        raise ValueError("Could not read video metadata")
+                    frame_step = frame_step_for_sample_rate(reader.info.fps)
+            except (OSError, ValueError) as exc:
+                messagebox.showerror("VantaSight video metadata failed", str(exc), parent=root)
+                root.destroy()
+                return 2
             command = (
                 f'.venv\\Scripts\\python.exe tools\\track_video.py '
-                f'"data\\input\\videos\\{video.name}" --frame-step 30 '
+                f'"data\\input\\videos\\{video.name}" --frame-step {frame_step} '
                 f'--preserve-source-resolution --output '
                 f'"reports\\{stem}_dashboard_tracks_dense.csv" --json-output '
                 f'"reports\\{stem}_dashboard_tracks_dense.json"'
