@@ -774,3 +774,7 @@ Legacy `Valorant_Visual_Analytics_Codex_Spec.md`-এ passive live-display captur
 ### M122: downloaded human labels import-এর Windows file-picker
 
 Browser review থেকে JSONL download করার পর command-এ সঠিক Downloads path লিখতে হয়। `tools/import_vd1_review_labels.bat` এবং file-picker helper যোগ হয়েছে: user নিজে downloaded `.jsonl` file বেছে নিলে এটি আগের `import_review_annotations.py`-কে exact video ও shortlist দিয়ে চালায়, validation result dialog-এ দেখায় এবং canonical annotation path-এ copy করে। ভুল video/hash, incomplete frame coverage, invalid box/point বা existing output হলে importer-এর আগের strict error/overwrite guard-ই কার্যকর থাকে। কোনো label generate বা validation bypass হয় না। README-তে double-click workflow যোগ করা হয়েছে। এই source/documentation ধাপে কোনো real label file না থাকায় importer চালানো হয়নি; test suite চালানো হয়নি।
+
+### M123: gallery-তে ১২-frame coverage ও label স্তর বোঝানো
+
+Review page-এর instruction-এ এখন স্পষ্ট যে shortlist-এর সব ১২টি frame-এ `Y`, `N`, বা `U` দিয়ে row save করতে হবে; uncertain frame metric থেকে বাদ গেলেও coverage-এর জন্য তার reviewed row দরকার। Visible opponent-এর box detector/tracking evaluation-এ লাগে; body-region points optional এবং pose/region evaluation চাইলে দিতে হয়। JSONL download-এর পর Windows importer launcher-এর নামও page-এ দেখায়। `data/previews/vd-1_review_gallery/` regenerate করে HTML-এ নতুন instruction যাচাই করা হয়েছে এবং ১২টি frame export হয়েছে। Gallery-তে এখনো human label নেই; browser-এ পুরোনো page render থাকায় visual refresh verification বাকি। কোনো label বা box save করা হয়নি।
