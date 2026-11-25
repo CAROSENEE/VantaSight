@@ -762,3 +762,7 @@ Presence evaluator-এর terminal output এখন confusion metrics-এর আ
 ### M119: vd-1 review gallery-এর সক্রিয়-window visual check
 
 Chrome-এর নতুন tab-এ local `data/previews/vd-1_review_gallery/index.html` খুলে screenshot-এ `VantaSight Offline Review — vd-1.mp4`, 2560×1440 source metadata, frame 540 / 4.500 s, Previous/Next, Y/N/U, box, save/export controls এবং offline-only নির্দেশনা দেখা হয়েছে। Gallery-তে gameplay frame-এর সঙ্গে streamer inset-ও আছে; নির্দেশনা অনুযায়ী inset, HUD, হাত/অস্ত্র বা replay silhouette-কে opponent label করা যাবে না। Counter এখনো `0/12 frames saved`; কোনো button, canvas বা label control ব্যবহার করা হয়নি এবং annotation file-ও নেই। ফলে visual check সম্পন্ন, কিন্তু human annotation ও video evaluation এখনো pending।
+
+### M120: offline dashboard-এর বাস্তব UI ও top branding যাচাই
+
+`tools/start_vd1_dashboard.bat` File Explorer থেকে চালিয়ে `vd-1_dashboard_tracks_dense.json`-সহ dashboard বাস্তব window-তে খোলা হয়েছে। Screenshot-এ একদম top-এ bold `VantaSight — Offline Analysis`, source `vd-1.mp4` / 2560×1440 / 120 FPS, video summary, local-media chooser, sampled-frame list এবং playback controls দেখা গেছে; বর্তমান window-তে header বা bottom controls clipped নয়। Report-টি 236 sampled frame ও 816 COCO person candidate দেখায়, কিন্তু 386 temporary ID এবং zero-candidate summary-গুলো ground truth নয়। Detector, pose-region ও IoU AP evaluation-এ manual label দরকার বলে UI-তে স্পষ্ট “not available” দেখা গেছে। কোনো playback/input control বদলানো হয়নি, annotation তৈরি হয়নি, এবং test suite চালানো হয়নি।
