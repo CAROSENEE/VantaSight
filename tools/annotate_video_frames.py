@@ -305,7 +305,7 @@ def _annotate_one(
         raise RuntimeError(
             "Could not open the annotation window. Run this command in a desktop session "
             "with OpenCV GUI support. For browser-based manual review, run "
-            "tools\\start_vd1_review_gallery.bat instead."
+            "tools\\open_review_gallery.bat instead."
         ) from exc
 
     result: dict | None = None

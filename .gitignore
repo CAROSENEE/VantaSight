@@ -243,12 +243,12 @@ reports/*
 !reports/.gitkeep
 
 # Numbered, user-approved source samples; videos are stored with Git LFS.
-!data/input/screenshots/ss-[0-9]*.png
-!data/input/screenshots/ss-[0-9]*.jpg
-!data/input/screenshots/ss-[0-9]*.jpeg
-!data/input/screenshots/ss-[0-9]*.bmp
-!data/input/screenshots/ss-[0-9]*.webp
-!data/input/videos/vd-[0-9]*.mp4
+!data/input/screenshots/ss-[1-9]*.png
+!data/input/screenshots/ss-[1-9]*.jpg
+!data/input/screenshots/ss-[1-9]*.jpeg
+!data/input/screenshots/ss-[1-9]*.bmp
+!data/input/screenshots/ss-[1-9]*.webp
+!data/input/videos/vd-[1-9]*.mp4
 
 .task-tmp/
 models/cache/

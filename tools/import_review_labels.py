@@ -26,7 +26,7 @@ def _video_name_from_review(review_path: Path) -> str:
     if len(video_names) != 1:
         raise ValueError("The selected file must contain review rows for exactly one video")
     video_name = video_names.pop()
-    if Path(video_name).name != video_name or not re.fullmatch(r"vd-[0-9]+\.mp4", video_name):
+    if Path(video_name).name != video_name or not re.fullmatch(r"vd-[1-9][0-9]*\.mp4", video_name):
         raise ValueError("Review rows must name a numbered source video such as vd-1.mp4")
     return video_name
 
