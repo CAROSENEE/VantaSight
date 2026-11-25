@@ -700,3 +700,7 @@ Gallery directory-তে `index.html`, manifest, এবং ১২টি extracte
 ### M104: opt-in tracking CLI run
 
 `tools/track_video.py`-তে `--predict-after-missed-updates` দিয়ে `vd-1` আবার চালিয়েছি। JSON report-এ source SHA-256 `3917b7d5…`, `settings.predict_after_missed_updates: true`, 236 sampled frame, 816 detection, 391 temporary track ও 257 single-observation track লেখা হয়েছে। Run প্রায় 139.0 সেকেন্ডে শেষ হয়েছে (1.698 sampled frame/s); ফলাফল `reports/vd-1_motion_predicted_tracks_optin.json` এবং CSV-তে local আছে, Git-ignored। এটা CLI ও report-setting-এর runtime confirmation, tracker accuracy বা improvement-এর evidence নয়। Video label এখনো নেই; test suite চালানো হয়নি।
+
+### M105: offline review gallery দৃশ্যমানভাবে খোলা
+
+Edge-এ local `data/previews/vd-1_review_gallery/index.html` খুলে accessibility tree ও screenshot-এ `VantaSight Offline Frame Review`, `vd-1.mp4`, SHA-256 এবং প্রথম frame দেখা গেছে। Progress counter তখন `0/12 frames saved`; annotation button-এ কোনো action নেওয়া হয়নি, তাই কোনো label তৈরি বা save হয়নি। এটি শুধু gallery window দৃশ্যমান হওয়ার প্রমাণ, browser storage persistence বা review workflow সম্পন্ন হওয়ার নয়। পরের ধাপ হলো user-এর হাতে frame review করে save ও JSONL export করা।
