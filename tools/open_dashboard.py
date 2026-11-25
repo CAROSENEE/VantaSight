@@ -121,12 +121,26 @@ def main(argv: list[str] | None = None) -> int:
     source = report["source"]
     alignment_summaries = summarize_alignment_errors(report)
     source_rate = "Screenshot" if source_is_image else f"{source.get('fps', 0):.2f} FPS"
+    sampling_summary = ""
+    settings = report.get("settings")
+    frame_step = settings.get("frame_step") if isinstance(settings, dict) else None
+    source_fps = source.get("fps")
+    if (
+        not source_is_image
+        and type(frame_step) is int
+        and frame_step > 0
+        and isinstance(source_fps, (int, float))
+        and not isinstance(source_fps, bool)
+        and math.isfinite(source_fps)
+        and source_fps > 0
+    ):
+        sampling_summary = f"  |  Sampling: every {frame_step} frames (~{frame_step / source_fps:.3f}s)"
     header = ttk.Frame(root, padding=10)
     header.pack(fill="x")
     ttk.Label(header, text="VantaSight — Offline Analysis", font=("Segoe UI", 16, "bold")).pack(anchor="w")
     summary_lines = [
         f"Source: {source.get('file_name')}  |  {source.get('width')}×{source.get('height')}  |  "
-        f"{source_rate}  |  Sampled frames: {summary.get('sampled_frames', 0)}",
+        f"{source_rate}{sampling_summary}  |  Sampled frames: {summary.get('sampled_frames', 0)}",
         f"Person candidates: {summary.get('candidate_detections', 0)}  |  "
         f"Throughput: {summary.get('sampled_frames_per_second', 0):.2f} sampled frames/s  |  "
         f"Mean detector latency: {summary.get('detector_latency_mean_ms', 0):.1f} ms",

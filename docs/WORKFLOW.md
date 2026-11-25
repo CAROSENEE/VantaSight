@@ -810,3 +810,7 @@ Tracked user-labeled `ss-1` ও `ss-2` দিয়ে documented evaluator GPU-ত
 ### M131: tracking CLI-র FPS-aware default sampling
 
 Generic launcher-এ source FPS অনুযায়ী step হলেও সরাসরি `track_video.py`-র default সব video-তে 30 source frame-ই নিত। `--frame-step` না দিলে CLI এখন একই helper দিয়ে প্রায় 4 sample/second-এর step বেছে নেয়; explicit `--frame-step N` দিলে caller-এর interval-ই বহাল থাকে। Analysis output-এ ব্যবহৃত step print হয় এবং JSON settings-এ লেখা হয়। ফলে 120 FPS `vd-1`-এর default step 30-ই থাকে, অন্য FPS-এ সময়ভিত্তিক sample interval কাছাকাছি হয়। README-তে override ও limitation যোগ হয়েছে। `.venv`-এ `py_compile`, `track_video.py --help` এবং `git diff --check` চালিয়ে যাচাই হয়েছে; এই পরিবর্তনের জন্য full model inference বা test suite চালানো হয়নি।
+
+### M132: dashboard-এ report sampling interval
+
+Source FPS ও sampled-frame count আগে দেখালেও report কোন `frame_step` ব্যবহার করেছে তা dashboard header-এ দেখা যেত না। নতুন report-এ এখন `Sampling: every N frames (~T seconds)` দেখায়, যাতে বিভিন্ন FPS/source settings-এর dashboard তুলনা করার সময় temporal sampling স্পষ্ট থাকে। Screenshot analysis ও পুরোনো report-এ `frame_step` না থাকলে এই text আসে না। README update হয়েছে। UI runtime-এ নতুন header দেখা এখনো যাচাই করা হয়নি; accuracy বা missed-target দাবি এতে যোগ হয়নি।
