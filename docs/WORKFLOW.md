@@ -722,3 +722,7 @@ Annotation window খোলার সময় OpenCV GUI error হলে এখন
 ### M109: screenshot pilot-এর ফল README-তে প্রকাশ
 
 বর্তমান ignored evaluation CSV এবং `screenshot_presence.csv`-এর দুইটি user label মিলিয়ে README-তে threshold `0.25`-এর ফল যোগ হয়েছে। Default-resize mode-এ `ss-1` candidate ধরা পড়লেও `ss-2`-এর first-person arm/weapon false positive হয়েছে (TP=1, FP=1, TN=0, FN=0)। Original-resolution mode-এ `ss-1` miss, আর false positive বহাল (TP=0, FP=1, TN=0, FN=1)। নথিতে n=2, localization ও general accuracy সীমাবদ্ধতা, এবং video annotation না থাকায় video accuracy অজানা—সব স্পষ্ট করা হয়েছে। এটি আগে তৈরি report-এর ফল প্রকাশ; নতুন inference বা test চালানো হয়নি।
+
+### M110: screenshot pilot পুনরায় চালানোর command
+
+README-তে confidence threshold `0.25`-এ default-resize ও `--preserve-source-resolution` mode-কে `cuda:0`-তে চালিয়ে পৃথক local CSV তৈরির command যোগ হয়েছে। এতে M109-এর দুই mode independently পুনরায় তৈরি করা যাবে; output `reports/`-এ Git-ignored থাকে। Threshold sweep command-টিও আগের মতো আছে। Command-গুলো এই ধাপে চালানো হয়নি; শুধু documentation update।
