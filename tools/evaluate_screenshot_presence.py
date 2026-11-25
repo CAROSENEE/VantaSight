@@ -6,6 +6,7 @@ import argparse
 import csv
 import math
 from pathlib import Path
+import re
 
 from vantasight.analytics import PresenceCounts, calculate_presence_metrics
 from vantasight.cli import IMAGE_SUFFIXES, _load_excluded_regions
@@ -67,22 +68,16 @@ def main() -> int:
     try:
         with labels_path.open("r", newline="", encoding="utf-8-sig") as source:
             reader = csv.DictReader(source)
-            required = {"asset_id", "visible_in_game_enemy", "user_labeled"}
+            required = {"asset_id", "source_sha256", "visible_in_game_enemy", "user_labeled"}
             if reader.fieldnames is None or not required.issubset(reader.fieldnames):
                 raise ValueError(f"Labels CSV must contain columns: {', '.join(sorted(required))}")
             records = list(reader)
         if not records:
             raise ValueError("Labels CSV contains no screenshot rows")
 
-        detector = TorchvisionPersonDetector(
-            confidence_threshold=min(thresholds),
-            device=args.device,
-            min_size=min(1080, args.max_side),
-            max_size=args.max_side,
-            preserve_source_resolution=args.preserve_source_resolution,
-        )
-        rows: list[dict] = []
-        counts_by_threshold = {threshold: [0, 0, 0, 0] for threshold in thresholds}
+        validated_records: list[
+            tuple[str, bool, Path, str, tuple[tuple[int, int, int, int], ...]]
+        ] = []
         seen_ids: set[str] = set()
         for line_number, record in enumerate(records, start=2):
             asset_id = (record.get("asset_id") or "").strip()
@@ -103,9 +98,34 @@ def main() -> int:
                 )
             image_path = candidates[0]
             source_sha256 = file_sha256(image_path)
+            label_sha256 = (record.get("source_sha256") or "").strip().lower()
+            if not re.fullmatch(r"[0-9a-f]{64}", label_sha256):
+                raise ValueError(
+                    f"Screenshot {asset_id} must have a 64-character source_sha256 "
+                    f"in labels CSV line {line_number}"
+                )
+            if label_sha256 != source_sha256:
+                raise ValueError(
+                    f"Screenshot source fingerprint mismatch for {asset_id}: "
+                    f"label={label_sha256}, file={source_sha256}"
+                )
+            exclusions = _load_excluded_regions(regions_path, image_path.name)
+            validated_records.append((asset_id, visible, image_path, source_sha256, exclusions))
+
+        detector = TorchvisionPersonDetector(
+            confidence_threshold=min(thresholds),
+            device=args.device,
+            min_size=min(1080, args.max_side),
+            max_size=args.max_side,
+            preserve_source_resolution=args.preserve_source_resolution,
+        )
+        rows: list[dict] = []
+        counts_by_threshold = {threshold: [0, 0, 0, 0] for threshold in thresholds}
+        for asset_id, visible, image_path, source_sha256, exclusions in validated_records:
             image = load_image(image_path)
             height, width = image.pixels.shape[:2]
-            exclusions = _load_excluded_regions(regions_path, image_path.name)
+            if file_sha256(image_path) != source_sha256:
+                raise ValueError(f"Screenshot changed after label validation: {image_path}")
             detector.excluded_regions = tuple(exclusions)
             detections = detector.detect(image.pixels)
             if file_sha256(image_path) != source_sha256:

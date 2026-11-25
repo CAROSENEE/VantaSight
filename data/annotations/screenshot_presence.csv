@@ -1,3 +1,3 @@
-asset_id,game,visible_in_game_enemy,user_labeled,notes
-ss-1,Valorant,true,true,"Enemy character visible in the doorway; replay/HUD silhouettes are not the label target."
-ss-2,Valorant,false,true,"No enemy character visible in the gameplay scene; replay/HUD silhouettes are excluded."
+asset_id,source_sha256,game,visible_in_game_enemy,user_labeled,notes
+ss-1,49ca24f3595c7c3e4bbc086d6c8b4f05fa1da4a4e07c6f762aba6a79b26b0019,Valorant,true,true,"Enemy character visible in the doorway; replay/HUD silhouettes are not the label target."
+ss-2,0a488425e9c9adb054927dafee1f5be9adb86c907791ea914400a82b35a31d5b,Valorant,false,true,"No enemy character visible in the gameplay scene; replay/HUD silhouettes are excluded."
