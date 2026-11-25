@@ -825,4 +825,8 @@ Dashboard header এখন report-এর `settings.frame_step` পড়ে sample 
 
 ### M135: LinkedIn progress post-এর খসড়া
 
-বর্তমান বাস্তব milestone ধরে ইংরেজিতে LinkedIn post draft যোগ হয়েছে। এতে recorded-media pipeline, FPS অনুযায়ী sampling, baseline person detection/tracking, screenshot pilot এবং সীমাবদ্ধতা লেখা আছে; দুই screenshot-এর ছোট pilot-কে gameplay accuracy বলা হয়নি এবং `vd-1` video labels pending বলা হয়েছে। পোস্টের প্রথম line-এ `VantaSight` আছে। সঙ্গে `ss-1`/`ss-2` candidate preview পাশাপাশি ব্যবহারের পরামর্শ, dashboard/gallery-এর ঐচ্ছিক ছবি, এবং player/account identifiers শেয়ার করার আগে blur করার নোট আছে। এটি শুধু draft; LinkedIn-এ publish করা হয়নি। `git diff --check` দিয়ে whitespace যাচাই করা হবে; code বা evaluation বদলানো হয়নি.
+বর্তমান বাস্তব milestone ধরে ইংরেজিতে LinkedIn post draft যোগ হয়েছে। এতে recorded-media pipeline, FPS অনুযায়ী sampling, baseline person detection/tracking, screenshot pilot এবং সীমাবদ্ধতা লেখা আছে; দুই screenshot-এর ছোট pilot-কে gameplay accuracy বলা হয়নি এবং `vd-1` video labels pending বলা হয়েছে। পোস্টের প্রথম line-এ `VantaSight` আছে। সঙ্গে `ss-1`/`ss-2` candidate preview পাশাপাশি ব্যবহারের পরামর্শ, dashboard/gallery-এর ঐচ্ছিক ছবি, এবং player/account identifiers শেয়ার করার আগে blur করার নোট আছে। এটি শুধু draft; LinkedIn-এ publish করা হয়নি। `git diff --check` পাস করেছে; code বা evaluation বদলানো হয়নি।
+
+### M136: annotation launcher-এ browser gallery default
+
+vd-1 OpenCV annotation script desktop session-এ `cv2.waitKey` পর্যন্ত পৌঁছালেও এই সেশনের visible-window তালিকায় annotation window দেখা যায়নি; কোনো label file-ও তৈরি হয়নি। ফলে UI দৃশ্যমান কি না নিশ্চিত না করে label input নেওয়া হয়নি। `tools/start_vd1_annotation.bat` এখন local browser review gallery launcher চালায়, video picker-এ numbered video বাছতে দেয়, এবং review page-এর save/download flow ব্যবহার করে; manual review ও import safeguards আগের মতোই বহাল। README-র launcher নির্দেশ আপডেট হয়েছে। `git diff --check` পাস করেছে; নতুন launcher UI-তে চালিয়ে দেখা হয়নি।
