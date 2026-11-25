@@ -782,3 +782,7 @@ Review page-এর instruction-এ এখন স্পষ্ট যে shortlist
 ### M124: shortlist-এ model miss ও enemy absence আলাদা করে বোঝানো
 
 `reports/vd-1_manual_review_shortlist.csv`-এ ছয়টি time bin-এর প্রতিটিতে একটি smallest-candidate frame ও একটি zero-candidate frame আছে। Zero model candidate হলো detector output-এর অবস্থা, enemy অনুপস্থিতির ground truth নয়। Gallery ও README-তে এই পার্থক্য যোগ করা হয়েছে, যাতে reviewer gameplay frame দেখে `Y`/`N`/`U` দেন এবং visible opponent থাকলেও detector miss করলে `Y` দিয়ে box label করতে পারেন। Regenerated gallery Chrome-এ refresh করে sampling note ও `0/12 frames saved` দেখা হয়েছে; কোনো label save করা হয়নি। ১২টি sample-এর balance একটি ছোট review set; পুরো 59-second video-এর representative accuracy দাবি করার জন্য যথেষ্ট নয়।
+
+### M125: screenshot presence pilot পুনরুৎপাদন
+
+Tracked user-labeled `ss-1` ও `ss-2` দিয়ে documented evaluator GPU-তে আবার চালানো হয়েছে: `TP=1, FP=1, TN=0, FN=0` at confidence `0.25`; precision `0.50`, recall `1.00`, specificity `0.00`। `ss-2`-এ ভুল person candidate থাকায় false positive একইভাবে দেখা গেছে। Output `reports/screenshot_presence_eval_default.csv`-এ আছে এবং `.gitignore`-এর কারণে local-only। `n=2` screenshot presence pilot—enemy identity, bounding-box localization, video accuracy, tracking, aim accuracy, বা game-wide performance measurement নয়. Test suite চালানো হয়নি।
