@@ -754,3 +754,7 @@ Chrome-এর নতুন tab-এ local `data/previews/vd-1_review_gallery/inde
 ### M117: screenshot evaluator-এ pilot সতর্কতা আগে দেখানো
 
 Presence evaluator-এর terminal output এখন confusion metrics-এর আগেই sample size-সহ `exploratory only` সতর্কতা এবং এটি enemy identity, box localization বা gameplay accuracy নয়—এ কথা দেখায়। দুই screenshot-এর summary যাতে game accuracy হিসেবে ভুল না বোঝা হয়, তাই warning-টি metrics-এর পরে না রেখে আগে আনা হয়েছে। এই ধাপে evaluator output পুনরায় চালানো হয়নি; test suite-ও চালানো হয়নি।
+
+### M118: dashboard-এর উপরের VantaSight শিরোনাম যাচাই
+
+`tools/open_dashboard.py`-এর header-এ আগে থেকেই bold `VantaSight — Offline Analysis` শিরোনাম আছে, তাই আলাদা branding পরিবর্তন লাগেনি। Dashboard-এর video filename-সহ window title-ও `VantaSight Offline Dashboard` দিয়ে শুরু হয়। এই ধাপে source code যাচাই হয়েছে; `.bat`-কে CUA সরাসরি চালাতে পারেনি এবং দৃশ্যমান dashboard window পাওয়া যায়নি, তাই runtime-এ শিরোনামের visual অবস্থান এখনো নিশ্চিত নয়।
