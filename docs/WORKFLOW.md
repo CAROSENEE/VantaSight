@@ -806,3 +806,7 @@ Tracked user-labeled `ss-1` ও `ss-2` দিয়ে documented evaluator GPU-ত
 ### M130: source FPS অনুযায়ী video sample step
 
 `vd-1` 120 FPS হওয়ায় পুরোনো generic launcher command-এ স্থির `--frame-step 30` মানে প্রতি 0.25 সেকেন্ডে একটি sample ছিল; অন্য FPS-এ ওই interval ভিন্ন হতো। `src/vantasight/input/sampling.py`-এ এখন finite positive source FPS থেকে target 4 sample/second-এর কাছাকাছি positive frame step হিসাব হয়; source FPS 4-এর নিচে হলে প্রতিটি frame নেওয়া হয়। Gallery ও dashboard launcher report না থাকলে video metadata পড়ে একই হিসাবের command দেখায়। এটি কেবল sampled offline report-এর ঘনত্ব ঠিক করে; unsampled appearance ধরার নিশ্চয়তা বা gameplay accuracy নয়। Function ও launcher helper `py_compile`-এ pass এবং `git diff --check` পরিষ্কার; বাস্তব picker interaction এখনো UI-তে যাচাই হয়নি।
+
+### M131: tracking CLI-র FPS-aware default sampling
+
+Generic launcher-এ source FPS অনুযায়ী step হলেও সরাসরি `track_video.py`-র default সব video-তে 30 source frame-ই নিত। `--frame-step` না দিলে CLI এখন একই helper দিয়ে প্রায় 4 sample/second-এর step বেছে নেয়; explicit `--frame-step N` দিলে caller-এর interval-ই বহাল থাকে। Analysis output-এ ব্যবহৃত step print হয় এবং JSON settings-এ লেখা হয়। ফলে 120 FPS `vd-1`-এর default step 30-ই থাকে, অন্য FPS-এ সময়ভিত্তিক sample interval কাছাকাছি হয়। README-তে override ও limitation যোগ হয়েছে। `.venv`-এ `py_compile`, `track_video.py --help` এবং `git diff --check` চালিয়ে যাচাই হয়েছে; এই পরিবর্তনের জন্য full model inference বা test suite চালানো হয়নি।

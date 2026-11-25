@@ -20,6 +20,7 @@ from vantasight.analytics import (
     write_tracking_report,
 )
 from vantasight.input import VideoReader, file_sha256
+from vantasight.input.sampling import frame_step_for_sample_rate
 from vantasight.tracking import IoUTracker
 from vantasight.vision.body_region_estimator import TorchvisionBodyRegionEstimator
 from vantasight.vision import TorchvisionPersonDetector
@@ -33,7 +34,11 @@ def main() -> int:
         description="Analyze a recorded video offline and export temporary candidate tracks."
     )
     parser.add_argument("video", type=Path)
-    parser.add_argument("--frame-step", type=int, default=30, help="Analyze every Nth source frame")
+    parser.add_argument(
+        "--frame-step",
+        type=int,
+        help="Analyze every Nth source frame; default targets about four samples per second",
+    )
     parser.add_argument("--start-frame", type=int, default=0, help="Inclusive first frame index")
     parser.add_argument("--stop-frame", type=int, help="Exclusive last frame index")
     parser.add_argument("--confidence-threshold", type=float, default=0.25)
@@ -68,7 +73,7 @@ def main() -> int:
     parser.add_argument("--json-output", type=Path, default=Path("reports/tracks.json"))
     args = parser.parse_args()
 
-    if args.frame_step < 1 or args.start_frame < 0 or args.max_side < 1:
+    if (args.frame_step is not None and args.frame_step < 1) or args.start_frame < 0 or args.max_side < 1:
         parser.error("--frame-step and --max-side must be positive; --start-frame must be nonnegative")
     if args.stop_frame is not None and args.stop_frame <= args.start_frame:
         parser.error("--stop-frame must be greater than --start-frame")
@@ -141,6 +146,11 @@ def main() -> int:
         with VideoReader(video) as reader:
             if reader.info is None:
                 raise RuntimeError("Could not read video metadata")
+            frame_step = (
+                args.frame_step
+                if args.frame_step is not None
+                else frame_step_for_sample_rate(reader.info.fps)
+            )
             reference_xy = (
                 crosshair_override
                 if crosshair_override is not None
@@ -152,7 +162,7 @@ def main() -> int:
             ):
                 raise ValueError("Crosshair reference must lie within the source frame")
             for frame in reader.sampled_frames(
-                frame_step=args.frame_step,
+                frame_step=frame_step,
                 start_frame=args.start_frame,
                 stop_frame=args.stop_frame,
             ):
@@ -320,7 +330,7 @@ def main() -> int:
                 "duration_seconds": reader.info.duration_seconds,
             },
             "settings": {
-                "frame_step": args.frame_step,
+                "frame_step": frame_step,
                 "start_frame": args.start_frame,
                 "stop_frame_exclusive": args.stop_frame,
                 "confidence_threshold": args.confidence_threshold,
@@ -355,6 +365,7 @@ def main() -> int:
         write_tracking_report(json_output, report)
         print(f"Device: {detector.device}")
         print(f"Source FPS: {reader.info.fps:.3f}")
+        print(f"Frame step: {frame_step} source frames")
         print(f"Sampled frames: {sampled_frames}; detections: {total_detections}")
         print(f"Analysis throughput: {throughput:.3f} sampled frames/s")
         if paused_seconds:
