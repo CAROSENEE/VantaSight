@@ -726,3 +726,7 @@ Annotation window খোলার সময় OpenCV GUI error হলে এখন
 ### M110: screenshot pilot পুনরায় চালানোর command
 
 README-তে confidence threshold `0.25`-এ default-resize ও `--preserve-source-resolution` mode-কে `cuda:0`-তে চালিয়ে পৃথক local CSV তৈরির command যোগ হয়েছে। এতে M109-এর দুই mode independently পুনরায় তৈরি করা যাবে; output `reports/`-এ Git-ignored থাকে। Threshold sweep command-টিও আগের মতো আছে। Command-গুলো এই ধাপে চালানো হয়নি; শুধু documentation update।
+
+### M111: দুই screenshot inference mode পুনরায় চালানো
+
+README-র দুই command বর্তমান user-labeled screenshot-এ `cuda:0`, threshold `0.25` দিয়ে চালানো হয়েছে। নতুন CSV-এর উভয় row-এর image SHA-256 label dataset-এর সঙ্গে মেলে। Default-resize mode-এ `TP=1, FP=1, TN=0, FN=0`; source-resolution mode-এ `TP=0, FP=1, TN=0, FN=1` পাওয়া গেছে—M109-এর README ফল পুনরুৎপন্ন হয়েছে। CSV `reports/screenshot_presence_eval_default.csv` ও `reports/screenshot_presence_eval_source_resolution.csv` local Git-ignored report। দুই image-ই একই সীমিত pilot; এটি gameplay accuracy নয়। Test suite চালানো হয়নি।
