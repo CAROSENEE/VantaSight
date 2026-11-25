@@ -173,7 +173,8 @@ def main() -> int:
             writer.writeheader()
             writer.writerows(rows)
         print(f"Device: {detector.device}")
-        print(f"User-labeled screenshots: {len(seen_ids)}")
+        print(f"User-labeled screenshot pilot (n={len(seen_ids)}; exploratory only)")
+        print("Candidate presence only; not enemy identity, box localization, or gameplay accuracy.")
         for threshold, (tp, fp, tn, fn) in counts_by_threshold.items():
             counts = PresenceCounts(tp, fp, tn, fn)
             metrics = calculate_presence_metrics(counts)
@@ -187,8 +188,6 @@ def main() -> int:
             ):
                 print(f"{name}: {value:.3f}" if value is not None else f"{name}: n/a")
         print(f"Per-screenshot results: {output.resolve()}")
-        print("These exploratory presence metrics are limited to the supplied labels and thresholds.")
-        print("Person-candidate presence is not enemy identity, box localization, or gameplay accuracy.")
         return 0
     except (FileNotFoundError, OSError, ValueError, RuntimeError) as exc:
         parser.exit(2, f"screenshot presence evaluation: error: {exc}\n")

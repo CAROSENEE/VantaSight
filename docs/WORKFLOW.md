@@ -750,3 +750,7 @@ Screenshot preflight এখন আলাদা `ss-N` ID-তে একই source
 ### M116: browser gallery বাস্তব Chrome window-তে দৃশ্যমান
 
 Chrome-এর নতুন tab-এ local `data/previews/vd-1_review_gallery/index.html` খুলেছি। Accessibility tree ও screenshot-এ `VantaSight Offline Frame Review`, `vd-1.mp4`, video SHA-256 `3917b7d5…`, frame 540 / 4.500 s, offline-local-files note এবং review controls দেখা গেছে। Counter `0/12 frames saved`; কোনো status, box বা region point নির্বাচন/save করা হয়নি। এটি gallery-র বাস্তব desktop-window visibility নিশ্চিত করে, কিন্তু user annotation বা evaluation completion নয়।
+
+### M117: screenshot evaluator-এ pilot সতর্কতা আগে দেখানো
+
+Presence evaluator-এর terminal output এখন confusion metrics-এর আগেই sample size-সহ `exploratory only` সতর্কতা এবং এটি enemy identity, box localization বা gameplay accuracy নয়—এ কথা দেখায়। দুই screenshot-এর summary যাতে game accuracy হিসেবে ভুল না বোঝা হয়, তাই warning-টি metrics-এর পরে না রেখে আগে আনা হয়েছে। এই ধাপে evaluator output পুনরায় চালানো হয়নি; test suite-ও চালানো হয়নি।
