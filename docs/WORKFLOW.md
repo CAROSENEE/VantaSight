@@ -714,3 +714,7 @@ Gallery খুলতে সমস্যা হলে সব review sample এক
 ### M107: annotation অবস্থার user correction
 
 User স্পষ্ট করেছেন যে annotation করা হয়নি এবং annotation window দেখা যায়নি। M86-এর “actual window খুলেছি” বক্তব্যটি user-visible প্রমাণ ছাড়া লেখা হয়েছিল, তাই সেটি প্রত্যাহার করা হয়েছে। M105-এর browser gallery preview আলাদা ঘটনা; সেটিও user-এর কাছে window দেখা বা review সম্পন্ন হওয়ার প্রমাণ নয়। `vd-1_user_verified.jsonl` না থাকায় video-annotation gate pending; user frame-গুলো নিজে review করে label save/verify না করা পর্যন্ত কোনো video metric তৈরি বা দাবি করা হবে না.
+
+### M108: OpenCV window না খুললে browser review বিকল্প
+
+Annotation window খোলার সময় OpenCV GUI error হলে এখন error message-এ `tools\start_vd1_review_gallery.bat`-এর browser-based বিকল্প বলা হয়। `tools/start_vd1_annotation.bat`-ও console-এ একই বিকল্প জানায়। এতে user চাইলে OpenCV annotation tool ছেড়ে ১২-frame browser gallery ব্যবহার করতে পারবেন; কোনো label নিজে থেকে তৈরি বা save হয় না। এটি code/message update; GUI fallback runtime-এ খোলা যাচাই হয়নি।

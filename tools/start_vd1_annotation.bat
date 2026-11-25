@@ -36,6 +36,7 @@ if not exist "%SHORTLIST%" (
 echo Starting a blank manual review. No provisional boxes will be loaded.
 echo Look for a window titled "VantaSight annotation - vd-1.mp4 frame ...".
 echo If the window does not appear, keep this console open and read any error below.
+echo If the OpenCV window cannot be opened or found, run tools\start_vd1_review_gallery.bat for browser-based review.
 echo Validating shortlist fingerprint and decoding the selected frames first...
 "%PYTHON%" "tools\annotate_video_frames.py" "%VIDEO%" --shortlist-csv "%SHORTLIST%" --dry-run
 if errorlevel 1 goto finish
