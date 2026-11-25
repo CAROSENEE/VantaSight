@@ -758,3 +758,7 @@ Presence evaluator-এর terminal output এখন confusion metrics-এর আ
 ### M118: dashboard-এর উপরের VantaSight শিরোনাম যাচাই
 
 `tools/open_dashboard.py`-এর header-এ আগে থেকেই bold `VantaSight — Offline Analysis` শিরোনাম আছে, তাই আলাদা branding পরিবর্তন লাগেনি। Dashboard-এর video filename-সহ window title-ও `VantaSight Offline Dashboard` দিয়ে শুরু হয়। এই ধাপে source code যাচাই হয়েছে; `.bat`-কে CUA সরাসরি চালাতে পারেনি এবং দৃশ্যমান dashboard window পাওয়া যায়নি, তাই runtime-এ শিরোনামের visual অবস্থান এখনো নিশ্চিত নয়।
+
+### M119: vd-1 review gallery-এর সক্রিয়-window visual check
+
+Chrome-এর নতুন tab-এ local `data/previews/vd-1_review_gallery/index.html` খুলে screenshot-এ `VantaSight Offline Review — vd-1.mp4`, 2560×1440 source metadata, frame 540 / 4.500 s, Previous/Next, Y/N/U, box, save/export controls এবং offline-only নির্দেশনা দেখা হয়েছে। Gallery-তে gameplay frame-এর সঙ্গে streamer inset-ও আছে; নির্দেশনা অনুযায়ী inset, HUD, হাত/অস্ত্র বা replay silhouette-কে opponent label করা যাবে না। Counter এখনো `0/12 frames saved`; কোনো button, canvas বা label control ব্যবহার করা হয়নি এবং annotation file-ও নেই। ফলে visual check সম্পন্ন, কিন্তু human annotation ও video evaluation এখনো pending।
