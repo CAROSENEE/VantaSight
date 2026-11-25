@@ -10,7 +10,7 @@ VantaSight analyzes recorded screenshots and video offline. The current prototyp
 
 These previews come from the local `ss-1`, `ss-2`, and `vd-1` samples. Green boxes are generic COCO person candidates, not verified enemy detections or accuracy results. The video preview's webcam inset was covered after inference for sharing; the detector boxes were produced before that cover was added.
 
-The two source screenshots and their user-provided presence labels are included as a small reproducible pilot dataset, along with the HUD exclusion-region configuration. Each screenshot label is tied to the exact image bytes with a SHA-256 fingerprint; the evaluator refuses to run if an image has changed since it was labeled or if the same image bytes appear under multiple IDs. The `vd-1.mp4` source video is stored with Git LFS; the video annotation file remains local and is not included.
+The two source screenshots and their user-provided presence labels are included as a small reproducible pilot dataset, along with the HUD exclusion-region configuration. Each screenshot label is tied to the exact image bytes with a SHA-256 fingerprint; the evaluator refuses to run if an image has changed since it was labeled or if the same image bytes appear under multiple IDs. Numbered source files (`ss-N` images and `vd-N.mp4` videos) are eligible to be added to Git; MP4 videos use Git LFS. The video annotation file remains local and is not included.
 
 | `ss-1`: a candidate overlaps the in-world character | `ss-2`: the candidate is a first-person arm/weapon false positive |
 |---|---|
@@ -78,7 +78,7 @@ The command reports image dimensions or video dimensions, FPS, duration, and fra
 - Put screenshots in `data/input/screenshots/`.
 - Put recorded videos in `data/input/videos/`.
 - Keep the IDs you assign in the filenames: `vd-1.mp4`, `vd-2.mp4`, `ss-1.png`, `ss-2.jpg`, and so on. Video IDs (`vd-N`) and screenshot IDs (`ss-N`) each have their own sequence. Preview filenames retain the video ID, for example `vd-1_frame_000120.png`.
-- These input folders are ignored by Git, so your media will not be included in a normal commit or pushed to GitHub. Do not use `git add -f` on media unless you intentionally want to upload it.
+- Other files in these input folders are ignored by Git. Numbered source screenshots (`ss-N.png`, `.jpg`, `.jpeg`, `.bmp`, or `.webp`) and videos (`vd-N.mp4`) are eligible for normal Git commits; MP4 files use Git LFS. Check `git status --short` and stage only media you intend to publish. Generated previews remain ignored by default.
 
 ## Save a frame preview
 

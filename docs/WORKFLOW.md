@@ -786,3 +786,7 @@ Review page-এর instruction-এ এখন স্পষ্ট যে shortlist
 ### M125: screenshot presence pilot পুনরুৎপাদন
 
 Tracked user-labeled `ss-1` ও `ss-2` দিয়ে documented evaluator GPU-তে আবার চালানো হয়েছে: `TP=1, FP=1, TN=0, FN=0` at confidence `0.25`; precision `0.50`, recall `1.00`, specificity `0.00`। `ss-2`-এ ভুল person candidate থাকায় false positive একইভাবে দেখা গেছে। Output `reports/screenshot_presence_eval_default.csv`-এ আছে এবং `.gitignore`-এর কারণে local-only। `n=2` screenshot presence pilot—enemy identity, bounding-box localization, video accuracy, tracking, aim accuracy, বা game-wide performance measurement নয়. Test suite চালানো হয়নি।
+
+### M126: ধারাবাহিক serial-এর input media Git rules
+
+আগের `.gitignore` শুধু `ss-1.png`, `ss-2.png` ও `vd-1.mp4`-কে Git-এর জন্য allow করত; ফলে পরে যোগ করা `ss-3` বা `vd-2` media local folder-এ থাকলেও অজান্তে ignored হয়ে যেত। তুমি numbered gameplay sample GitHub-এ রাখতে অনুমতি দিয়েছ, তাই নিয়মটি serial-based করা হয়েছে: supported image extension-এ `ss-N` এবং `.mp4`-এ `vd-N` stage করা যায়; MP4 Git LFS-এ থাকে, generated preview এখনও default-এ ignored। README-তে নতুন নিয়ম ও `git status --short` দিয়ে নির্বাচিত media যাচাইয়ের নির্দেশ যোগ হয়েছে। কোনো নতুন media stage বা upload করা হয়নি। `.gitignore` matching ও `.mp4` LFS attribute আলাদাভাবে যাচাই করা হবে।
