@@ -4,7 +4,7 @@
 
 **Document type:** Software Requirements & Technical Implementation
 Guide\
-**Project category:** Computer Vision / AI / Real-Time Visual Analytics\
+**Project category:** Computer Vision / AI / Offline Visual Analytics\
 **Reference environment:** Valorant\
 **Primary goal:** Analyze gameplay visuals and measure target-detection
 and aim-precision metrics without controlling the game.
@@ -37,15 +37,14 @@ memory, inspect game files, or bypass anti-cheat. - Provide an unfair
 gameplay advantage through automated interaction.
 
 The application may: - Analyze user-provided screenshots and recorded
-gameplay videos. - In a research-only mode, passively analyze pixels
-captured from the display, without interacting with the game. - Run
-experiments on an offline, self-created FPS simulation or permitted
-benchmark footage. - Display analytics in a separate application window
-after or alongside analysis, without drawing into or modifying the game.
+gameplay videos offline. - Run experiments on an offline, self-created
+FPS simulation or permitted recorded benchmark footage. - Display
+results in a separate application window after processing the selected
+local media.
 
-**Recommended first milestone:** Start with recorded video and
-screenshots. Add passive live-screen analysis only after the offline
-pipeline is reliable and after checking applicable game/platform rules.
+**Current project scope:** Recorded-media analysis only. Passive live
+screen capture, live gameplay analysis, in-game overlays, and gameplay
+assistance are out of scope and must not be implemented in this project.
 
 ------------------------------------------------------------------------
 
@@ -57,8 +56,8 @@ pipeline is reliable and after checking applicable game/platform rules.
 -   Load MP4 gameplay recordings.
 -   Allow the user to select a video file and configure analysis
     settings.
--   Optional passive desktop capture as a later milestone; no
-    game-process hooks or injected overlays.
+-   Only user-selected local screenshots and recorded video are inputs;
+    desktop/live-screen capture is out of scope.
 
 ### 2.2 Player / character detection
 
@@ -394,9 +393,9 @@ distribution. - Missed detections and false positives. - Tracking ID
 switches and track fragmentation. - Memory and GPU/CPU usage where
 available.
 
-Use a frame queue carefully if processing video in real time. If the
-pipeline cannot keep up, report dropped or skipped frames; do not
-silently present stale results as live results.
+For offline video processing, keep frame indices and timestamps attached
+to each sampled result. Report the sampling interval and actual processed
+frames; do not present sampled-frame output as continuous video analysis.
 
 ------------------------------------------------------------------------
 
@@ -474,13 +473,13 @@ silently present stale results as live results.
   M8                                  Evaluation report, tests, and
                                       documentation
 
-  M9                                  Optional passive live-display
-                                      analysis, subject to applicable
-                                      rules
+  M9                                  Out of scope: live-display
+                                      analysis and live gameplay
+                                      assistance
   -----------------------------------------------------------------------
 
-**Recommended approach:** Complete M1--M3 before attempting real-time
-analysis. A reliable offline baseline is essential.
+**Recommended approach:** Complete and evaluate the recorded-media
+pipeline. The current project does not proceed to real-time analysis.
 
 ------------------------------------------------------------------------
 
