@@ -830,3 +830,7 @@ Dashboard header এখন report-এর `settings.frame_step` পড়ে sample 
 ### M136: annotation launcher-এ browser gallery default
 
 vd-1 OpenCV annotation script desktop session-এ `cv2.waitKey` পর্যন্ত পৌঁছালেও এই সেশনের visible-window তালিকায় annotation window দেখা যায়নি; কোনো label file-ও তৈরি হয়নি। ফলে UI দৃশ্যমান কি না নিশ্চিত না করে label input নেওয়া হয়নি। `tools/start_vd1_annotation.bat` এখন local browser review gallery launcher চালায়, video picker-এ numbered video বাছতে দেয়, এবং review page-এর save/download flow ব্যবহার করে; manual review ও import safeguards আগের মতোই বহাল। README-র launcher নির্দেশ আপডেট হয়েছে। `git diff --check` পাস করেছে; নতুন launcher UI-তে চালিয়ে দেখা হয়নি।
+
+### M137: vd-1 annotation launcher-এ সরাসরি video নির্বাচন
+
+M136-এ browser gallery-তে বদলানোর পরও vd-1 launcher generic video picker দেখাত, যদিও launcher-এর নাম ও উদ্দেশ্য vd-1। `tools/open_review_gallery.py`-তে ঐচ্ছিক `--video` argument যোগ হয়েছে; নির্দিষ্ট numbered source দিলে picker না খুলে matching local report/shortlist দিয়ে gallery তৈরি করে। `tools/start_vd1_annotation.bat` এখন `vd-1.mp4` সরাসরি পাঠায়; অন্য serial-এর জন্য generic picker launcher রয়ে গেছে। Path এখনও `data/input/videos`-এর ভেতরে serial `vd-N.mp4` হতে হয় এবং missing file হলে gallery খোলে না। `.venv`-এ `py_compile`, `--help`, ও `git diff --check` পাস করেছে। নতুন launcher UI runtime এখনো যাচাই করা হয়নি।

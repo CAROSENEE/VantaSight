@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 import subprocess
 import sys
@@ -13,6 +14,14 @@ from vantasight.input.sampling import frame_step_for_sample_rate
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Open the local review gallery for a numbered video.")
+    parser.add_argument(
+        "--video",
+        type=Path,
+        help="open this numbered video directly instead of showing the video picker",
+    )
+    args = parser.parse_args()
+
     try:
         import tkinter as tk
         from tkinter import filedialog, messagebox
@@ -25,21 +34,32 @@ def main() -> int:
     root.attributes("-topmost", True)
     project_root = Path(__file__).resolve().parents[1]
     videos_dir = project_root / "data" / "input" / "videos"
-    video_name = filedialog.askopenfilename(
-        parent=root,
-        title="Select a numbered VantaSight source video",
-        initialdir=videos_dir,
-        filetypes=[("Numbered MP4 videos", "vd-*.mp4")],
-    )
-    if not video_name:
-        root.destroy()
-        return 0
+    if args.video is None:
+        video_name = filedialog.askopenfilename(
+            parent=root,
+            title="Select a numbered VantaSight source video",
+            initialdir=videos_dir,
+            filetypes=[("Numbered MP4 videos", "vd-*.mp4")],
+        )
+        if not video_name:
+            root.destroy()
+            return 0
+        video = Path(video_name).resolve()
+    else:
+        video = (project_root / args.video).resolve() if not args.video.is_absolute() else args.video.resolve()
 
-    video = Path(video_name).resolve()
     if video.parent != videos_dir.resolve() or re.fullmatch(r"vd-[1-9][0-9]*\.mp4", video.name) is None:
         messagebox.showerror(
             "VantaSight video name is invalid",
             "Choose an MP4 named vd-N.mp4 from data/input/videos.",
+            parent=root,
+        )
+        root.destroy()
+        return 2
+    if not video.is_file():
+        messagebox.showerror(
+            "VantaSight video is missing",
+            f"The selected source video was not found:\n{video}",
             parent=root,
         )
         root.destroy()

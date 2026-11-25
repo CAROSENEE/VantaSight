@@ -11,8 +11,8 @@ if not exist "%PYTHON%" (
 )
 
 echo This compatibility launcher opens the local browser-based review gallery.
-echo Choose a numbered vd-N.mp4 video and label each frame yourself.
-"%PYTHON%" "tools\open_review_gallery.py"
+echo Review vd-1.mp4 and label each frame yourself.
+"%PYTHON%" "tools\open_review_gallery.py" --video "data\input\videos\vd-1.mp4"
 if errorlevel 1 (
     echo.
     echo Review gallery could not be opened. Read the dialog or error above.
