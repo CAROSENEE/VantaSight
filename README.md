@@ -20,6 +20,17 @@ The two source screenshots and their user-provided presence labels are included 
 
 <img src="docs/assets/vd-1_frame_003000_candidate_preview.jpg" alt="VantaSight person candidates on a Valorant frame, with the webcam inset hidden" width="720">
 
+## First screenshot pilot: useful detection, clear failure
+
+The two manually labeled Valorant screenshots are an initial presence-only pilot. At confidence threshold `0.25`, the default-resize run found a person candidate in `ss-1`, where an in-world enemy is visible, but also returned a candidate in `ss-2`, where the in-world enemy is absent and the candidate overlaps the first-person arm/weapon. Preserving the original input resolution changed the outcome: `ss-1` was missed at this threshold, while the `ss-2` false positive remained.
+
+| Inference mode at threshold 0.25 | `ss-1` (enemy visible) | `ss-2` (enemy absent) | TP / FP / TN / FN |
+|---|---|---|---|
+| Default resize | Candidate | False positive | 1 / 1 / 0 / 0 |
+| Preserve source resolution | Miss | False positive | 0 / 1 / 0 / 1 |
+
+This is only two images: it does not establish general detector accuracy, identify teams, or measure bounding-box localization. The results show why model candidates need human-reviewed labels and why changing inference resolution is not guaranteed to help. Video accuracy remains unmeasured because verified video annotations are not available.
+
 ## Requirements
 
 - Python 3.11 or newer (the current development environment uses Python 3.13)

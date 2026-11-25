@@ -718,3 +718,7 @@ User স্পষ্ট করেছেন যে annotation করা হয়ন
 ### M108: OpenCV window না খুললে browser review বিকল্প
 
 Annotation window খোলার সময় OpenCV GUI error হলে এখন error message-এ `tools\start_vd1_review_gallery.bat`-এর browser-based বিকল্প বলা হয়। `tools/start_vd1_annotation.bat`-ও console-এ একই বিকল্প জানায়। এতে user চাইলে OpenCV annotation tool ছেড়ে ১২-frame browser gallery ব্যবহার করতে পারবেন; কোনো label নিজে থেকে তৈরি বা save হয় না। এটি code/message update; GUI fallback runtime-এ খোলা যাচাই হয়নি।
+
+### M109: screenshot pilot-এর ফল README-তে প্রকাশ
+
+বর্তমান ignored evaluation CSV এবং `screenshot_presence.csv`-এর দুইটি user label মিলিয়ে README-তে threshold `0.25`-এর ফল যোগ হয়েছে। Default-resize mode-এ `ss-1` candidate ধরা পড়লেও `ss-2`-এর first-person arm/weapon false positive হয়েছে (TP=1, FP=1, TN=0, FN=0)। Original-resolution mode-এ `ss-1` miss, আর false positive বহাল (TP=0, FP=1, TN=0, FN=1)। নথিতে n=2, localization ও general accuracy সীমাবদ্ধতা, এবং video annotation না থাকায় video accuracy অজানা—সব স্পষ্ট করা হয়েছে। এটি আগে তৈরি report-এর ফল প্রকাশ; নতুন inference বা test চালানো হয়নি।
