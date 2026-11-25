@@ -2,7 +2,7 @@
 
 এটি VantaSight তৈরির ধাপে ধাপে কাজের তালিকা। প্রতিটি ধাপ শুরুর আগে কী করতে যাচ্ছি তা জানাব। ধাপ শেষ হলে কী বদলেছে, কেন দরকার, কীভাবে ব্যবহার করতে হবে এবং কোনো সীমাবদ্ধতা আছে কি না—সহজ ভাষায় বুঝিয়ে দেব। কোনো কাজ যাচাই করা না গেলে সেটিও পরিষ্কার করে বলব।
 
-**Annotation status (2026-11-22):** আগের OpenCV annotation attempt-এ process frame 540-এ চললেও user window দেখেননি; তাই সেটি annotation ছিল না। পরে stale OpenCV process বন্ধ করা হয়েছে। Local browser review gallery-তে ১২টি frame, opponent box, optional body-region point ও zoom controls প্রস্তুত; কিন্তু `vd-1_user_verified.jsonl` এখনো নেই এবং কোনো video label save/confirm হয়নি। তাই verified video ground truth বা detector/pose accuracy metric নেই; annotation user review ও label-নির্ভর evaluation pending। আগের unverified provisional label ও derived local reports মুছে ফেলা হয়েছে।
+**Annotation status (2026-11-25):** User নিশ্চিত করেছেন যে তিনি annotation window দেখেননি এবং কোনো video frame annotate করেননি। আগের OpenCV launch attempt-কে user-visible window বা completed annotation হিসেবে ধরা যাবে না; `vd-1_user_verified.jsonl` নেই। Local browser review gallery-তে ১২টি frame, opponent box, optional body-region point ও zoom controls প্রস্তুত, কিন্তু কোনো video label save/confirm হয়নি। তাই verified video ground truth বা video detector/pose accuracy metric নেই; annotation ও label-নির্ভর evaluation pending। আগের unverified provisional label ও derived local reports মুছে ফেলা হয়েছে।
 
 ## প্রকল্পের লক্ষ্য
 
@@ -308,7 +308,7 @@ Folder-গুলো খালি থাকলেও Git-এ দেখানো�
 - M70-এ annotation batch launcher চালুর আগে blank review ও প্রত্যাশিত window title prefix console-এ জানায়; ভুল হলে console খোলা রেখে error পড়তে বলে। এতে পরে annotation শুরু করলে কী window খুঁজতে হবে বোঝা যাবে। Annotation tool চালানো হয়নি।
 - M71-এ dashboard title-এ source video এবং report filename দুটোই থাকবে; একই footage-এর পুরোনো ও dense analysis window আলাদা করে চেনা যাবে।
 - M72-এ নতুন title-সহ dense dashboard সরাসরি launch করে দেখা হয়েছে। Python process চললেও CUA inventory-তে শুধু পুরোনো `VantaSight Offline Dashboard — vd-1.mp4` window ছিল; নতুন window/screenshot বা error পাওয়া যায়নি। শুধু এই attempt-এর process বন্ধ করেছি। তাই report-specific title code আছে, কিন্তু নতুন window visible/targetable হওয়া নিশ্চিত নয়।
-- Video manual annotation এখনো হয়নি। M86-এ blank annotation window frame 540-এ চালু হয়েছে, কিন্তু screen visibility user-confirmed নয় এবং কোনো label save হয়নি। `vd-1_user_verified.jsonl` নেই; আগের provisional labels ও derived metrics মুছে ফেলা হয়েছে.
+- Video manual annotation এখনো হয়নি। M86-এ frame 540-এর annotation window চালুর চেষ্টা হয়েছিল, কিন্তু user জানান window দেখেননি; তাই এটি সফলভাবে user-এর screen-এ খোলা হয়েছিল বলে দাবি করা যাবে না এবং কোনো label save হয়নি। `vd-1_user_verified.jsonl` নেই; আগের provisional labels ও derived metrics মুছে ফেলা হয়েছে.
 - পরবর্তী gate: OpenCV window বা `data/previews/vd-1_review_gallery/index.html` ব্যবহার করে ১২টি sampled frame নিজে review করে label save করা। Browser page থেকে JSONL download করে `data/annotations/`-এ রাখার পর evaluator চলবে। Dashboard dense-report playback-এর visual QA-ও এখনো বাকি।
 
 ## আমরা যেভাবে কাজ করব
