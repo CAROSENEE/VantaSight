@@ -814,3 +814,7 @@ Generic launcher-এ source FPS অনুযায়ী step হলেও সর�
 ### M132: dashboard-এ report sampling interval
 
 Source FPS ও sampled-frame count আগে দেখালেও report কোন `frame_step` ব্যবহার করেছে তা dashboard header-এ দেখা যেত না। নতুন report-এ এখন `Sampling: every N frames (~T seconds)` দেখায়, যাতে বিভিন্ন FPS/source settings-এর dashboard তুলনা করার সময় temporal sampling স্পষ্ট থাকে। Screenshot analysis ও পুরোনো report-এ `frame_step` না থাকলে এই text আসে না। README update হয়েছে। UI runtime-এ নতুন header দেখা এখনো যাচাই করা হয়নি; accuracy বা missed-target দাবি এতে যোগ হয়নি।
+
+### M133: dashboard media analysis-এ FPS-aware sampling suggestion
+
+Dashboard-এর **Analyze local media** panel-এ video sampling field আগে স্থির `30` দিয়ে শুরু হতো, যা source FPS অনুযায়ী সময়ের ব্যবধান বদলে দিত। এখন local video নির্বাচন করলে FPS metadata দিয়ে প্রায় 4 sample/second-এর frame step বের হয়, media details-এ seconds/sample দেখায়, এবং editable entry-তে suggestion বসায়। ব্যবহারকারী চাইলে analysis শুরুর আগে step বদলাতে পারেন; screenshot inference-এ এই setting প্রযোজ্য নয়। Invalid/zero FPS হলে error dialog দেখিয়ে analysis শুরু হয় না। Python syntax check ও `git diff --check` প্রয়োজন; dashboard UI-তে নতুন আচরণ এখনো runtime-এ যাচাই করা হয়নি।

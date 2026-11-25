@@ -25,6 +25,7 @@ from vantasight.dashboard.evaluation_summary import (
     load_threshold_sweep,
 )
 from vantasight.input import file_sha256
+from vantasight.input.sampling import frame_step_for_sample_rate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -601,8 +602,19 @@ def main(argv: list[str] | None = None) -> int:
             fps = metadata_capture.get(cv2.CAP_PROP_FPS)
             count = int(metadata_capture.get(cv2.CAP_PROP_FRAME_COUNT))
             metadata_capture.release()
+            try:
+                suggested_frame_step = frame_step_for_sample_rate(fps)
+            except ValueError as exc:
+                messagebox.showerror("Video sampling", str(exc), parent=root)
+                return
             duration = count / fps if fps > 0 else 0
-            media_details.set(f"Selected: {media_to_analyze.name} | {width}×{height} | {fps:.2f} FPS | {duration:.1f}s")
+            sample_interval = suggested_frame_step / fps
+            media_details.set(
+                f"Selected: {media_to_analyze.name} | {width}×{height} | {fps:.2f} FPS | "
+                f"{duration:.1f}s | suggested: every {suggested_frame_step} frames (~{sample_interval:.3f}s)"
+            )
+            frame_step_entry.delete(0, "end")
+            frame_step_entry.insert(0, str(suggested_frame_step))
         if crosshair_xy is not None and not (0 <= crosshair_xy[0] <= width and 0 <= crosshair_xy[1] <= height):
             messagebox.showerror(
                 "Crosshair reference",
@@ -705,7 +717,10 @@ def main(argv: list[str] | None = None) -> int:
 
     media_details = tk.StringVar(value="Choose a local screenshot or video to inspect its metadata.")
     ttk.Label(analysis_controls, textvariable=media_details, wraplength=250).pack(anchor="w", pady=(0, 5))
-    ttk.Label(analysis_controls, text="Video sampling: every N source frames").pack(anchor="w")
+    ttk.Label(
+        analysis_controls,
+        text="Video sampling: every N source frames (auto target ~4 samples/s; editable)",
+    ).pack(anchor="w")
     frame_step_entry = ttk.Entry(analysis_controls, width=10)
     frame_step_entry.insert(0, "30")
     frame_step_entry.pack(anchor="w", pady=(2, 5))
