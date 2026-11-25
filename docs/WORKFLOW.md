@@ -834,3 +834,7 @@ vd-1 OpenCV annotation script desktop session-এ `cv2.waitKey` পর্যন�
 ### M137: vd-1 annotation launcher-এ সরাসরি video নির্বাচন
 
 M136-এ browser gallery-তে বদলানোর পরও vd-1 launcher generic video picker দেখাত, যদিও launcher-এর নাম ও উদ্দেশ্য vd-1। `tools/open_review_gallery.py`-তে ঐচ্ছিক `--video` argument যোগ হয়েছে; নির্দিষ্ট numbered source দিলে picker না খুলে matching local report/shortlist দিয়ে gallery তৈরি করে। `tools/start_vd1_annotation.bat` এখন `vd-1.mp4` সরাসরি পাঠায়; অন্য serial-এর জন্য generic picker launcher রয়ে গেছে। Path এখনও `data/input/videos`-এর ভেতরে serial `vd-N.mp4` হতে হয় এবং missing file হলে gallery খোলে না। `.venv`-এ `py_compile`, `--help`, ও `git diff --check` পাস করেছে। নতুন launcher UI runtime এখনো যাচাই করা হয়নি।
+
+### M138: browser gallery-কে নতুন tab-এ খোলা
+
+Review launcher আগে browser-কে current tab ব্যবহার করতে বলত, তারপর topmost Tk info dialog দেখাত। এতে page অন্য tab-কে সরিয়ে দিতে বা dialog-এর পেছনে ঢেকে যেতে পারত। এখন launcher নতুন browser tab চায়; সফল হলে blocking info dialog দেখায় না, আর browser launch ব্যর্থ হলেই local HTML path-সহ error dialog দেখায়। এতে gallery সামনে দেখা সহজ হবে এবং বর্তমান tab অক্ষত থাকবে বলে লক্ষ্য করা হয়েছে। `.venv`-এ `py_compile`, `--help`, ও `git diff --check` পাস করেছে; live browser UI runtime user activity-র কারণে এখনো করা হয়নি।

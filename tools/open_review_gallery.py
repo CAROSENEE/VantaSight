@@ -133,15 +133,15 @@ def main() -> int:
         return result.returncode
 
     gallery = output_dir / "index.html"
-    opened = webbrowser.open(gallery.resolve().as_uri())
-    messagebox.showinfo(
-        "VantaSight offline review gallery",
-        f"Gallery: {gallery}\n\n"
-        + ("The browser was asked to open the local gallery." if opened else "If no browser page appears, open this local file manually."),
-        parent=root,
-    )
+    opened = webbrowser.open(gallery.resolve().as_uri(), new=2)
+    if not opened:
+        messagebox.showerror(
+            "VantaSight gallery exported",
+            f"The browser could not be opened automatically. Open this local file:\n{gallery}",
+            parent=root,
+        )
     root.destroy()
-    return 0
+    return 0 if opened else 2
 
 
 if __name__ == "__main__":
