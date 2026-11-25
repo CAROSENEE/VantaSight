@@ -746,3 +746,7 @@ README-তে নতুন screenshot-কে পরের `ss-N` ID দেওয়
 ### M115: duplicate screenshot sample reject করা
 
 Screenshot preflight এখন আলাদা `ss-N` ID-তে একই source SHA-256 পেলে detector initialize করার আগেই error দেয়। এতে একই image accidental duplicate row হিসেবে রেখে presence metrics-এর sample count কৃত্রিমভাবে বাড়ানো যাবে না। `ss-1` ও `ss-2`-এর hash আলাদা; valid two-image dataset দিয়ে evaluator চালিয়ে আগের `TP=1, FP=1, TN=0, FN=0` ফল পাওয়া গেছে। Duplicate-row error path আলাদা করে চালানো হয়নি এবং test suite চালানো হয়নি।
+
+### M116: browser gallery বাস্তব Chrome window-তে দৃশ্যমান
+
+Chrome-এর নতুন tab-এ local `data/previews/vd-1_review_gallery/index.html` খুলেছি। Accessibility tree ও screenshot-এ `VantaSight Offline Frame Review`, `vd-1.mp4`, video SHA-256 `3917b7d5…`, frame 540 / 4.500 s, offline-local-files note এবং review controls দেখা গেছে। Counter `0/12 frames saved`; কোনো status, box বা region point নির্বাচন/save করা হয়নি। এটি gallery-র বাস্তব desktop-window visibility নিশ্চিত করে, কিন্তু user annotation বা evaluation completion নয়।
