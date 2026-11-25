@@ -29,6 +29,8 @@ The two manually labeled Valorant screenshots are an initial presence-only pilot
 | Default resize | Candidate | False positive | 1 / 1 / 0 / 0 |
 | Preserve source resolution | Miss | False positive | 0 / 1 / 0 / 1 |
 
+The threshold sweep adds a caution: in default-resize mode, `ss-1` scored `0.2863` and the `ss-2` false positive scored `0.2559`, so cutoffs `0.26` and `0.28` separate these two examples; at `0.30`, the visible target is missed. This is a same-sample observation, not a recommended threshold. In source-resolution mode, the positive scored `0.1934` and the false positive `0.3650`; no single confidence cutoff can classify both screenshots correctly in this pair.
+
 This is only two images: it does not establish general detector accuracy, identify teams, or measure bounding-box localization. The results show why model candidates need human-reviewed labels and why changing inference resolution is not guaranteed to help. Video accuracy remains unmeasured because verified video annotations are not available.
 
 ## Requirements
@@ -180,10 +182,12 @@ Evaluate screenshot-level candidate presence against the manually labeled screen
 ```powershell
 python tools/evaluate_screenshot_presence.py --confidence-threshold 0.25 --device cuda:0 --output reports/screenshot_presence_eval_default.csv
 python tools/evaluate_screenshot_presence.py --confidence-threshold 0.25 --device cuda:0 --preserve-source-resolution --output reports/screenshot_presence_eval_source_resolution.csv
-python tools/evaluate_screenshot_presence.py --thresholds 0.25,0.26,0.28,0.30,0.35,0.40 --output reports/screenshot_presence_threshold_sweep.csv
+$sweepThresholds = "0.15,0.19,0.20,0.22,0.24,0.26,0.28,0.30,0.32,0.34,0.36,0.38,0.40"
+python tools/evaluate_screenshot_presence.py --thresholds $sweepThresholds --device cuda:0 --output reports/screenshot_presence_threshold_sweep_default.csv
+python tools/evaluate_screenshot_presence.py --thresholds $sweepThresholds --device cuda:0 --preserve-source-resolution --output reports/screenshot_presence_threshold_sweep_source_resolution.csv
 ```
 
-The first two commands reproduce the two inference modes summarized above and write local CSV reports; `reports/` is Git-ignored. This compares whether any person candidate was returned with the user-labeled enemy-visible yes/no value; it does not evaluate box overlap, enemy identity, tracking, or aim accuracy. `--thresholds` evaluates several cutoffs from one inference pass and writes one row per screenshot and threshold, including the source image SHA-256. The current two-screenshot result is only an exploratory pilot and must not be generalized to gameplay footage.
+These commands reproduce the two inference modes and threshold sweeps summarized above and write local CSV reports; `reports/` is Git-ignored. This compares whether any person candidate was returned with the user-labeled enemy-visible yes/no value; it does not evaluate box overlap, enemy identity, tracking, or aim accuracy. `--thresholds` evaluates several cutoffs from one inference pass and writes one row per screenshot and threshold, including the source image SHA-256. The current two-screenshot result is only an exploratory pilot and must not be generalized to gameplay footage.
 
 If you marked body-region points, compare the COCO pose model against them with:
 
